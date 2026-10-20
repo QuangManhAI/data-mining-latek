@@ -1,0 +1,86 @@
+% ==============================================================================
+% BÁO CÁO BÀI TẬP LỚN: KHAI PHÁ DỮ LIỆU (DATA MINING)
+% TRƯỜNG ĐẠI HỌC GIAO THÔNG VẬN TẢI TP. HỒ CHÍ MINH (UTH)
+% Đề tài: KHAI THÁC DỮ LIỆU NGHIÊN CỨU KHOA HỌC THỜI GIAN THỰC
+%        HƯỚNG TỚI XÂY DỰNG HỆ THỐNG TRUY XUẤT TRI THỨC TĂNG CƯỜNG (RAG) CHO MIỀN AI/DS
+% Giáo viên hướng dẫn: TS. Trần Thế Vinh
+% Nhóm thực hiện: Nhóm 1 (7 thành viên)
+% Chuẩn biên dịch khuyến nghị: XeLaTeX hoặc LuaLaTeX (Font Times New Roman, Size 13pt)
+% ==============================================================================
+
+\documentclass[13pt,a4paper]{extreport}
+
+% 1. Nạp cấu hình gói mở rộng & kiểu dáng
+\input{config/preamble.tex}
+
+% 2. Nạp siêu dữ liệu (Tên đề tài, Giảng viên, Sinh viên)
+\input{config/metadata.tex}
+
+% 3. Nạp các định nghĩa sơ đồ vector TikZ
+\input{figures/diagrams.tex}
+
+\begin{document}
+
+% --- TRANG BÌA CHUẨN MẪU UTH ---
+\input{sections/00_cover.tex}
+
+% --- PHẦN ĐẦU (FRONT MATTER) ---
+\pagenumbering{roman}
+\setcounter{page}{1}
+
+% Tóm tắt nội dung (Tiếng Việt & Abstract Tiếng Anh)
+\input{sections/01_abstract.tex}
+\clearpage
+
+% Mục lục & Danh mục Bảng biểu, Hình vẽ
+\tableofcontents
+\clearpage
+
+\listoffigures
+\clearpage
+
+\listoftables
+\clearpage
+
+% --- NỘI DUNG CHÍNH (MAIN MATTER) ---
+\pagenumbering{arabic}
+\setcounter{page}{1}
+
+% Chương 1: Hiểu bài toán (Business Understanding)
+\input{sections/02_business_understanding.tex}
+\clearpage
+
+% Chương 2: Hiểu dữ liệu & EDA (Data Understanding)
+\input{sections/03_data_understanding.tex}
+\clearpage
+
+% Chương 3: Chuẩn bị dữ liệu & Medallion Lakehouse (Data Preparation)
+\input{sections/04_data_preparation.tex}
+\clearpage
+
+% Chương 4: Mô hình & 4 Trụ cột Khai phá Dữ liệu (Modeling)
+\input{sections/05_modeling.tex}
+\clearpage
+
+% Chương 5: Đánh giá Thực nghiệm & DeepEval RAG (Evaluation)
+\input{sections/06_evaluation.tex}
+\clearpage
+
+% Chương 6: Triển khai Hệ thống & Vận hành (Deployment)
+\input{sections/07_deployment.tex}
+\clearpage
+
+% Chương 7: Kết luận & Hướng phát triển (Conclusion & Future Work)
+\input{sections/08_conclusion.tex}
+\clearpage
+
+% --- PHẦN CUỐI (BACK MATTER) ---
+% Danh mục Tài liệu tham khảo chuẩn BibTeX
+\bibliographystyle{ieeetr}
+\bibliography{references}
+\clearpage
+
+% Phụ lục (Appendix): Ma trận đối chiếu, Mã nguồn mẫu, Hướng dẫn cài đặt
+\input{sections/09_appendix.tex}
+
+\end{document}

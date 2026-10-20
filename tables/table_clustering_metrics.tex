@@ -1,0 +1,21 @@
+% ==============================================================================
+% BẢNG ĐÁNH GIÁ CHẤT LƯỢNG PHÂN CỤM NGỮ NGHĨA (CLUSTERING VALIDITY)
+% ==============================================================================
+
+\begin{table}[htbp]
+  \centering
+  \small
+  \caption{Đánh giá Chất lượng Phân cụm Ngữ nghĩa trên Không gian Vector 768-D Chuẩn hóa L2 (Nguồn: \texttt{clusters.json})}
+  \label{tab:clustering_metrics}
+  \begin{tabularx}{\textwidth}{@{}l c c c c L@{}}
+    \toprule
+    \textbf{Thuật toán / Cấu hình} & \textbf{Số cụm ($K$)} & \textbf{Silhouette $\uparrow$} & \textbf{Davies-Bouldin $\downarrow$} & \textbf{Calinski-H. $\uparrow$} & \textbf{Nhận xét \& Phân tích Hình học} \\
+    \midrule
+    MiniBatchKMeans ($K=4$) & 4 & 0.0185 & 5.8210 & \textbf{94.2} & Các cụm bị gộp quá rộng, lẫn lộn giữa Thị giác và Xử lý Ngôn ngữ. \\
+    \textbf{MiniBatchKMeans ($K=6$)} & \textbf{6} & \textbf{0.0210} & \textbf{5.3739} & 88.0 & \textbf{Cấu hình tối ưu}: Tách bạch rõ 6 trường phái nghiên cứu AI/DS. \\
+    MiniBatchKMeans ($K=8$) & 8 & 0.0192 & 5.6140 & 81.5 & Xuất hiện hiện tượng phân mảnh vi mô nội bộ nhóm Học máy. \\
+    \midrule
+    \textbf{DBSCAN} ($\varepsilon=0.28, \text{min}=10$) & 1--4 lõi & -- & -- & -- & Phát hiện các vùng lõi mật độ cao; $53.5\%$ mẫu là điểm ranh giới liên ngành. \\
+    \bottomrule
+  \end{tabularx}
+\end{table}

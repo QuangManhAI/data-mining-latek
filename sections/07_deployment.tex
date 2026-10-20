@@ -1,0 +1,106 @@
+% ==============================================================================
+% CHƯƠNG 6: TRIỂN KHAI VÀ VẬN HÀNH HỆ THỐNG (DEPLOYMENT)
+% ==============================================================================
+
+\chapter{Triển Khai và Vận Hành Hệ Thống (Deployment)}
+\label{chap:deployment}
+
+\section{Kiến Trúc Vận Hành Phân Tán (Distributed Infrastructure)}
+
+Hệ thống được thiết kế theo mô hình vi dịch vụ phân tán (\textit{Distributed Microservices Architecture}), đóng gói toàn diện trong các bộ chứa Docker (Dockerized Containers), vận hành độc lập và giao tiếp với nhau thông qua mạng nội bộ tốc độ cao:
+
+\begin{figure}[htbp]
+  \centering
+  \DrawSystemArchitecture
+  \caption{Sơ đồ Kiến trúc Vận hành Phân tán Toàn diện của Hệ thống}
+  \label{fig:system_architecture}
+\end{figure}
+
+Các thành phần hạ tầng cốt lõi bao gồm:
+
+\begin{enumerate}[label=\textbf{\arabic*.}]
+  \item \textbf{Tầng Điều phối Tự động (Orchestration - Apache Airflow 2.10)}:
+    Được cấu hình vận hành theo múi giờ chuẩn Việt Nam (\texttt{Asia/Ho\_Chi\_Minh - ICT}). Airflow quản lý 7 DAGs tự động hóa:
+    \begin{itemize}
+      \item \texttt{dag\_tier1\_realtime\_stream}: Kích hoạt lúc 02:00 AM hàng ngày quét RSS mới nhất.
+      \item \texttt{dag\_tier2\_near\_past\_harvest}: Kích hoạt lúc 02:10 AM hàng ngày quét 10k bài OAI-PMH.
+      \item \texttt{dag\_recompute\_mining}: Tự động chạy định kỳ lúc 00:00 Chủ Nhật hàng tuần, gọi endpoint nội bộ \texttt{/api/mining/trigger} để tính toán lại toàn bộ EDA và 4 Trụ cột Khai phá trên dữ liệu mới tích lũy.
+      \item \texttt{dag\_compact\_silver}: Nén và tối ưu hóa các tệp Parquet phân mảnh.
+    \end{itemize}
+  \item \textbf{Tầng Hàng đợi Thông điệp (Message Broker - RabbitMQ)}:
+    Sử dụng giao thức chuẩn AMQP 0-9-1. Hàng đợi \texttt{scientific\_paper\_ingest} được cấu hình chế độ bền vững (\textit{Durable Queue}) kết hợp cơ chế lấy theo lô nhỏ (\textit{Prefetch micro-batch}). Hệ thống tích hợp hàng đợi thư chết (\textit{Dead Letter Queue - DLQ}) với giới hạn tối đa 3 lần thử lại (\textit{max 3 retries}), bảo đảm không một bài báo nào bị thất thoát khi gặp sự cố mạng hoặc lỗi cú pháp HTML.
+  \item \textbf{Tầng Lưu trữ Đối tượng (Object Storage - MinIO S3)}:
+    Đóng vai trò là trung tâm của hồ dữ liệu (Lakehouse) với bucket chuẩn \texttt{uth-scientific-lakehouse}. Toàn bộ các tầng Medallion (Bronze, Silver Parquet, Gold Mining Artifacts) đều được lưu trữ tại đây, cung cấp giao diện tương thích chuẩn AWS S3 API cho DuckDB và PyArrow.
+  \item \textbf{Tầng Quản trị Vector (Vector Database - Qdrant)}:
+    Hệ thống vector engine hiệu năng cao viết bằng ngôn ngữ Rust, lưu trữ bộ sưu tập \texttt{scientific\_papers\_gold} gồm 374,082 điểm vector 768 chiều. Qdrant sử dụng cấu trúc đồ thị HNSW và chỉ mục tải trọng (Payload Indexing) cho phép lọc dữ liệu thời gian thực theo chuyên ngành và năm xuất bản với độ trễ dưới 270 mili-giây.
+  \item \textbf{Tầng Dịch vụ API Backend (FastAPI)}:
+    Lắng nghe tại cổng \texttt{:8000}, cung cấp các RESTful API cho phép tìm kiếm lai (RRF Hybrid Search), phân tích khai phá dữ liệu (\texttt{/api/mining/*}), và truyền tải câu trả lời sinh tự hồi quy qua giao thức Server-Sent Events (SSE) mượt mà.
+  \item \textbf{Tầng Giao diện Người dùng (Frontend Dashboard - React 19)}:
+    Lắng nghe tại cổng \texttt{:5173}, xây dựng trên nền tảng React 19, Vite, TailwindCSS và kiến trúc Bento Grid hiện đại. Dashboard tích hợp sơ đồ hình học đường ống dữ liệu 3D, thanh giám sát trạng thái pipeline thời gian thực, bảng phân tích 4 Trụ cột Khai phá tương tác, và giao diện hỏi đáp RAG chuyên nghiệp hỗ trợ hiển thị công thức toán học KaTeX.
+  \item \textbf{Tầng Mô hình Cục bộ (Local LLM Microservice)}:
+    Khởi chạy mô hình \texttt{Qwen2.5-7B-Instruct} (GGUF Q4\_K\_M) thông qua \texttt{node-llama-cpp} hoặc \texttt{llama-server} tại cổng \texttt{:9001}, cung cấp giao diện tương thích chuẩn OpenAI API (\texttt{/v1/chat/completions}), tận dụng tối đa nhân gia tốc phần cứng CUDA của GPU máy trạm.
+\end{enumerate}
+
+\section{Bảo Mật và Phân Quyền Truy Cập (Zero Trust \& Role-Based Access)}
+
+Để phục vụ chia sẻ tài nguyên cho sinh viên và đồng môn trong lớp học nghiên cứu mà vẫn bảo vệ tuyệt đối tính toàn vẹn của hồ dữ liệu, hệ thống thiết lập cơ chế **Zero Trust Access** thông qua Cloudflare Tunnel:
+
+\subsection{Phân quyền MinIO Object Storage}
+\begin{itemize}
+  \item \textbf{Tài khoản Quản trị (Admin)}: Toàn quyền ghi dữ liệu hồ, cập nhật Parquet và cấu hình bucket.
+  \item \textbf{Tài khoản Sinh viên / Khách (\texttt{guest\_student})}: Được gán chính sách phân quyền nghiêm ngặt \lstinline{student_readonly} (chỉ cho phép các hành động \texttt{s3:ListBucket} và \texttt{s3:GetObject}). Sinh viên có thể duyệt cây thư mục và tải dữ liệu Parquet về phân tích nghiên cứu, nhưng mọi hành động tải lên, ghi đè hoặc xóa tài liệu đều bị máy chủ S3 chặn đứng với mã lỗi \texttt{AccessDenied}.
+\end{itemize}
+
+\subsection{Phân quyền Qdrant Vector Database}
+\begin{itemize}
+  \item \textbf{Admin Master Key}: Dành riêng cho Backend và Ingestion Consumer để tạo collection và nạp (upsert) vector.
+  \item \textbf{Read-Only API Key (\texttt{uth\_guest\_readonly\_key\_...})}: Cung cấp cho sinh viên thực hiện các truy vấn tìm kiếm ngữ nghĩa (\texttt{search}, \texttt{scroll}, \texttt{get points}). Mọi yêu cầu ghi/xóa (\texttt{POST /points/delete}, \texttt{DELETE /collections}) đều bị Qdrant chặn với mã lỗi \textbf{\texttt{403 Forbidden}}.
+\end{itemize}
+
+\section{Quy Trình Khởi Chạy và Kiểm Thử Hệ Thống (Deployment SOP)}
+
+Hệ thống cung cấp quy trình khởi chạy chuẩn hóa thông qua kịch bản tự động hoặc từng phân hệ độc lập:
+
+\begin{enumerate}[label=\textbf{Bước \arabic*.}]
+  \item \textbf{Khởi động Hạ tầng Docker}:
+  \begin{lstlisting}[language=bash]
+docker compose up -d minio qdrant rabbitmq
+cd airflow && docker compose up -d
+  \end{lstlisting}
+  \item \textbf{Cấu hình Biến Môi trường}:
+  Sao chép tệp cấu hình mẫu và điền các thông số kết nối:
+  \begin{lstlisting}[language=bash]
+cp .env_example .env
+  \end{lstlisting}
+  \item \textbf{Khởi chạy Workers Xử lý Hàng đợi (RabbitMQ Consumers)}:
+  Mở 2 tiến trình worker nền độc lập:
+  \begin{lstlisting}[language=bash]
+# Worker 1: Thu thập HTML & ghi Silver Parquet
+python -m src.ingestion.queue_consumer --stage fetch
+
+# Worker 2: Nhúng vector Nomic & nạp Gold Qdrant
+python -m src.ingestion.queue_consumer --stage embed
+  \end{lstlisting}
+  \item \textbf{Khởi chạy Mô hình Ngôn ngữ LLM Cục bộ}:
+  \begin{lstlisting}[language=bash]
+# Chạy Qwen2.5-7B Instruct qua llama-server với CUDA
+.\llama-server.exe -m models\qwen2.5-7b-instruct-q4_k_m.gguf --port 9001 --ctx-size 4096 -ngl -1
+  \end{lstlisting}
+  \item \textbf{Khởi chạy Backend FastAPI và Frontend React}:
+  \begin{lstlisting}[language=bash]
+# Backend
+python -m uvicorn backend.app.main:app --host 0.0.0.0 --port 8000 --reload
+
+# Frontend
+cd frontend && npm run dev
+  \end{lstlisting}
+\end{enumerate}
+
+\section{Kế Hoạch Giám Sát và Khắc Phục Sự Cố (Monitoring \& Operations)}
+
+Hệ thống thiết lập cơ chế giám sát sức khỏe phân tầng:
+\begin{itemize}
+  \item \textbf{Endpoint Kiểm tra Sức khỏe (\texttt{/api/health})}: Định kỳ mỗi 30 giây kiểm tra trạng thái kết nối tới MinIO S3, Qdrant cluster, RabbitMQ broker và LLM local server.
+  \item \textbf{Giám sát Ngưỡng Dung lượng Hồ Dữ liệu (\texttt{LAKEHOUSE\_BUDGET\_GB})}: Mặc định đặt ngưỡng cảnh báo $20\text{ GB}$. Khi tổng dung lượng tệp Parquet và chỉ mục vector chạm $90\%$ ngân sách, bộ thu thập tự động tạm dừng để bảo vệ an toàn cho ổ cứng máy chủ.
+  \item \textbf{Chiến lược Khôi phục Tự động (Auto-Recovery)}: Nếu tiến trình Consumer bị ngắt đột ngột khi đang xử lý một bài báo, RabbitMQ sẽ tự động trả lại thông điệp vào hàng đợi (\texttt{nack with requeue}) nhờ cơ chế xác nhận thủ công (\textit{manual ACK}).
+\end{itemize}

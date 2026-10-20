@@ -1,0 +1,81 @@
+% ==============================================================================
+% CHƯƠNG 1: HIỂU BÀI TOÁN (BUSINESS UNDERSTANDING)
+% ==============================================================================
+
+\chapter{Hiểu Bài Toán (Business Understanding)}
+\label{chap:business_understanding}
+
+\section{Bối cảnh Khai thác Dữ liệu Nghiên cứu Khoa học trong AI/DS}
+
+Sự trỗi dậy mạnh mẽ của Trí tuệ Nhân tạo và Khoa học Dữ liệu (AI/DS) trong thập kỷ qua đã tạo nên một làn sóng công bố học thuật chưa từng có trong lịch sử khoa học. Các nền tảng tiền ấn phẩm mở (open-access preprints) như arXiv, OpenReview, và các kỷ yếu hội nghị danh giá (NeurIPS, ICML, ICLR, CVPR, ACL) tiếp nhận hàng trăm công trình mới mỗi ngày. Theo ghi nhận của cộng đồng nghiên cứu, tốc độ xuất bản trong các chuyên ngành Học máy (\texttt{cs.LG}), Thị giác máy tính (\texttt{cs.CV}), và Xử lý ngôn ngữ tự nhiên (\texttt{cs.CL}) tăng trưởng theo hàm mũ, đặc biệt bùng nổ mạnh mẽ kể từ khi các mô hình ngôn ngữ lớn (LLMs) và mô hình khuếch tán (Diffusion Models) ra đời.
+
+Tuy nhiên, sự bùng nổ dữ liệu này cũng đặt ra bài toán nghịch lý về thông tin: \textit{Số lượng công trình nghiên cứu tăng vọt nhưng khả năng tiếp cận, sàng lọc và nắm bắt tri thức nền tảng của con người lại bị quá tải nghiêm trọng}. Các nhà nghiên cứu trẻ, nghiên cứu sinh và sinh viên đại học thường mất hàng tuần lễ chỉ để thực hiện việc khảo cứu tài liệu (literature review) cho một chủ đề hẹp, dễ bị lạc vào biển tài liệu thứ cấp hoặc bỏ sót các bài báo mang tính bước ngoặt (landmark foundation papers).
+
+\section{Vấn đề Phân tán Dữ liệu và Rủi ro Ảo giác Học thuật}
+
+Trong thực tiễn khai thác dữ liệu học thuật, các phương pháp tiếp cận truyền thống bộc lộ ba điểm nghẽn cốt lõi (Academic Trilemma):
+
+\begin{enumerate}[label=\textbf{\arabic*.}]
+  \item \textbf{Cấu trúc tài liệu học thuật phức tạp và mất mát ký hiệu toán học}: Phần lớn tài liệu khoa học được lưu trữ dưới định dạng PDF. Khi chuyển đổi PDF thô sang văn bản thuần túy, các công thức toán học dạng LaTeX ($...$ và $$...$$), ký hiệu ma trận, đạo hàm và cấu trúc bảng biểu thường bị vỡ vụn hoặc biến thành chuỗi ký tự vô nghĩa. Điều này làm mất đi hơn 50\% giá trị tri thức của các bài báo lý thuyết nặng về toán học như \texttt{stat.ML} hay \texttt{cs.LG}.
+  \item \textbf{Hiện tượng ảo giác học thuật của các LLM thương mại}: Khi được yêu cầu tổng hợp tài liệu, các mô hình ngôn ngữ lớn phổ biến (ChatGPT, Claude, Gemini) thường có xu hướng "tự bịa" ra các bài báo không tồn tại, gán ghép sai tên tác giả, hoặc trích dẫn các chỉ số benchmark không có thật để làm câu trả lời nghe có vẻ thuyết phục (\textit{hallucination}). Trong nghiên cứu khoa học, đây là sai sót nghiêm trọng nhất không thể chấp nhận.
+  \item \textbf{Sự phân mảnh và thiếu cơ chế liên kết tri thức}: Tài liệu khoa học không tồn tại độc lập mà liên kết chặt chẽ qua mạng lưới trích dẫn (citation network), đồng tác giả (co-authorship), và sự tương đồng về ngữ nghĩa. Việc chỉ dựa vào tìm kiếm từ khóa thuần túy (lexical search) hoặc tìm kiếm vector phẳng (dense retrieval) không thể phản ánh được vị thế học thuật hay trường phái nghiên cứu của từng công trình.
+\end{enumerate}
+
+\section{Mục tiêu Nghiên cứu và Thiết kế Hệ thống}
+
+Nhằm giải quyết triệt để các vấn đề nêu trên, đồ án xác định mục tiêu tổng thể và các mục tiêu kỹ thuật cụ thể:
+
+\subsection{Mục tiêu tổng thể}
+Xây dựng một hệ thống hoàn chỉnh từ khâu thu thập dữ liệu thời gian thực, lưu trữ trên nền tảng hồ dữ liệu học thuật (**Academic Lakehouse**), thực thi **4 Trụ cột Khai phá Dữ liệu**, và tích hợp các tri thức khai phá được vào pipeline **Truy xuất Tri thức Tăng cường (Advanced RAG)** nhằm cung cấp công cụ trợ lý nghiên cứu trung thực, bảo toàn công thức toán học và có dẫn chứng khoa học xác thực 100\%.
+
+\subsection{Mục tiêu cụ thể}
+\begin{itemize}
+  \item \textbf{Về Kỹ thuật Dữ liệu (Data Engineering)}: Xây dựng pipeline thu thập dữ liệu đa tầng tự động (Tier 1 Daily Stream qua arXiv RSS lúc 02:00 AM ICT, Tier 2 Near-Past 10,000 bài qua OAI-PMH, Tier 3 Landmark Archive qua OpenAlex/Semantic Scholar). Tổ chức dữ liệu theo kiến trúc Medallion (Bronze S3 $\to$ Silver Parquet $\to$ Gold Vector/Artifacts).
+  \item \textbf{Về Khai phá Dữ liệu (Data Mining)}:
+    \begin{itemize}
+      \item \textit{Trụ cột 1}: Áp dụng FP-Growth phát hiện luật kết hợp giữa các chuyên ngành và khái niệm công nghệ AI để mở rộng truy vấn RAG.
+      \item \textit{Trụ cột 2}: Phân cụm ngữ nghĩa vector 768 chiều (K-Means và DBSCAN) kết hợp giảm chiều Centered PCA để làm rõ các trường phái nghiên cứu.
+      \item \textit{Trụ cột 3}: Khai phá đồ thị trích dẫn có hướng (Directed PageRank và phân rã cộng đồng Louvain) để định lượng độ uy tín học thuật của các bài báo kinh điển.
+      \item \textit{Trụ cột 4}: Đo lường động lượng xu hướng ($\Delta \text{Share}$ Velocity) và sử dụng Isolation Forest phát hiện các bài báo dị biệt cấu trúc.
+    \end{itemize}
+  \item \textbf{Về Hệ thống RAG và Trực quan hóa}: Xây dựng backend FastAPI tích hợp bộ tái xếp hạng Cross-Encoder (\texttt{ms-marco-MiniLM-L-6-v2}), bộ tổng hợp điểm Reciprocal Rank Fusion (RRF), bộ nhân uy tín PageRank và hệ thống kiểm soát chống ảo giác (Negative Guardrails). Triển khai giao diện Dashboard React 19 trực quan hóa các chiều dữ liệu và hỗ trợ giải toán KaTeX.
+\end{itemize}
+
+\section{Đối tượng Sử dụng và Các Trường hợp Sử dụng (Use Cases)}
+
+Hệ thống được thiết kế hướng tới ba đối tượng sử dụng chính trong môi trường đại học và viện nghiên cứu:
+
+\begin{enumerate}[label=\textbf{\arabic*.}]
+  \item \textbf{Sinh viên ngành AI/DS và CNTT}: Tra cứu các khái niệm kỹ thuật cốt lõi (ví dụ: cơ chế tự chú ý \textit{Self-Attention}, thuật toán tối ưu hóa \textit{DPO}, \textit{LoRA}), đọc trực tiếp công thức toán học chuẩn xác kèm theo trích dẫn bài báo gốc để làm đồ án và bài tập lớn.
+  \item \textbf{Học viên cao học và Nghiên cứu sinh}: Nhanh chóng định vị các công trình bước ngoặt (\textit{Landmark Papers}) thông qua bảng xếp hạng PageRank; quan sát ma trận giao thoa giữa các chuyên ngành để tìm kiếm ý tưởng nghiên cứu mới tại các điểm giao thoa (ví dụ: giao thoa giữa \texttt{cs.AI} và \texttt{cs.CV}).
+  \item \textbf{Giảng viên và Hội đồng thẩm định}: Sử dụng hệ thống để kiểm tra tính chính xác của tài liệu tham khảo, đánh giá động lượng tăng trưởng của các hướng nghiên cứu hiện đại, và phát hiện các tài liệu chuyên khảo dị biệt trong hồ dữ liệu.
+\end{enumerate}
+
+\section{Bảng Chỉ số Hiệu năng Đo lường (KPI Matrix)}
+
+Để đánh giá khoa học và khách quan, hệ thống thiết lập bảng KPI chia thành ba nhóm: Nhóm chỉ số chất lượng truy xuất và sinh câu trả lời RAG, Nhóm chỉ số tốc độ và tài nguyên phần cứng, và Nhóm chỉ số khai phá dữ liệu hồ lưu trữ. 
+
+Bảng~\ref{tab:system_kpis} trình bày chi tiết định nghĩa chỉ số, phương pháp đo, mục tiêu đề xuất ban đầu, kết quả đo lường thực nghiệm thực tế và nguồn gốc file xác thực trong repository.
+
+\input{tables/table_kpi.tex}
+
+\section{Phạm vi, Giả định và Giới hạn Kỹ thuật}
+
+\subsection{Phạm vi nghiên cứu (Scope)}
+\begin{itemize}
+  \item Dữ liệu tập trung vào các chuyên ngành cốt lõi của Trí tuệ Nhân tạo và Khoa học Dữ liệu trên arXiv: Học máy (\texttt{cs.LG}), Thị giác máy tính (\texttt{cs.CV}), Ngôn ngữ và Tính toán (\texttt{cs.CL}), Robot học (\texttt{cs.RO}), Trí tuệ Nhân tạo (\texttt{cs.AI}), Xử lý Ảnh và Tín hiệu (\texttt{eess.IV}), và Thống kê Học máy (\texttt{stat.ML}).
+  \item Hệ thống ưu tiên trích xuất nội dung từ các bài báo có định dạng HTML5 học thuật (arXiv HTML5 / ar5iv / LaTeXML) nhằm đảm bảo bảo toàn cấu trúc công thức toán học và các phân đoạn bài báo.
+\end{itemize}
+
+\subsection{Giả định hệ thống (Assumptions)}
+\begin{itemize}
+  \item Các bài báo xuất bản trên arXiv đã vượt qua khâu kiểm duyệt học thuật sơ bộ (moderation) và phản ánh chính xác các ý tưởng khoa học của nhóm tác giả.
+  \item Đồ thị trích dẫn nội bộ giữa các bài báo trong hồ dữ liệu đủ dày đặc để phản ánh dòng chảy tri thức và xác định các nút tác giả/bài báo có tầm ảnh hưởng lớn thông qua thuật toán PageRank.
+\end{itemize}
+
+\subsection{Các giới hạn đã xác định (Limitations)}
+\begin{itemize}
+  \item \textit{Độ lệch thời gian do thu thập theo lô (Batch Ingestion Artifact)}: Do việc thu thập 10,000 bài báo trong đợt thử nghiệm Tier 2 tập trung nhiều vào các bài công bố đầu năm 2024, biểu đồ số lượng bài theo thời gian có hiện tượng "dồn cục" ở tháng 1 và tháng 2 năm 2024.
+  \item \textit{Ranh giới cụm ngữ nghĩa mờ}: Do bản chất các công trình AI hiện đại có tính liên ngành rất cao (các bài báo Thị giác hay Ngôn ngữ hầu như đều áp dụng Học máy sâu), các cụm ngữ nghĩa có độ giao thoa lớn, dẫn đến điểm Silhouette đo được ở mức thấp ($0.021 - 0.063$).
+  \item \textit{Phụ thuộc tài nguyên phần cứng}: Để chạy mô hình ngôn ngữ lớn \texttt{Qwen2.5-7B} cục bộ với độ trễ thấp, máy trạm cần tối thiểu một card đồ họa rời hỗ trợ CUDA với bộ nhớ VRAM từ 6GB trở lên.
+\end{itemize}

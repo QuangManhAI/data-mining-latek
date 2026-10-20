@@ -1,0 +1,84 @@
+% ==============================================================================
+% PHẦN 1: TRANG BÌA CHUẨN ĐỒ ÁN / BÀI TẬP LỚN UTH
+% (Thiết kế bám sát 100% mẫu ảnh Trang bìa mẫu.png)
+% ==============================================================================
+
+\begin{titlepage}
+\thispagestyle{empty}
+
+% --- Vẽ Khung viền kép hoa văn góc bằng TikZ ---
+\begin{tikzpicture}[remember picture, overlay]
+  \coordinate (TopLeftOuter) at ($(current page.north west) + (23mm, -20mm)$);
+  \coordinate (BottomRightOuter) at ($(current page.south east) + (-17mm, 20mm)$);
+  \coordinate (TopLeftInner) at ($(TopLeftOuter) + (2.5mm, -2.5mm)$);
+  \coordinate (BottomRightInner) at ($(BottomRightOuter) + (-2.5mm, 2.5mm)$);
+
+  % Viền ngoài (đậm)
+  \draw[line width=1.8pt, UTHBlue!90!black] (TopLeftOuter) rectangle (BottomRightOuter);
+  % Viền trong (mảnh)
+  \draw[line width=0.7pt, UTHBlue!90!black] (TopLeftInner) rectangle (BottomRightInner);
+
+  % Hoa văn 4 góc (Corner square ornaments)
+  \foreach \x/\y in {
+    TopLeftOuter/{1/-1},
+    TopLeftOuter -| BottomRightOuter/{-1/-1},
+    TopLeftOuter |- BottomRightOuter/{1/1},
+    BottomRightOuter/{-1/1}
+  } {
+    \draw[line width=1.0pt, UTHBlue!90!black, fill=white] 
+      ($(\x) + (\y*0.1cm, \y*0.1cm)$) rectangle ($(\x) + (\y*0.75cm, \y*0.75cm)$);
+    \draw[line width=0.5pt, UTHBlue!90!black] 
+      ($(\x) + (\y*0.25cm, \y*0.25cm)$) rectangle ($(\x) + (\y*0.60cm, \y*0.60cm)$);
+  }
+\end{tikzpicture}
+
+\vspace*{-0.5cm}
+
+\begin{center}
+  % Tiêu đề Trường
+  {\fontsize{13pt}{16pt}\selectfont \textbf{\TenTruong}}\\[0.4em]
+  {\fontsize{13pt}{16pt}\selectfont \textbf{VIỆN \underline{CÔNG NGHỆ THÔNG TIN VÀ ĐIỆN, ĐIỆN TỬ}}}\\[1.4cm]
+
+  % Logo UTH
+  \includegraphics[width=6.8cm]{figures/uth_logo.png}\\[1.6cm]
+
+  % Loại báo cáo & Môn học
+  {\fontsize{14pt}{18pt}\selectfont \textbf{\LoaiBaoCao}}\\[0.5em]
+  {\fontsize{14pt}{18pt}\selectfont \textbf{\TenMonHoc}}\\[1.6cm]
+
+  % Tên Đề tài (In hoa, Đậm, Màu Đỏ theo chuẩn ảnh mẫu)
+  \begin{minipage}{0.92\textwidth}
+    \centering
+    {\fontsize{15pt}{22pt}\selectfont \textcolor{UTHRed}{\textbf{\TenDeTai}}}
+  \end{minipage}
+
+  \vfill
+
+  % Khối thông tin Giảng viên hướng dẫn & Sinh viên thực hiện
+  % (Căn lề phải theo đúng bố cục ảnh mẫu)
+  \begin{flushright}
+    \begin{minipage}{0.58\textwidth}
+      \setstretch{1.2}
+      {\fontsize{12pt}{15pt}\selectfont
+        \textbf{GVHD:} \GiangVienHuongDan\\[0.6em]
+        \textbf{SVTH:} \TenNhom\\[0.4em]
+        \begin{tabular}{@{}ll@{}}
+          \ThanhVienMot\\
+          \ThanhVienHai\\
+          \ThanhVienBa\\
+          \ThanhVienBon\\
+          \ThanhVienNam\\
+          \ThanhVienSau\\
+          \ThanhVienBay\\
+        \end{tabular}
+      }
+    \end{minipage}
+  \end{flushright}
+
+  \vspace*{1.2cm}
+
+  % Địa điểm và thời gian (Căn giữa cuối trang)
+  {\fontsize{12pt}{14pt}\selectfont \DiaDiemThoiGian}\\[0.2cm]
+\end{center}
+
+\end{titlepage}

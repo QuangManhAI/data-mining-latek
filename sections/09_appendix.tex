@@ -1,0 +1,145 @@
+% ==============================================================================
+% PHỤ LỤC (APPENDIX)
+% ==============================================================================
+
+\chapter*{PHỤ LỤC}
+\addcontentsline{toc}{chapter}{Phụ lục}
+\renewcommand{\thesection}{\Alph{section}}
+\setcounter{section}{0}
+
+\section{Bảng Đối Chiếu Chéo Giữa Báo Cáo và Mã Nguồn (Traceability Matrix)}
+
+Nhằm bảo đảm tính minh bạch học thuật, toàn bộ các nội dung, thuật toán, công thức toán và số liệu thực nghiệm trong báo cáo này đều có thể truy nguyên trực tiếp về các tệp mã nguồn và tệp dữ liệu tương ứng trong repository dự án:
+
+\begin{table}[htbp]
+  \centering
+  \small
+  \caption{Ma Trận Truy Nguyên Nguồn Gốc từ Báo Cáo tới Mã Nguồn và Tệp Dữ Liệu Thực Tế}
+  \label{tab:traceability_matrix}
+  \begin{tabularx}{\textwidth}{@{}l p{4.5cm} p{6.5cm}@{}}
+    \toprule
+    \textbf{Chương / Mục} & \textbf{Nội dung Trọng tâm} & \textbf{Đường dẫn Tệp Nguồn trong Repository} \\
+    \midrule
+    \textbf{Chương 1} & Business Understanding \& KPI & \texttt{docs/OVERVIEW.md}, \texttt{SETUP.md} \\
+    \textbf{Chương 2} & Thống kê mô tả \& 4 Insights EDA & \texttt{data/gold/mining/eda\_summary.json}, \texttt{src/mining/eda\_engine.py} \\
+    \textbf{Chương 3} & Thu thập 3 tầng \& Medallion S3 & \texttt{src/ingestion/arxiv\_batch\_harvester.py}, \texttt{src/storage/duckdb\_engine.py} \\
+    \textbf{Chương 3} & AcademicHTMLParser \& Chunking & \texttt{src/transformation/html\_parser.py}, \texttt{src/indexing/chunker.py} \\
+    \textbf{Chương 3} & Embedding Nomic Text v1.5 & \texttt{src/indexing/embedder.py}, \texttt{src/indexing/qdrant\_manager.py} \\
+    \textbf{Chương 4.1} & Trụ cột 1: FP-Growth Rules & \texttt{src/mining/association\_rules.py}, \texttt{data/gold/mining/association\_rules.json} \\
+    \textbf{Chương 4.2} & Trụ cột 2: K-Means \& DBSCAN & \texttt{src/mining/cluster\_analysis.py}, \texttt{data/gold/mining/clusters.json} \\
+    \textbf{Chương 4.3} & Trụ cột 3: Graph Mining \& PageRank & \texttt{src/mining/graph\_mining.py}, \texttt{data/gold/mining/graph\_coauthorship.json} \\
+    \textbf{Chương 4.4} & Trụ cột 4: Trend \& Isolation Forest & \texttt{src/mining/trend\_anomaly\_mining.py}, \texttt{data/gold/mining/trends\_anomalies.json} \\
+    \textbf{Chương 4.5} & Tích hợp RAG \& Authority Boost & \texttt{backend/app/services/retrieval\_service.py}, \texttt{backend/app/services/rag\_service.py} \\
+    \textbf{Chương 5.1} & Đánh giá Benchmark DeepEval 2.x & \texttt{docs/benchmarks/RAG\_EVALUATION\_REPORT\_21\_SAMPLES.md} \\
+    \textbf{Chương 5.2} & Đo lường Độ trễ GPU RTX 4060 & \texttt{docs/benchmarks/PERFORMANCE\_BENCHMARK\_REPORT.md} \\
+    \textbf{Chương 6} & Triển khai Docker, Airflow \& MinIO & \texttt{README.md}, \texttt{.env\_example}, \texttt{dags/}, \texttt{backend/app/main.py} \\
+    \bottomrule
+  \end{tabularx}
+\end{table}
+
+\section{Trích Đoạn Mã Nguồn Tiêu Biểu (Key Code Listings)}
+
+\subsection{Thuật toán Khai phá Luật Kết hợp FP-Growth với Khử Trùng lặp Đối xứng}
+Đoạn mã trích từ \texttt{src/mining/association\_rules.py} thể hiện quá trình một-nóng hóa giao dịch, dựng cây FP-Tree và lọc luật đối xứng theo giá trị Lift và Confidence:
+
+\begin{lstlisting}[language=Python, caption={Khử trùng lặp luật đối xứng trong AssociationRuleMiner}]
+# Trich doan tu src/mining/association_rules.py
+te = TransactionEncoder()
+te_ary = te.fit_transform(transactions)
+df_encoded = pd.DataFrame(te_ary, columns=te.columns_)
+
+# Khai pha tap muc pho bien bang FP-Growth
+frequent_itemsets = fpgrowth(df_encoded, min_support=min_support, use_colnames=True)
+
+# Sinh luat ket hop theo do nang Lift
+rules = association_rules(frequent_itemsets, metric="lift", min_threshold=min_lift)
+sorted_rules = rules.sort_values(by=["lift", "confidence"], ascending=[False, False])
+
+# Khu trung lap luat doi xung: giu lai chieu co Confidence cao hon
+deduped_rows = []
+seen_pairs = set()
+for _, row in sorted_rules.iterrows():
+    ant = tuple(sorted(list(row["antecedents"])))
+    con = tuple(sorted(list(row["consequents"])))
+    pair_key = frozenset([ant, con])
+    if pair_key in seen_pairs:
+        continue
+    seen_pairs.add(pair_key)
+    deduped_rows.append(row)
+\end{lstlisting}
+
+\subsection{Cơ chế Tăng cường Điểm Uy tín PageRank trong Thuật toán Tìm kiếm Lai (RAG Retrieval)}
+Đoạn mã trích từ \texttt{backend/app/services/retrieval\_service.py} thể hiện việc ánh xạ tác giả bài báo với các nút có điểm PageRank cao trong đồ thị trích dẫn:
+
+\begin{lstlisting}[language=Python, caption={Bộ nhân uy tín PageRank Authority Multiplier}]
+# Trich doan tu backend/app/services/retrieval_service.py
+def _match_authority(self, authors: List[str]) -> Tuple[float, Optional[str]]:
+    """Anh xa tac gia cua doan trich voi cac nut co PageRank cao trong mang luoi."""
+    self._ensure_graph_and_rules()
+    if not authors or not self.influencers:
+        return 0.0, None
+
+    best_pr = 0.0
+    best_author = None
+    for a in authors:
+        a_lower = a.lower().strip()
+        for inf in self.influencers:
+            if inf["author_clean"] in a_lower or a_lower in inf["author_clean"]:
+                if inf["pagerank"] > best_pr:
+                    best_pr = inf["pagerank"]
+                    best_author = a
+
+    if best_pr > 0.0:
+        norm_pr = min(1.0, best_pr / max(1e-6, self.max_pagerank))
+        return norm_pr, best_author
+    return 0.0, None
+\end{lstlisting}
+
+\subsection{Phát hiện Bài báo Dị biệt Cấu trúc Bằng Rừng Cô Lập với Chuẩn hóa $\log(1+x)$}
+Đoạn mã trích từ \texttt{src/mining/trend\_anomaly\_mining.py}:
+
+\begin{lstlisting}[language=Python, caption={Isolation Forest tren dac trung log1p}]
+# Trich doan tu src/mining/trend_anomaly_mining.py
+feature_cols = [
+    "total_math_count",
+    "total_words",
+    "total_sections",
+    "author_count",
+    "category_count",
+]
+X_raw = df[feature_cols].fillna(0).values.astype(np.float64)
+# Chuan hoa log(1+x) de giam do lech phan phoi duoi dai
+X_log = np.log1p(X_raw)
+
+iso_forest = IsolationForest(
+    contamination=contamination,
+    random_state=42,
+    n_estimators=100,
+)
+preds = iso_forest.fit_predict(X_log)
+anomaly_scores = iso_forest.score_samples(X_log)
+df["is_anomaly"] = preds == -1
+\end{lstlisting}
+
+\section{Hướng Dẫn Cài Đặt và Khởi Chạy Nhanh Dự Án}
+
+\subsection{Cài đặt môi trường Python}
+\begin{lstlisting}[language=bash]
+# 1. Tao moi truong ao
+python -m venv .venv
+
+# 2. Kich hoat moi truong ao (Windows PowerShell)
+.\.venv\Scripts\Activate.ps1
+
+# 3. Cai dat cac goi thu vien phu thuoc
+pip install --upgrade pip
+pip install -r requirements.txt
+pip install -e .
+\end{lstlisting}
+
+\subsection{Khởi động toàn bộ phân hệ kiểm thử 1-Click}
+\begin{lstlisting}[language=bash]
+# Chay toan bo test suite kiem thu tu dong (Unit, Integration, Performance)
+pytest tests/unit/ -v
+pytest tests/integration/ -v
+\end{lstlisting}

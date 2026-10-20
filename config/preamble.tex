@@ -1,0 +1,166 @@
+% ==============================================================================
+% CONFIGURATION: PREAMBLE & DANH MỤC GÓI MỞ RỘNG
+% ==============================================================================
+
+\usepackage{ifxetex,ifluatex}
+\newif\ifxetexorluatex
+\ifxetex
+  \xetexorluatextrue
+\else
+  \ifluatex
+    \xetexorluatextrue
+  \else
+    \xetexorluatexfalse
+  \fi
+\fi
+
+% --- Cấu hình Font chữ Times New Roman và Tiếng Việt ---
+\ifxetexorluatex
+  \usepackage{fontspec}
+  \setmainfont{Times New Roman}[
+    Path = ,
+    Extension = ,
+    UprightFont = *,
+    BoldFont = * Bold,
+    ItalicFont = * Italic,
+    BoldItalicFont = * Bold Italic
+  ]
+  \setsansfont{Arial}
+  \setmonofont{Courier New}[Scale=0.92]
+\else
+  \usepackage[utf8]{inputenc}
+  \usepackage[T5,T1]{fontenc}
+  \usepackage{mathptmx}
+\fi
+
+% --- Cấu hình Trang in & Căn lề chuẩn Luận văn / BTL ---
+\usepackage[
+  a4paper,
+  top=25mm,
+  bottom=25mm,
+  left=30mm,
+  right=20mm,
+  headheight=16pt,
+  footskip=12mm
+]{geometry}
+
+% --- Giãn dòng và thụt đầu dòng ---
+\usepackage{setspace}
+\setstretch{1.25} % Giãn dòng 1.25 - 1.3 chuẩn bài tập lớn
+\setlength{\parindent}{1.0cm}
+\setlength{\parskip}{4pt plus 2pt minus 1pt}
+
+% --- Toán học nâng cao & Ký hiệu ---
+\usepackage{amsmath,amssymb,amsfonts,mathtools,amsthm}
+\usepackage{bm}
+
+% --- Đồ họa & Màu sắc ---
+\usepackage{graphicx}
+\usepackage[table,xcdraw,dvipsnames]{xcolor}
+\definecolor{UTHBlue}{HTML}{0054A6}
+\definecolor{UTHTeal}{HTML}{008080}
+\definecolor{UTHRed}{HTML}{C8102E}
+\definecolor{DarkNavy}{HTML}{0F172A}
+\definecolor{LightGray}{HTML}{F8FAFC}
+\definecolor{BorderGray}{HTML}{CBD5E1}
+\definecolor{CodeBg}{HTML}{F1F5F9}
+
+% --- Bảng biểu chuyên nghiệp ---
+\usepackage{booktabs}
+\usepackage{tabularx}
+\usepackage{multirow}
+\usepackage{makecell}
+\usepackage{array}
+\usepackage{longtable}
+\newcolumntype{Y}{>{\centering\arraybackslash}X}
+\newcolumntype{L}{>{\raggedright\arraybackslash}X}
+
+% --- TikZ & Vẽ sơ đồ Vector ---
+\usepackage{tikz}
+\usetikzlibrary{calc,shapes,arrows.meta,positioning,shadows,fit,backgrounds,trees}
+
+% --- Code Listing & Hộp chú thích ---
+\usepackage{listings}
+\lstset{
+  backgroundcolor=\color{CodeBg},
+  basicstyle=\ttfamily\footnotesize,
+  breaklines=true,
+  frame=single,
+  rulecolor=\color{BorderGray},
+  keywordstyle=\color{UTHBlue}\bfseries,
+  commentstyle=\color{gray}\itshape,
+  stringstyle=\color{OliveGreen},
+  numbers=left,
+  numberstyle=\tiny\color{gray},
+  numbersep=8pt,
+  tabsize=2,
+  showstringspaces=false,
+  captionpos=b
+}
+
+\usepackage[most]{tcolorbox}
+\newtcolorbox{calloutbox}[2][]{
+  enhanced,
+  colback=LightGray,
+  colframe=UTHBlue,
+  coltitle=white,
+  fonttitle=\bfseries\small,
+  title={#2},
+  boxrule=0.8pt,
+  arc=3mm,
+  top=3mm, bottom=3mm, left=4mm, right=4mm,
+  #1
+}
+
+% --- Định dạng Đề mục (Section / Chapter) ---
+\usepackage{titlesec}
+\titleformat{\chapter}[hang]
+  {\normalfont\bfseries\Large\color{UTHBlue}}
+  {\thechapter.}{1em}{}
+\titlespacing*{\chapter}{0pt}{-10pt}{15pt}
+
+\titleformat{\section}
+  {\normalfont\bfseries\large\color{DarkNavy}}
+  {\thesection}{1em}{}
+\titlespacing*{\section}{0pt}{12pt}{6pt}
+
+\titleformat{\subsection}
+  {\normalfont\bfseries\normalsize\color{DarkNavy}}
+  {\thesubsection}{1em}{}
+\titlespacing*{\subsection}{0pt}{8pt}{4pt}
+
+% --- Header & Footer ---
+\usepackage{fancyhdr}
+\pagestyle{fancy}
+\fancyhf{}
+\fancyhead[L]{\small\itshape Khai phá Dữ liệu Khoa học & Hệ thống RAG (UTH)}
+\fancyhead[R]{\small\thepage}
+\renewcommand{\headrulewidth}{0.4pt}
+\renewcommand{\footrulewidth}{0pt}
+
+% --- Hyperlinks & Metadata PDF ---
+\usepackage{hyperref}
+\hypersetup{
+  colorlinks=true,
+  linkcolor=UTHBlue,
+  citecolor=ForestGreen,
+  urlcolor=BlueViolet,
+  pdfborder={0 0 0},
+  pdftitle={BTL Khai phá Dữ liệu - UTH},
+  pdfauthor={Nhóm 1 - UTH AI/DS}
+}
+
+% --- Chú thích hình & bảng ---
+\usepackage{caption}
+\usepackage{subcaption}
+\captionsetup{
+  font={small},
+  labelfont={bf},
+  labelsep=colon,
+  justification=centering
+}
+
+\usepackage{enumitem}
+\setlist{itemsep=2pt,topsep=2pt,parsep=0pt}
+
+\usepackage{tocbibind} % Đưa mục tài liệu tham khảo vào TOC

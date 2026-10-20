@@ -1,0 +1,106 @@
+% ==============================================================================
+% SƠ ĐỒ HỆ THỐNG & KIẾN TRÚC MEDALLION LAKEHOUSE BẰNG TIKZ
+% ==============================================================================
+
+% 1. Sơ đồ Kiến trúc Phân tán Tổng thể (Distributed Architecture)
+\newcommand{\DrawSystemArchitecture}{%
+\begin{tikzpicture}[
+  node distance=1.1cm and 1.2cm,
+  font=\footnotesize,
+  box/.style={
+    rectangle, rounded corners=3pt, draw=UTHBlue, fill=white,
+    thick, minimum width=2.8cm, minimum height=0.9cm, align=center
+  },
+  layer/.style={
+    rectangle, rounded corners=6pt, draw=BorderGray, fill=LightGray,
+    inner sep=8pt
+  },
+  arrow/.style={
+    ->, >=Latex, thick, draw=UTHBlue
+  },
+  dataarrow/.style={
+    ->, >=Latex, dashed, thick, draw=ForestGreen
+  }
+]
+
+  % Cột 1: Thu thập (Ingestion)
+  \node[box] (t1) {\textbf{Tier 1: arXiv RSS}\\\scriptsize Cập nhật 24h (02:00 AM)};
+  \node[box, below=0.4cm of t1] (t2) {\textbf{Tier 2: OAI-PMH}\\\scriptsize 10,000 bài (02:10 AM)};
+  \node[box, below=0.4cm of t2] (t3) {\textbf{Tier 3: Archive}\\\scriptsize OpenAlex / S2 Landmark};
+  \begin{scope}[on background layer]
+    \node[layer, fit=(t1) (t3), label=above:{\textbf{\color{UTHBlue}1. Ingestion Sources}}] (ingest_layer) {};
+  \end{scope}
+
+  % Cột 2: Message Broker & Workers
+  \node[box, right=1.2cm of t2, fill=Orange!10, draw=Orange!80!black] (rmq) {\textbf{RabbitMQ AMQP}\\\scriptsize Queue: \texttt{paper\_ingest}\\\scriptsize DLQ (Max 3 retries)};
+  \node[box, below=0.5cm of rmq] (workers) {\textbf{Parallel Workers}\\\scriptsize AcademicHTMLParser\\\scriptsize Nomic Embed v1.5};
+  \begin{scope}[on background layer]
+    \node[layer, fit=(rmq) (workers), label=above:{\textbf{\color{Orange!80!black}2. Broker \& Workers}}] (broker_layer) {};
+  \end{scope}
+
+  % Cột 3: Medallion Storage
+  \node[box, right=1.2cm of rmq, yshift=0.8cm, fill=Blue!5] (bronze) {\textbf{Bronze Zone (S3)}\\\scriptsize Raw HTML5 \& JSON\\\scriptsize SHA-256 Ledger};
+  \node[box, below=0.4cm of bronze, fill=Blue!10] (silver) {\textbf{Silver Zone (S3)}\\\scriptsize Parquet (zstd) theo năm\\\scriptsize 2.76M Công thức toán};
+  \node[box, below=0.4cm of silver, fill=Red!10, draw=Red!80!black] (gold) {\textbf{Gold Zone (Qdrant)}\\\scriptsize HNSW 768-D Vectors\\\scriptsize Mining JSON Artifacts};
+  \begin{scope}[on background layer]
+    \node[layer, fit=(bronze) (gold), label=above:{\textbf{\color{UTHBlue}3. Medallion Lakehouse}}] (storage_layer) {};
+  \end{scope}
+
+  % Cột 4: Analytics & Serving
+  \node[box, right=1.2cm of silver, yshift=0.8cm, fill=Green!10, draw=ForestGreen] (mining) {\textbf{4 Mining Pillars}\\\scriptsize FP-Growth | Clustering\\\scriptsize PageRank | Anomalies};
+  \node[box, below=0.5cm of mining, fill=Purple!10, draw=Purple] (api) {\textbf{FastAPI Backend (:8000)}\\\scriptsize RRF Hybrid Search\\\scriptsize Graph Authority Boost};
+  \node[box, below=0.5cm of api, fill=Teal!10, draw=Teal] (ui) {\textbf{React 19 Dashboard}\\\scriptsize Giao diện 3D \& Bento\\\scriptsize Chatbot RAG Grounded};
+  \begin{scope}[on background layer]
+    \node[layer, fit=(mining) (ui), label=above:{\textbf{\color{Purple}4. Intelligence \& Serving}}] (serving_layer) {};
+  \end{scope}
+
+  % Kết nối mũi tên luồng dữ liệu
+  \draw[arrow] (t1.east) -- (rmq.west);
+  \draw[arrow] (t2.east) -- (rmq.west);
+  \draw[arrow] (t3.east) -- (rmq.west);
+  \draw[arrow] (rmq.south) -- (workers.north);
+  \draw[arrow] (workers.east) -- (bronze.west);
+  \draw[arrow] (workers.east) -- (silver.west);
+  \draw[arrow] (workers.east) -- (gold.west);
+  \draw[arrow] (silver.east) -- (mining.west);
+  \draw[arrow] (mining.south) -- (api.north);
+  \draw[arrow] (gold.east) -- (api.west);
+  \draw[arrow] (api.south) -- (ui.north);
+
+\end{tikzpicture}
+}
+
+% 2. Sơ đồ Luồng Truy xuất RAG Kết hợp Data Mining (RAG + 4 Pillars Flow)
+\newcommand{\DrawRagPipelineDiagram}{%
+\begin{tikzpicture}[
+  node distance=0.8cm and 0.8cm,
+  font=\footnotesize,
+  box/.style={
+    rectangle, rounded corners=3pt, draw=UTHBlue, fill=white,
+    thick, minimum width=2.5cm, minimum height=0.8cm, align=center
+  },
+  arrow/.style={->, >=Latex, thick, draw=UTHBlue}
+]
+
+  \node[box, fill=Gray!10] (query) {\textbf{User Query}\\\scriptsize Câu hỏi học thuật};
+  \node[box, right=0.8cm of query] (embed) {\textbf{Nomic Bi-Encoder}\\\scriptsize Vector 768-D};
+  \node[box, right=0.8cm of embed] (qdrant) {\textbf{Qdrant HNSW}\\\scriptsize Thu hồi Top-$k=15$};
+  \node[box, below=0.8cm of qdrant] (rrf) {\textbf{Reciprocal Rank Fusion}\\\scriptsize Dense + Lexical BM25};
+  \node[box, left=0.8cm of rrf, fill=Orange!10, draw=Orange!80!black] (graph) {\textbf{Pillar 3: PageRank}\\\scriptsize Authority Multiplier (+25\%)};
+  \node[box, left=0.8cm of graph, fill=Green!10, draw=ForestGreen] (rules) {\textbf{Pillar 1: FP-Growth}\\\scriptsize Query Expansion};
+  \node[box, below=0.8cm of rrf, fill=Red!10, draw=Red!80!black] (rerank) {\textbf{Cross-Encoder Reranker}\\\scriptsize ms-marco-MiniLM-L-6-v2};
+  \node[box, left=1.2cm of rerank, fill=Purple!10, draw=Purple] (llm) {\textbf{Local Qwen2.5-7B}\\\scriptsize Strict Grounding Guardrails};
+  \node[box, below=0.8cm of llm, fill=Teal!10, draw=Teal] (answer) {\textbf{Grounded Answer}\\\scriptsize Kèm trích dẫn \texttt{[Paper: ID]}};
+
+  \draw[arrow] (query) -- (embed);
+  \draw[arrow] (embed) -- (qdrant);
+  \draw[arrow] (qdrant) -- (rrf);
+  \draw[arrow] (graph) -- (rrf);
+  \draw[arrow] (query.south) |- (rules.west);
+  \draw[arrow] (rules) -- (graph);
+  \draw[arrow] (rrf) -- (rerank);
+  \draw[arrow] (rerank) -- (llm);
+  \draw[arrow] (llm) -- (answer);
+
+\end{tikzpicture}
+}
