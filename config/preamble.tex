@@ -46,9 +46,9 @@
 
 % --- Giãn dòng và thụt đầu dòng ---
 \usepackage{setspace}
-\setstretch{1.25} % Giãn dòng 1.25 - 1.3 chuẩn bài tập lớn
+\setstretch{1.3} % Giãn dòng 1.3 chuẩn bài tập lớn UTH
 \setlength{\parindent}{1.0cm}
-\setlength{\parskip}{4pt plus 2pt minus 1pt}
+\setlength{\parskip}{4pt plus 1pt minus 1pt}
 
 % --- Toán học nâng cao & Ký hiệu ---
 \usepackage{amsmath,amssymb,amsfonts,mathtools,amsthm}
@@ -112,22 +112,35 @@
   #1
 }
 
-% --- Định dạng Đề mục (Section / Chapter) ---
+% --- Định dạng Đề mục (Section / Chapter) Chuẩn hóa ---
 \usepackage{titlesec}
-\titleformat{\chapter}[hang]
-  {\normalfont\bfseries\Large\color{UTHBlue}}
-  {\thechapter.}{1em}{}
-\titlespacing*{\chapter}{0pt}{-10pt}{15pt}
+\renewcommand{\chaptertitlename}{CHƯƠNG}
+
+% Tiêu đề chương có đánh số: CHƯƠNG X (dòng 1), TÊN CHƯƠNG (dòng 2) - IN HOA, MÀU ĐEN, IN ĐẬM, CĂN GIỮA
+\titleformat{\chapter}[display]
+  {\normalfont\bfseries\Large\color{black}\centering}
+  {\MakeUppercase{\chaptertitlename\ \thechapter}}
+  {0.6ex}
+  {\MakeUppercase}
+\titlespacing*{\chapter}{0pt}{-10pt}{20pt}
+
+% Tiêu đề chương không đánh số (Tóm tắt, Abstract, Mục lục...): IN HOA, MÀU ĐEN, IN ĐẬM, CĂN GIỮA
+\titleformat{name=\chapter,numberless}[block]
+  {\normalfont\bfseries\Large\color{black}\centering}
+  {}
+  {0pt}
+  {\MakeUppercase}
+\titlespacing*{name=\chapter,numberless}{0pt}{-10pt}{20pt}
 
 \titleformat{\section}
-  {\normalfont\bfseries\large\color{DarkNavy}}
+  {\normalfont\bfseries\large\color{black}}
   {\thesection}{1em}{}
-\titlespacing*{\section}{0pt}{12pt}{6pt}
+\titlespacing*{\section}{0pt}{14pt}{6pt}
 
 \titleformat{\subsection}
-  {\normalfont\bfseries\normalsize\color{DarkNavy}}
+  {\normalfont\bfseries\normalsize\color{black}}
   {\thesubsection}{1em}{}
-\titlespacing*{\subsection}{0pt}{8pt}{4pt}
+\titlespacing*{\subsection}{0pt}{10pt}{4pt}
 
 % --- Header & Footer ---
 \usepackage{fancyhdr}
@@ -137,6 +150,9 @@
 \fancyhead[R]{\small\thepage}
 \renewcommand{\headrulewidth}{0.4pt}
 \renewcommand{\footrulewidth}{0pt}
+
+% --- Hỗ trợ ngắt dòng đường dẫn và URL tự động ---
+\usepackage{xurl}
 
 % --- Hyperlinks & Metadata PDF ---
 \usepackage{hyperref}
@@ -162,5 +178,29 @@
 
 \usepackage{enumitem}
 \setlist{itemsep=2pt,topsep=2pt,parsep=0pt}
+
+% --- Cấu hình Mục lục (TOC), Danh mục hình ảnh (LOF), Danh mục bảng biểu (LOT) ---
+\usepackage{tocloft}
+\renewcommand{\contentsname}{MỤC LỤC}
+\renewcommand{\cfttoctitlefont}{\hfill\bfseries\Large\color{black}}
+\renewcommand{\cftaftertoctitle}{\hfill}
+
+% Đường chấm nối dài tự động cho toàn bộ các cấp đề mục
+\renewcommand{\cftchapleader}{\cftdotfill{\cftsecdotsep}}
+\renewcommand{\cftsecleader}{\cftdotfill{\cftsecdotsep}}
+\renewcommand{\cftsubsecleader}{\cftdotfill{\cftsecdotsep}}
+\renewcommand{\cftsubsubsecleader}{\cftdotfill{\cftsecdotsep}}
+
+% Đồng bộ Danh mục hình vẽ
+\renewcommand{\listfigurename}{DANH MỤC HÌNH VẼ}
+\renewcommand{\cftloftitlefont}{\hfill\bfseries\Large\color{black}}
+\renewcommand{\cftafterloftitle}{\hfill}
+\renewcommand{\cftfigleader}{\cftdotfill{\cftsecdotsep}}
+
+% Đồng bộ Danh mục bảng biểu
+\renewcommand{\listtablename}{DANH MỤC BẢNG BIỂU}
+\renewcommand{\cftlottitlefont}{\hfill\bfseries\Large\color{black}}
+\renewcommand{\cftafterlottitle}{\hfill}
+\renewcommand{\cfttableader}{\cftdotfill{\cftsecdotsep}}
 
 \usepackage{tocbibind} % Đưa mục tài liệu tham khảo vào TOC

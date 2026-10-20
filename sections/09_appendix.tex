@@ -16,24 +16,36 @@ Nhằm bảo đảm tính minh bạch học thuật, toàn bộ các nội dung,
   \small
   \caption{Ma Trận Truy Nguyên Nguồn Gốc từ Báo Cáo tới Mã Nguồn và Tệp Dữ Liệu Thực Tế}
   \label{tab:traceability_matrix}
-  \begin{tabularx}{\textwidth}{@{}l p{4.5cm} p{6.5cm}@{}}
-    \toprule
+  \begin{tabularx}{\textwidth}{|l|p{4.5cm}|X|}
+    \hline
     \textbf{Chương / Mục} & \textbf{Nội dung Trọng tâm} & \textbf{Đường dẫn Tệp Nguồn trong Repository} \\
-    \midrule
-    \textbf{Chương 1} & Business Understanding \& KPI & \texttt{docs/OVERVIEW.md}, \texttt{SETUP.md} \\
-    \textbf{Chương 2} & Thống kê mô tả \& 4 Insights EDA & \texttt{data/gold/mining/eda\_summary.json}, \texttt{src/mining/eda\_engine.py} \\
-    \textbf{Chương 3} & Thu thập 3 tầng \& Medallion S3 & \texttt{src/ingestion/arxiv\_batch\_harvester.py}, \texttt{src/storage/duckdb\_engine.py} \\
-    \textbf{Chương 3} & AcademicHTMLParser \& Chunking & \texttt{src/transformation/html\_parser.py}, \texttt{src/indexing/chunker.py} \\
-    \textbf{Chương 3} & Embedding Nomic Text v1.5 & \texttt{src/indexing/embedder.py}, \texttt{src/indexing/qdrant\_manager.py} \\
-    \textbf{Chương 4.1} & Trụ cột 1: FP-Growth Rules & \texttt{src/mining/association\_rules.py}, \texttt{data/gold/mining/association\_rules.json} \\
-    \textbf{Chương 4.2} & Trụ cột 2: K-Means \& DBSCAN & \texttt{src/mining/cluster\_analysis.py}, \texttt{data/gold/mining/clusters.json} \\
-    \textbf{Chương 4.3} & Trụ cột 3: Graph Mining \& PageRank & \texttt{src/mining/graph\_mining.py}, \texttt{data/gold/mining/graph\_coauthorship.json} \\
-    \textbf{Chương 4.4} & Trụ cột 4: Trend \& Isolation Forest & \texttt{src/mining/trend\_anomaly\_mining.py}, \texttt{data/gold/mining/trends\_anomalies.json} \\
-    \textbf{Chương 4.5} & Tích hợp RAG \& Authority Boost & \texttt{backend/app/services/retrieval\_service.py}, \texttt{backend/app/services/rag\_service.py} \\
-    \textbf{Chương 5.1} & Đánh giá Benchmark DeepEval 2.x & \texttt{docs/benchmarks/RAG\_EVALUATION\_REPORT\_21\_SAMPLES.md} \\
-    \textbf{Chương 5.2} & Đo lường Độ trễ GPU RTX 4060 & \texttt{docs/benchmarks/PERFORMANCE\_BENCHMARK\_REPORT.md} \\
-    \textbf{Chương 6} & Triển khai Docker, Airflow \& MinIO & \texttt{README.md}, \texttt{.env\_example}, \texttt{dags/}, \texttt{backend/app/main.py} \\
-    \bottomrule
+    \hline
+    \textbf{Chương 1} & Business Understanding \& KPI & \path{docs/OVERVIEW.md}, \path{SETUP.md} \\
+    \hline
+    \textbf{Chương 2} & Thống kê mô tả \& 4 Insights EDA & \path{data/gold/mining/eda_summary.json}, \path{src/mining/eda_engine.py} \\
+    \hline
+    \textbf{Chương 3} & Thu thập 3 tầng \& Medallion S3 & \path{src/ingestion/arxiv_batch_harvester.py}, \path{src/storage/duckdb_engine.py} \\
+    \hline
+    \textbf{Chương 3} & AcademicHTMLParser \& Chunking & \path{src/transformation/html_parser.py}, \path{src/indexing/chunker.py} \\
+    \hline
+    \textbf{Chương 3} & Embedding Nomic Text v1.5 & \path{src/indexing/embedder.py}, \path{src/indexing/qdrant_manager.py} \\
+    \hline
+    \textbf{Chương 4.1} & Trụ cột 1: FP-Growth Rules & \path{src/mining/association_rules.py}, \path{data/gold/mining/association_rules.json} \\
+    \hline
+    \textbf{Chương 4.2} & Trụ cột 2: K-Means \& DBSCAN & \path{src/mining/cluster_analysis.py}, \path{data/gold/mining/clusters.json} \\
+    \hline
+    \textbf{Chương 4.3} & Trụ cột 3: Graph Mining \& PageRank & \path{src/mining/graph_mining.py}, \path{data/gold/mining/graph_coauthorship.json} \\
+    \hline
+    \textbf{Chương 4.4} & Trụ cột 4: Trend \& Isolation Forest & \path{src/mining/trend_anomaly_mining.py}, \path{data/gold/mining/trends_anomalies.json} \\
+    \hline
+    \textbf{Chương 4.5} & Tích hợp RAG \& Authority Boost & \path{backend/app/services/retrieval_service.py}, \path{backend/app/services/rag_service.py} \\
+    \hline
+    \textbf{Chương 5.1} & Đánh giá Benchmark DeepEval 2.x & \path{docs/benchmarks/RAG_EVALUATION_REPORT_21_SAMPLES.md} \\
+    \hline
+    \textbf{Chương 5.2} & Đo lường Độ trễ GPU RTX 4060 & \path{docs/benchmarks/PERFORMANCE_BENCHMARK_REPORT.md} \\
+    \hline
+    \textbf{Chương 6} & Triển khai Docker, Airflow \& MinIO & \path{README.md}, \path{.env_example}, \path{dags/}, \path{backend/app/main.py} \\
+    \hline
   \end{tabularx}
 \end{table}
 

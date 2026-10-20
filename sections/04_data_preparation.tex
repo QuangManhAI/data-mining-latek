@@ -51,14 +51,14 @@ Khác với các tài liệu văn phòng thông thường, tài liệu khoa họ
 Hệ thống triển khai kiến trúc **Medallion Lakehouse** chuẩn công nghiệp, phân tách triệt để giữa tầng tính toán (Compute) và tầng lưu trữ (Storage) nhằm tối ưu hóa chi phí và khả năng mở rộng:
 
 \begin{enumerate}[label=\textbf{\arabic*.}]
-  \item \textbf{Bronze Zone (\texttt{s3://uth-scientific-lakehouse/bronze/papers/YYYY/})}:
+  \item \textbf{Bronze Zone (\path{s3://uth-scientific-lakehouse/bronze/papers/YYYY/})}:
     Lưu trữ nguyên bản các tệp JSON siêu dữ liệu thô và tệp HTML5 học thuật được cào từ arXiv/ar5iv. Dữ liệu tại tầng này mang tính bất biến (immutable), cho phép hệ thống tái xử lý từ đầu bất cứ khi nào cập nhật thuật toán bóc tách mới.
-  \item \textbf{Silver Zone (\texttt{s3://uth-scientific-lakehouse/silver/papers/year=YYYY/})}:
+  \item \textbf{Silver Zone (\path{s3://uth-scientific-lakehouse/silver/papers/year=YYYY/})}:
     Dữ liệu sau khi làm sạch được chuyển đổi sang định dạng cột **Apache Parquet**, nén bằng thuật toán \texttt{zstd} (Zstandard) mức nén tối ưu. Dữ liệu được phân vùng (partitioned) theo năm xuất bản. Tại tầng này, công cụ **DuckDB OLAP** có thể truy vấn trực tiếp dữ liệu từ S3 với kỹ thuật \textit{Predicate Pushdown} và \textit{Column Projection}, đạt tốc độ quét hàng trăm nghìn dòng chỉ trong vài mili-giây mà không cần nạp toàn bộ vào RAM.
   \item \textbf{Gold Zone}:
     \begin{itemize}
       \item \textit{Vector Store (Qdrant)}: Lưu trữ các vector biểu diễn ngữ nghĩa 768 chiều của các đoạn văn bản học thuật (\texttt{scientific\_papers\_gold}) được chỉ mục bằng đồ thị HNSW (Hierarchical Navigable Small World) viết bằng Rust, hỗ trợ lọc metadata thời gian thực theo chuyên ngành.
-      \item \textit{Mining Artifacts (\texttt{s3://.../gold/mining/})}: Lưu trữ các tệp JSON tri thức cô đọng được xuất ra từ 4 Trụ cột Khai phá: đồ thị mạng lưới \texttt{graph\_coauthorship.json}, tập luật kết hợp \texttt{association\_rules.json}, phân cụm \texttt{clusters.json}, và danh sách dị biệt \texttt{trends\_anomalies.json}.
+      \item \textit{Mining Artifacts (\path{s3://.../gold/mining/})}: Lưu trữ các tệp JSON tri thức cô đọng được xuất ra từ 4 Trụ cột Khai phá: đồ thị mạng lưới \texttt{graph\_coauthorship.json}, tập luật kết hợp \texttt{association\_rules.json}, phân cụm \texttt{clusters.json}, và danh sách dị biệt \texttt{trends\_anomalies.json}.
     \end{itemize}
 \end{enumerate}
 

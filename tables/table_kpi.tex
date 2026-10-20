@@ -1,5 +1,5 @@
 % ==============================================================================
-% BẢNG KPI KỸ THUẬT VÀ NGHIỆP VỤ HỆ THỐNG
+% BẢNG KPI KỸ THUẬT VÀ NGHIỆP VỤ HỆ THỐNG (CHUẨN VIỀN LƯỚI HỌC THUẬT)
 % ==============================================================================
 
 \begin{table}[htbp]
@@ -7,30 +7,39 @@
   \small
   \caption{Bảng tổng hợp KPI Kỹ thuật và Nghiệp vụ: So sánh Mục tiêu Đề xuất và Kết quả Thực nghiệm}
   \label{tab:system_kpis}
-  \begin{tabularx}{\textwidth}{@{}l p{3.2cm} p{2.2cm} c c p{2.8cm}@{}}
-    \toprule
+  \begin{tabularx}{\textwidth}{|l|p{3.2cm}|p{2.2cm}|c|c|X|}
+    \hline
     \textbf{Tên chỉ số (KPI)} & \textbf{Ý nghĩa \& Đơn vị} & \textbf{Phương pháp đo} & \textbf{Mục tiêu} & \textbf{Thực nghiệm} & \textbf{Nguồn xác minh} \\
-    \midrule
-    \multicolumn{6}{@{}l}{\textbf{1. Nhóm KPI Hiệu năng Truy xuất \& Chất lượng RAG (DeepEval 2.x)}} \\
-    \midrule
+    \hline
+    \multicolumn{6}{|l|}{\cellcolor{LightGray}\textbf{1. Nhóm KPI Hiệu năng Truy xuất \& Chất lượng RAG (DeepEval 2.x)}} \\
+    \hline
     \textbf{Contextual Precision} & Tỷ lệ đoạn trích chứa câu trả lời xếp ở thứ hạng cao & DeepEval LLM Judge & $\ge 0.70$ & \textbf{0.860} (80\% pass) & \texttt{RAG\_EVALUATION\_REPORT} \\
+    \hline
     \textbf{Contextual Recall} & Mức độ bao phủ toàn diện các luận điểm khoa học & DeepEval LLM Judge & $\ge 0.85$ & \textbf{1.000} (100\% pass) & \texttt{RAG\_EVALUATION\_REPORT} \\
+    \hline
     \textbf{Answer Relevancy} & Độ bám sát trọng tâm câu hỏi, loại bỏ filler & DeepEval LLM Judge & $\ge 0.70$ & \textbf{0.752} (55\% pass) & \texttt{RAG\_EVALUATION\_REPORT} \\
+    \hline
     \textbf{Faithfulness} & Mức độ trung thực với tài liệu dẫn chứng, chống ảo giác & DeepEval LLM Judge & $\ge 0.70$ & \textbf{0.699} (53\% pass) & \texttt{RAG\_EVALUATION\_REPORT} \\
+    \hline
     \textbf{Citation Grounding} & Tỷ lệ câu trả lời dẫn đúng định dạng \texttt{[Paper: ID]} & Trích xuất RegEx / G-Eval & $\ge 80\%$ & \textbf{90.0\%} (18/20) & \texttt{RAG\_EVALUATION\_REPORT} \\
-    \midrule
-    \multicolumn{6}{@{}l}{\textbf{2. Nhóm KPI Tốc độ Xử lý \& Phần cứng (NVIDIA RTX 4060 GPU)}} \\
-    \midrule
+    \hline
+    \multicolumn{6}{|l|}{\cellcolor{LightGray}\textbf{2. Nhóm KPI Tốc độ Xử lý \& Phần cứng (NVIDIA RTX 4060 GPU)}} \\
+    \hline
     \textbf{Vector Search Latency} & Độ trễ truy vấn vector Top-k trên Qdrant Cloud/WAN & $p50$ vòng lặp 20 lần & $\le 500\text{ ms}$ & \textbf{268.1 ms} & \texttt{PERFORMANCE\_REPORT} \\
+    \hline
     \textbf{Time To First Token} & Thời gian phản hồi token đầu tiên (TTFT) & Đo thời gian prefill & $\le 1.5\text{ s}$ & \textbf{609.8 ms} & \texttt{PERFORMANCE\_REPORT} \\
+    \hline
     \textbf{Token Generation Speed} & Tốc độ sinh văn bản tự hồi quy & Tốc độ \texttt{tok/s} (CUDA) & $\ge 30\text{ tok/s}$ & \textbf{46.33 tok/s} & \texttt{PERFORMANCE\_REPORT} \\
+    \hline
     \textbf{Peak VRAM Footprint} & Dung lượng bộ nhớ đồ họa tiêu thụ tối đa & NVIDIA-SMI telemetry & $\le 7.0\text{ GB}$ & \textbf{5.7 GB / 8.0 GB} & \texttt{PERFORMANCE\_REPORT} \\
-    \midrule
-    \multicolumn{6}{@{}l}{\textbf{3. Nhóm KPI Khai phá \& Hồ dữ liệu (Lakehouse \& Mining)}} \\
-    \midrule
+    \hline
+    \multicolumn{6}{|l|}{\cellcolor{LightGray}\textbf{3. Nhóm KPI Khai phá \& Hồ dữ liệu (Lakehouse \& Mining)}} \\
+    \hline
     \textbf{Enrichment Ratio} & Tỷ lệ bài báo bóc tách thành công HTML5 \& Math & Đếm Parquet Silver & $\ge 85\%$ & \textbf{90.15\%} & \texttt{eda\_summary.json} \\
+    \hline
     \textbf{LaTeX Math Extracted} & Tổng số công thức toán học được bảo toàn & Thống kê DuckDB OLAP & $\ge 1.5\text{M}$ & \textbf{2,765,395} & \texttt{eda\_summary.json} \\
+    \hline
     \textbf{Mining Engine Runtime} & Thời gian hoàn thành 4 trụ cột Mining định kỳ & Đo tổng thời gian chạy & $\le 120\text{ s}$ & \textbf{73.33 s} & \texttt{mining\_manifest.json} \\
-    \bottomrule
+    \hline
   \end{tabularx}
 \end{table}

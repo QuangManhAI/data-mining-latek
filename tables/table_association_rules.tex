@@ -1,5 +1,5 @@
 % ==============================================================================
-% BẢNG CÁC LUẬT KẾT HỢP KHAI PHÁ BỞI FP-GROWTH
+% BẢNG CÁC LUẬT KẾT HỢP KHAI PHÁ BỞI FP-GROWTH (CHUẨN VIỀN LƯỚI)
 % ==============================================================================
 
 \begin{table}[htbp]
@@ -7,23 +7,31 @@
   \small
   \caption{Danh mục Các Luật Kết hợp Tiêu biểu Khai phá bằng Thuật toán FP-Growth trên Hồ Dữ liệu Học thuật (Nguồn: \texttt{association\_rules.json})}
   \label{tab:association_rules}
-  \begin{tabularx}{\textwidth}{@{}l p{4.2cm} p{4.2cm} c c c c@{}}
-    \toprule
+  \begin{tabularx}{\textwidth}{|c|X|X|c|c|c|c|}
+    \hline
     \textbf{STT} & \textbf{Tiền đề (Antecedents $X$)} & \textbf{Hệ quả (Consequents $Y$)} & \textbf{Support} & \textbf{Conf.} & \textbf{Lift} & \textbf{Conviction} \\
-    \midrule
+    \hline
     \textbf{1} & \texttt{tag:model-quantization} & \texttt{tag:transformer} & 0.0177 & 0.500 & \textbf{3.357} & 1.702 \\
+    \hline
     \textbf{2} & \texttt{tag:transformer} & \texttt{tag:model-quantization} & 0.0177 & 0.119 & \textbf{3.357} & 1.095 \\
+    \hline
     \textbf{3} & \texttt{tag:knowledge-distillation} & \texttt{tag:federated-learning} & 0.0248 & 0.280 & \textbf{2.820} & 1.251 \\
+    \hline
     \textbf{4} & \texttt{tag:federated-learning} & \texttt{tag:knowledge-distillation} & 0.0248 & 0.250 & \textbf{2.820} & 1.215 \\
+    \hline
     \textbf{5} & \texttt{tag:zero-shot-learning} & \texttt{tag:diffusion-models} & 0.0213 & 0.231 & \textbf{1.860} & 1.139 \\
+    \hline
     \textbf{6} & \texttt{tag:multimodal-ai} & \texttt{tag:attention-mech} & 0.0213 & 0.118 & \textbf{1.071} & 1.009 \\
+    \hline
     \textbf{7} & \texttt{tag:convex-optimization} & \texttt{tag:reinforcement-learning} & 0.0248 & 0.200 & \textbf{0.910} & 0.975 \\
-    \midrule
-    \multicolumn{7}{@{}l}{\textbf{Nhóm Luật Chuyên ngành Liên kết (Category Domain Rules)}} \\
-    \midrule
+    \hline
+    \multicolumn{7}{|l|}{\cellcolor{LightGray}\textbf{Nhóm Luật Chuyên ngành Liên kết (Category Domain Rules)}} \\
+    \hline
     \textbf{8} & \{\texttt{cat:cs.AI}, \texttt{cat:cs.CV}\} & \{\texttt{cat:cs.LG}\} & 0.0650 & 0.852 & \textbf{2.540} & 4.980 \\
+    \hline
     \textbf{9} & \{\texttt{cat:cs.AI}, \texttt{cat:cs.CL}\} & \{\texttt{cat:cs.LG}\} & 0.0520 & 0.784 & \textbf{2.330} & 3.420 \\
+    \hline
     \textbf{10} & \{\texttt{cat:stat.ML}\} & \{\texttt{cat:cs.LG}\} & 0.0814 & 0.892 & \textbf{2.660} & 6.810 \\
-    \bottomrule
+    \hline
   \end{tabularx}
 \end{table}
