@@ -1,17 +1,20 @@
 % ==============================================================================
-% BẢNG ĐÁNH GIÁ HIỆU NĂNG RAG BẰNG DEEPEVAL 2.X (CHUẨN VIỀN LƯỚI)
+% BẢNG ĐÁNH GIÁ HIỆU NĂNG RAG BẰNG DEEPEVAL 2.X (CHUẨN VIỀN LƯỚI & KHỔ TRANG)
 % ==============================================================================
 
 \begin{table}[htbp]
   \centering
-  \small
+  \normalsize
   \caption{Kết quả So sánh Hiệu năng giữa Pipeline Cơ sở (Dense Baseline) và Pipeline Nâng cao (Upgraded RAG) qua Bộ Tiêu chuẩn DeepEval 2.x (Nguồn: \texttt{RAG\_EVALUATION\_REPORT\_21\_SAMPLES.md})}
   \label{tab:rag_benchmark}
-  \begin{tabularx}{\textwidth}{|p{3.8cm}|c|c|c|c|c|X|}
+  \vspace{4pt}
+  \noindent\resizebox{\textwidth}{!}{%
+  \setlength{\tabcolsep}{4.0pt}
+  \begin{tabular}{|>{\raggedright\arraybackslash}p{3.6cm}|>{\centering\arraybackslash}p{1.5cm}|>{\centering\arraybackslash}p{1.8cm}|>{\centering\arraybackslash}p{1.6cm}|>{\centering\arraybackslash}p{1.8cm}|>{\centering\arraybackslash}p{1.5cm}|>{\centering\arraybackslash}p{2.4cm}|}
     \hline
     \textbf{Chỉ số DeepEval} & \textbf{Baseline (Top-5)} & \textbf{Tỷ lệ Đạt} & \textbf{Upgraded RAG} & \textbf{Tỷ lệ Đạt} & \textbf{Mức tăng $\Delta$} & \textbf{Tăng tương đối} \\
     \hline
-    \textbf{Contextual Precision} $\uparrow$ & 0.637 & 60.0\% (12/20) & \textbf{0.860} & \textbf{80.0\% (16/20)} & \textbf{+0.223} & \textbf{+35.0\%} \textsuperscript{***} \\
+    \textbf{Contextual Precision} $\uparrow$ & 0.637 & 60.0\% (12/20) & \textbf{0.860} & \textbf{80.0\% (16/20)} & \textbf{+0.223} & \textbf{+35.0\%} \textsuperscript{(***)} \\
     \hline
     \textbf{Answer Relevancy} $\uparrow$ & 0.687 & 47.4\% (9/19) & \textbf{0.752} & \textbf{55.0\% (11/20)} & \textbf{+0.065} & \textbf{+9.4\%} \\
     \hline
@@ -19,9 +22,10 @@
     \hline
     \textbf{Faithfulness} $\uparrow$ & 0.668 & 50.0\% (8/16) & \textbf{0.699} & \textbf{52.9\% (9/17)} & \textbf{+0.031} & \textbf{+4.7\%} \\
     \hline
-    \textbf{Citation Grounding} $\uparrow$ & 0.757 & 90.5\% (19/21) & \textbf{0.720} & \textbf{90.0\% (18/20)} & -0.037 & Duy trì chuẩn $\ge 0.70$ \\
+    \textbf{Citation Grounding} $\uparrow$ & 0.757 & 90.5\% (19/21) & \textbf{0.720} & \textbf{90.0\% (18/20)} & -0.037 & Chuẩn $\ge 0.70$ \\
     \hline
-    \textbf{Contextual Relevancy} & 0.578 & 44.4\% (4/9) & 0.562 & 40.0\% (6/15) & -0.016 & Chấp nhận đánh đổi \\
+    \textbf{Contextual Relevancy} & 0.578 & 44.4\% (4/9) & 0.562 & 40.0\% (6/15) & -0.016 & Đánh đổi \\
     \hline
-  \end{tabularx}
+  \end{tabular}%
+  }
 \end{table}

@@ -7,11 +7,11 @@
 
 \section{Tổng Kết Các Kết Quả Đạt Được}
 
-Đồ án bài tập lớn môn **Khai phá Dữ liệu (Data Mining)** với đề tài \textit{"Khai thác dữ liệu nghiên cứu khoa học thời gian thực hướng tới xây dựng hệ thống truy xuất tri thức tăng cường (RAG) cho miền AI/DS"} đã hoàn thành xuất sắc toàn bộ các mục tiêu đặt ra:
+Đồ án bài tập lớn môn \textbf{Khai thác Dữ liệu} với đề tài \textit{"Khai thác dữ liệu nghiên cứu khoa học thời gian thực hướng tới xây dựng hệ thống truy xuất tri thức tăng cường (RAG) cho miền AI/DS"} đã hoàn thành xuất sắc toàn bộ các mục tiêu đặt ra:
 
 \begin{enumerate}[label=\textbf{\arabic*.}]
   \item \textbf{Xây dựng thành công Hồ dữ liệu Học thuật Medallion Lakehouse}:
-    Thu thập và xử lý hơn **13,000 bài báo khoa học** với hơn **2.76 triệu công thức toán học LaTeX** được bóc tách và bảo toàn nguyên vẹn từ mã nguồn HTML5, đạt tỷ lệ làm giàu nội dung $90.15\%$. Dữ liệu được tổ chức dạng cột nén Apache Parquet phân vùng theo năm, cho phép công cụ DuckDB OLAP quét phân tích với hiệu năng cao vượt trội.
+    Thu thập và xử lý hơn \textbf{13,000 bài báo khoa học} với hơn \textbf{2.76 triệu công thức toán học LaTeX} được bóc tách và bảo toàn nguyên vẹn từ mã nguồn HTML5, đạt tỷ lệ làm giàu nội dung $90.15\%$. Dữ liệu được tổ chức dạng cột nén Apache Parquet phân vùng theo năm, cho phép công cụ DuckDB OLAP quét phân tích với hiệu năng cao vượt trội.
   \item \textbf{Thực thi toàn diện và sâu sắc 4 Trụ Cột Khai Phá Dữ Liệu}:
     \begin{itemize}
       \item \textit{Trụ cột 1 (FP-Growth)}: Khai phá 22 luật kết hợp liên ngành có ý nghĩa thực tế cao ($\text{Lift} > 2.5$), mở ra khả năng mở rộng truy vấn tự động cho hệ thống RAG.
@@ -20,7 +20,7 @@
       \item \textit{Trụ cột 4 (Trend \& Anomalies)}: Đo lường động lượng xu hướng chuẩn hóa theo thị phần ($\Delta \text{Share}$) và áp dụng Isolation Forest phát hiện chính xác 260 bài báo dị biệt cấu trúc.
     \end{itemize}
   \item \textbf{Đột phá trong Hiệu năng RAG và Thẩm định DeepEval}:
-    Hệ thống RAG cải tiến kết hợp Cross-Encoder reranker, Reciprocal Rank Fusion, PageRank boost và negative guardrails đạt **Contextual Precision $0.860$ (+35.0\% so với baseline)**, **Contextual Recall $1.000$ (100\%)**, và **Citation Grounding đạt $90.0\%$**.
+    Hệ thống RAG cải tiến kết hợp Cross-Encoder reranker, Reciprocal Rank Fusion, PageRank boost và negative guardrails đạt \textbf{Contextual Precision $0.860$ (+35.0\% so với baseline)}, \textbf{Contextual Recall $1.000$ (100\%)}, và \textbf{Citation Grounding đạt $90.0\%$}.
   \item \textbf{Kiến trúc Triển khai Phân tán và Tối ưu Hóa Phần Cứng}:
     Đóng gói hoàn chỉnh hệ thống trên nền tảng Docker với MinIO S3, Qdrant HNSW vector engine, RabbitMQ broker và Apache Airflow 2.10. Tối ưu hóa thành công trên phần cứng GPU NVIDIA RTX 4060 với CUDA 12.4, đạt tốc độ sinh token $46.33\text{ tok/s}$, thời gian TTFT $609.8\text{ ms}$, và kiểm soát VRAM ổn định ở mức $5.7\text{ GB} / 8.0\text{ GB}$.
 \end{enumerate}
@@ -28,7 +28,7 @@
 \section{Đóng Góp Khoa Học và Giá Trị Ứng Dụng Thực Tiễn}
 
 \subsection{Về mặt học thuật và phương pháp luận}
-Công trình đã chứng minh một luận điểm quan trọng trong kỹ thuật trí tuệ nhân tạo hiện đại: **Trí tuệ Nhân tạo Tạo sinh (Generative AI) không thể thay thế Khai phá Dữ liệu (Data Mining), mà ngược lại, Khai phá Dữ liệu chính là nền tảng tri thức điều hướng giúp Generative AI hoạt động chính xác, trung thực và có chiều sâu**. Các thuật toán khai phá cổ điển (FP-Growth, PageRank, Isolation Forest) khi được kết hợp khéo léo với mô hình nhúng vector (Nomic Embed v1.5) và mô hình ngôn ngữ lớn (Qwen2.5-7B) đã khắc phục triệt để hiện tượng ảo giác học thuật.
+Công trình đã chứng minh một luận điểm quan trọng trong kỹ thuật trí tuệ nhân tạo hiện đại: \textbf{Trí tuệ Nhân tạo Tạo sinh (Generative AI) không thể thay thế Khai phá Dữ liệu (Data Mining), mà ngược lại, Khai phá Dữ liệu chính là nền tảng tri thức điều hướng giúp Generative AI hoạt động chính xác, trung thực và có chiều sâu}. Các thuật toán khai phá cổ điển (FP-Growth, PageRank, Isolation Forest) khi được kết hợp khéo léo với mô hình nhúng vector (Nomic Embed v1.5) và mô hình ngôn ngữ lớn (Qwen2.5-7B) đã khắc phục triệt để hiện tượng ảo giác học thuật.
 
 \subsection{Về mặt ứng dụng thực tiễn}
 Hệ thống là một công cụ thực chiến hoàn chỉnh phục vụ đắc lực cho sinh viên, giảng viên và nghiên cứu sinh ngành AI/DS tại Trường Đại học Giao thông Vận tải TP.HCM. Việc cung cấp giao diện trực quan hóa Bento Grid, trình đọc công thức toán học KaTeX và cơ chế dẫn nguồn chính xác giúp tiết kiệm hàng trăm giờ lao động khảo cứu tài liệu.

@@ -1,15 +1,17 @@
 % ==============================================================================
-% BẢNG TOP TÁC GIẢ & CÔNG TRÌNH CÓ PAGERANK CAO NHẤT (CHUẨN VIỀN LƯỚI)
+% BẢNG TOP TÁC GIẢ & CÔNG TRÌNH CÓ PAGERANK CAO NHẤT (CHUẨN VIỀN LƯỚI & KHỔ TRANG)
 % ==============================================================================
 
 \begin{table}[htbp]
   \centering
-  \small
+  \normalsize
   \caption{Top Các Tác giả và Nút Tri thức có Điểm PageRank Centrality Cao nhất trong Mạng lưới Khoa học (Nguồn: \texttt{graph\_coauthorship.json})}
   \label{tab:graph_influencers}
-  \begin{tabularx}{\textwidth}{|c|p{3.6cm}|c|c|c|c|X|}
+  \vspace{4pt}
+  \noindent\resizebox{\textwidth}{!}{%
+  \begin{tabularx}{\textwidth}{|>{\centering\arraybackslash}p{1.0cm}|>{\raggedright\arraybackslash}p{3.8cm}|>{\centering\arraybackslash}p{1.8cm}|>{\centering\arraybackslash}p{1.4cm}|>{\centering\arraybackslash}p{1.2cm}|>{\centering\arraybackslash}p{2.0cm}|>{\raggedright\arraybackslash}X|}
     \hline
-    \textbf{Hạng} & \textbf{Tác giả / Nút Mạng} & \textbf{PageRank} & \textbf{Bậc (Degree)} & \textbf{Số bài} & \textbf{Cộng đồng} & \textbf{Vai trò Mạng lưới} \\
+    \textbf{Hạng} & \textbf{Tác giả / Nút Mạng} & \textbf{PageRank} & \textbf{Bậc} & \textbf{Số bài} & \textbf{Cộng đồng} & \textbf{Vai trò Mạng lưới} \\
     \hline
     \textbf{1} & Yang Liu & \textbf{0.000509} & 237 & 38 & Community 0 & Hub liên kết nghiên cứu Học sâu \& Đa phương thức \\
     \hline
@@ -33,5 +35,6 @@
     \hline
     -- & \textit{BERT: Pre-training of Deep Bidirectional...} & 0.008710 & 1,950+ & -- & Seminal & Khởi nguồn mô hình ngôn ngữ tự giám sát \\
     \hline
-  \end{tabularx}
+  \end{tabularx}%
+  }
 \end{table}

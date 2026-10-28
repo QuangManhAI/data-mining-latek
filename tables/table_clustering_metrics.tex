@@ -1,13 +1,15 @@
 % ==============================================================================
-% BẢNG ĐÁNH GIÁ CHẤT LƯỢNG PHÂN CỤM NGỮ NGHĨA (CHUẨN VIỀN LƯỚI)
+% BẢNG ĐÁNH GIÁ CHẤT LƯỢNG PHÂN CỤM NGỮ NGHĨA (CHUẨN VIỀN LƯỚI & KHỔ TRANG)
 % ==============================================================================
 
 \begin{table}[htbp]
   \centering
-  \small
+  \normalsize
   \caption{Đánh giá Chất lượng Phân cụm Ngữ nghĩa trên Không gian Vector 768-D Chuẩn hóa L2 (Nguồn: \texttt{clusters.json})}
   \label{tab:clustering_metrics}
-  \begin{tabularx}{\textwidth}{|l|c|c|c|c|X|}
+  \vspace{4pt}
+  \noindent\resizebox{\textwidth}{!}{%
+  \begin{tabularx}{\textwidth}{|>{\raggedright\arraybackslash}p{4.2cm}|>{\centering\arraybackslash}p{1.4cm}|>{\centering\arraybackslash}p{1.6cm}|>{\centering\arraybackslash}p{1.8cm}|>{\centering\arraybackslash}p{1.6cm}|>{\raggedright\arraybackslash}X|}
     \hline
     \textbf{Thuật toán / Cấu hình} & \textbf{Số cụm ($K$)} & \textbf{Silhouette $\uparrow$} & \textbf{Davies-Bouldin $\downarrow$} & \textbf{Calinski-H. $\uparrow$} & \textbf{Nhận xét \& Phân tích Hình học} \\
     \hline
@@ -19,5 +21,6 @@
     \hline
     \textbf{DBSCAN} ($\varepsilon=0.28, \text{min}=10$) & 1--4 lõi & -- & -- & -- & Phát hiện các vùng lõi mật độ cao; $53.5\%$ mẫu là điểm ranh giới liên ngành. \\
     \hline
-  \end{tabularx}
+  \end{tabularx}%
+  }
 \end{table}

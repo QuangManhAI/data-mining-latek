@@ -16,7 +16,7 @@ Tuy nhiên, sự bùng nổ dữ liệu này cũng đặt ra bài toán nghịch
 Trong thực tiễn khai thác dữ liệu học thuật, các phương pháp tiếp cận truyền thống bộc lộ ba điểm nghẽn cốt lõi (Academic Trilemma):
 
 \begin{enumerate}[label=\textbf{\arabic*.}]
-  \item \textbf{Cấu trúc tài liệu học thuật phức tạp và mất mát ký hiệu toán học}: Phần lớn tài liệu khoa học được lưu trữ dưới định dạng PDF. Khi chuyển đổi PDF thô sang văn bản thuần túy, các công thức toán học dạng LaTeX ($...$ và $$...$$), ký hiệu ma trận, đạo hàm và cấu trúc bảng biểu thường bị vỡ vụn hoặc biến thành chuỗi ký tự vô nghĩa. Điều này làm mất đi hơn 50\% giá trị tri thức của các bài báo lý thuyết nặng về toán học như \texttt{stat.ML} hay \texttt{cs.LG}.
+  \item \textbf{Cấu trúc tài liệu học thuật phức tạp và mất mát ký hiệu toán học}: Phần lớn tài liệu khoa học được lưu trữ dưới định dạng PDF. Khi chuyển đổi PDF thô sang văn bản thuần túy, các công thức toán học dạng LaTeX (bao gồm cả công thức nội dòng \lstinline{$...$} và công thức khối \lstinline{$$...$$}), ký hiệu ma trận, đạo hàm và cấu trúc bảng biểu thường bị vỡ vụn hoặc biến thành chuỗi ký tự vô nghĩa. Điều này làm mất đi hơn 50\% giá trị tri thức của các bài báo lý thuyết nặng về toán học như \texttt{stat.ML} hay \texttt{cs.LG}.
   \item \textbf{Hiện tượng ảo giác học thuật của các LLM thương mại}: Khi được yêu cầu tổng hợp tài liệu, các mô hình ngôn ngữ lớn phổ biến (ChatGPT, Claude, Gemini) thường có xu hướng "tự bịa" ra các bài báo không tồn tại, gán ghép sai tên tác giả, hoặc trích dẫn các chỉ số benchmark không có thật để làm câu trả lời nghe có vẻ thuyết phục (\textit{hallucination}). Trong nghiên cứu khoa học, đây là sai sót nghiêm trọng nhất không thể chấp nhận.
   \item \textbf{Sự phân mảnh và thiếu cơ chế liên kết tri thức}: Tài liệu khoa học không tồn tại độc lập mà liên kết chặt chẽ qua mạng lưới trích dẫn (citation network), đồng tác giả (co-authorship), và sự tương đồng về ngữ nghĩa. Việc chỉ dựa vào tìm kiếm từ khóa thuần túy (lexical search) hoặc tìm kiếm vector phẳng (dense retrieval) không thể phản ánh được vị thế học thuật hay trường phái nghiên cứu của từng công trình.
 \end{enumerate}
@@ -26,7 +26,7 @@ Trong thực tiễn khai thác dữ liệu học thuật, các phương pháp ti
 Nhằm giải quyết triệt để các vấn đề nêu trên, đồ án xác định mục tiêu tổng thể và các mục tiêu kỹ thuật cụ thể:
 
 \subsection{Mục tiêu tổng thể}
-Xây dựng một hệ thống hoàn chỉnh từ khâu thu thập dữ liệu thời gian thực, lưu trữ trên nền tảng hồ dữ liệu học thuật (**Academic Lakehouse**), thực thi **4 Trụ cột Khai phá Dữ liệu**, và tích hợp các tri thức khai phá được vào pipeline **Truy xuất Tri thức Tăng cường (Advanced RAG)** nhằm cung cấp công cụ trợ lý nghiên cứu trung thực, bảo toàn công thức toán học và có dẫn chứng khoa học xác thực 100\%.
+Xây dựng một hệ thống hoàn chỉnh từ khâu thu thập dữ liệu thời gian thực, lưu trữ trên nền tảng hồ dữ liệu học thuật (\textbf{Academic Lakehouse}), thực thi \textbf{4 Trụ cột Khai phá Dữ liệu}, và tích hợp các tri thức khai phá được vào pipeline \textbf{Truy xuất Tri thức Tăng cường (Advanced RAG)} nhằm cung cấp công cụ trợ lý nghiên cứu trung thực, bảo toàn công thức toán học và có dẫn chứng khoa học xác thực 100\%.
 
 \subsection{Mục tiêu cụ thể}
 \begin{itemize}

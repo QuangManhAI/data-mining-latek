@@ -5,7 +5,7 @@
 \chapter{Mô Hình và Thuật Toán Khai Phá Dữ Liệu (Modeling)}
 \label{chap:modeling}
 
-Đây là chương trọng tâm của đồ án, trình bày cơ sở toán học, phương pháp luận thuật toán, kết quả thực nghiệm và cách tích hợp **4 Trụ Cột Khai Phá Dữ Liệu (The 4 Data Mining Pillars)** vào hệ thống Truy xuất Tri thức Tăng cường (Advanced RAG).
+Đây là chương trọng tâm của đồ án, trình bày cơ sở toán học, phương pháp luận thuật toán, kết quả thực nghiệm và cách tích hợp \textbf{4 Trụ Cột Khai Phá Dữ Liệu (The 4 Data Mining Pillars)} vào hệ thống Truy xuất Tri thức Tăng cường (Advanced RAG).
 
 \section{Trụ Cột 1: Khai Phá Tập Phổ Biến và Luật Kết Hợp (FP-Growth)}
 
@@ -19,9 +19,9 @@ Trong đó $\text{cat}$ là nhãn chuyên ngành arXiv, $\text{topic}$ là chủ
 \subsection{Tại sao chọn FP-Growth thay vì Apriori?}
 Thuật toán Apriori truyền thống yêu cầu sinh tập ứng viên kích thước $k$ ($C_k$) từ tập phổ biến $k-1$ ($L_{k-1}$) và phải quét lại toàn bộ cơ sở dữ liệu sau mỗi bước mở rộng. Khi số lượng mục lớn, độ phức tạp tổ hợp bùng nổ $O(2^{|I|})$ làm cạn kiệt tài nguyên bộ nhớ.
 
-Hệ thống triển khai thuật toán **FP-Growth (Frequent Pattern Growth)** (tại \texttt{src/mining/association\_rules.py}) với hai ưu điểm vượt trội:
+Hệ thống triển khai thuật toán \textbf{FP-Growth (Frequent Pattern Growth)} (tại \texttt{src/mining/association\_rules.py}) với hai ưu điểm vượt trội:
 \begin{enumerate}[label=\arabic*.]
-  \item \textbf{Chỉ quét dữ liệu 2 lần}: Lần thứ nhất đếm tần suất 1-itemset để loại bỏ các mục dưới ngưỡng hỗ trợ tối thiểu và sắp xếp theo tần suất giảm dần. Lần thứ hai dựng cây **FP-Tree** nén toàn bộ thông tin giao dịch trong bộ nhớ RAM.
+  \item \textbf{Chỉ quét dữ liệu 2 lần}: Lần thứ nhất đếm tần suất 1-itemset để loại bỏ các mục dưới ngưỡng hỗ trợ tối thiểu và sắp xếp theo tần suất giảm dần. Lần thứ hai dựng cây \textbf{FP-Tree} nén toàn bộ thông tin giao dịch trong bộ nhớ RAM.
   \item \textbf{Khai phá đệ quy không sinh ứng viên}: Bằng cách xây dựng các cây điều kiện (\textit{Conditional FP-Tree}) cho từng mục từ dưới lên, thuật toán khai thác triệt để các tiền tố chung, giúp tăng tốc độ tính toán gấp $10 \to 50$ lần so với Apriori trên tập dữ liệu hàng chục nghìn bài báo.
 \end{enumerate}
 
@@ -72,7 +72,7 @@ Việc chuẩn hóa này đưa toàn bộ các tài liệu lên bề mặt của
 \end{equation}
 
 \subsection{Giảm Chiều Không Gian Bằng Centered PCA}
-Để trực quan hóa không gian ngữ nghĩa trên giao diện Dashboard 2D mà không làm biến dạng cấu trúc phân bố, hệ thống áp dụng kỹ thuật **Centered PCA** (Phân tích thành phần chính trên vector đã trừ kỳ vọng trung bình):
+Để trực quan hóa không gian ngữ nghĩa trên giao diện Dashboard 2D mà không làm biến dạng cấu trúc phân bố, hệ thống áp dụng kỹ thuật \textbf{Centered PCA} (Phân tích thành phần chính trên vector đã trừ kỳ vọng trung bình):
 \begin{equation}
   X_c = X - \mu_X, \quad \mu_X = \frac{1}{N}\sum_{i=1}^N x_i
 \end{equation}
@@ -99,11 +99,11 @@ Hệ thống tiến hành quét tham số (\textit{parameter sweep}) qua $K \in 
 \end{enumerate}
 
 \begin{calloutbox}{Luận giải Khoa học: Tại sao điểm Silhouette thấp ($0.021 - 0.063$)?}
-Trong các bài toán phân cụm đồ vật hoặc khách hàng, Silhouette thường đạt $0.4 - 0.7$. Tuy nhiên, đối với văn bản khoa học AI/DS hiện đại, điểm Silhouette thấp là một **hiện tượng hoàn toàn tự nhiên và phản ánh trung thực bản chất dữ liệu**:
+Trong các bài toán phân cụm đồ vật hoặc khách hàng, Silhouette thường đạt $0.4 - 0.7$. Tuy nhiên, đối với văn bản khoa học AI/DS hiện đại, điểm Silhouette thấp là một \textbf{hiện tượng hoàn toàn tự nhiên và phản ánh trung thực bản chất dữ liệu}:
 \begin{itemize}
   \item Nghiên cứu AI có tính liên ngành cực cao: một bài báo về Thị giác (\texttt{cs.CV}) vẫn sử dụng các kiến trúc Transformer của \texttt{cs.CL} và hàm mất mát tối ưu của \texttt{cs.LG}.
   \item Từ vựng học thuật bị chia sẻ chung (\textit{loss, gradient, attention, benchmark, dataset}).
-  \item Kết quả DBSCAN khẳng định có tới **$53.5\%$ mẫu nằm ở vùng ranh giới (boundary points)** giữa các chuyên ngành. Do đó, các cụm không phải là các hòn đảo tách rời mà là các vùng mật độ cao liên tục giao thoa với nhau.
+  \item Kết quả DBSCAN khẳng định có tới \textbf{$53.5\%$ mẫu nằm ở vùng ranh giới (boundary points)} giữa các chuyên ngành. Do đó, các cụm không phải là các hòn đảo tách rời mà là các vùng mật độ cao liên tục giao thoa với nhau.
 \end{itemize}
 \end{calloutbox}
 
@@ -123,7 +123,7 @@ Phân cụm tối ưu tại $K=6$ phản ánh 6 trường phái nghiên cứu:
 \subsection{Mô Hình Đồ Thị và Trọng Số Phân Số}
 Hệ thống xây dựng đồ thị có hướng $G = (V, E)$, trong đó tập đỉnh $V$ là các bài báo ($|V| = 8,892$) và tập cạnh $E$ là liên kết trích dẫn nội bộ giữa các bài ($|E| = 86,295$).
 
-Khi xét trên góc độ mạng lưới đồng tác giả (Co-authorship Network) gồm 35,117 tác giả và 130,082 cạnh hợp tác, để ngăn chặn hiện tượng bùng nổ trọng số do các bài báo có danh sách tác giả khổng lồ (hàng trăm tác giả trong một dự án lớn), hệ thống áp dụng kỹ thuật **Trọng số phân số (Fractional Weighting)**:
+Khi xét trên góc độ mạng lưới đồng tác giả (Co-authorship Network) gồm 35,117 tác giả và 130,082 cạnh hợp tác, để ngăn chặn hiện tượng bùng nổ trọng số do các bài báo có danh sách tác giả khổng lồ (hàng trăm tác giả trong một dự án lớn), hệ thống áp dụng kỹ thuật \textbf{Trọng số phân số (Fractional Weighting)}:
 \begin{equation}
   W(u, v) = \sum_{p \in P_{uv}} \frac{1}{N_p - 1}
 \end{equation}
@@ -141,7 +141,7 @@ Thuật toán Louvain phân rã đồ thị thành các cộng đồng học thu
 \begin{equation}
   Q = \frac{1}{2m} \sum_{i, j} \left[ A_{ij} - \frac{k_i k_j}{2m} \right] \delta(c_i, c_j)
 \end{equation}
-Trong đó $A_{ij}$ là trọng số cạnh, $k_i$ là tổng bậc trọng số của đỉnh $i$, $m$ là tổng trọng số cạnh của toàn mạng lưới, và $\delta(c_i, c_j) = 1$ khi đỉnh $i, j$ thuộc cùng cộng đồng. Thuật toán phát hiện được **92 cộng đồng trường phái nghiên cứu** trên đồ thị trích dẫn.
+Trong đó $A_{ij}$ là trọng số cạnh, $k_i$ là tổng bậc trọng số của đỉnh $i$, $m$ là tổng trọng số cạnh của toàn mạng lưới, và $\delta(c_i, c_j) = 1$ khi đỉnh $i, j$ thuộc cùng cộng đồng. Thuật toán phát hiện được \textbf{92 cộng đồng trường phái nghiên cứu} trên đồ thị trích dẫn.
 
 Bảng~\ref{tab:graph_influencers} trình bày danh sách các tác giả trung tâm và các công trình nền tảng kinh điển có điểm PageRank dẫn đầu.
 
@@ -152,12 +152,12 @@ Hệ thống đưa điểm PageRank chuẩn hóa vào thuật toán xếp hạng
 \begin{equation}
   \text{Score}_{\text{final}}(d) = \text{Score}_{\text{RRF}}(d) \times \left(1.0 + \beta \cdot \frac{PR(d)}{PR_{\max}}\right)
 \end{equation}
-Với $\beta = 0.25$, các bài báo nền tảng kinh điển hoặc các bài do các tác giả có uy tín học thuật cao công bố được tăng điểm xếp hạng lên tới **$+25\%$**. Điều này giải quyết triệt để vấn đề các bài báo phái sinh thứ cấp vượt mặt các công trình phát minh gốc trong kết quả tìm kiếm.
+Với $\beta = 0.25$, các bài báo nền tảng kinh điển hoặc các bài do các tác giả có uy tín học thuật cao công bố được tăng điểm xếp hạng lên tới \textbf{$+25\%$}. Điều này giải quyết triệt để vấn đề các bài báo phái sinh thứ cấp vượt mặt các công trình phát minh gốc trong kết quả tìm kiếm.
 
 \section{Trụ Cột 4: Động Lượng Xu Hướng và Bản Đồ Dị Biệt (Trends \& Anomalies)}
 
 \subsection{Vận Tốc Xu Hướng Chuẩn Hóa Thị Phần ($\Delta\text{Share}$ Momentum)}
-Để đo lường sự bứt phá của từng lĩnh vực giữa hai quý liên tiếp mà không bị đánh lừa bởi các chuyên ngành nhỏ tăng trưởng ảo (ví dụ tăng từ 1 bài lên 3 bài là $+200\%$), hệ thống áp dụng công thức **Động lượng chuẩn hóa theo thị phần**:
+Để đo lường sự bứt phá của từng lĩnh vực giữa hai quý liên tiếp mà không bị đánh lừa bởi các chuyên ngành nhỏ tăng trưởng ảo (ví dụ tăng từ 1 bài lên 3 bài là $+200\%$), hệ thống áp dụng công thức \textbf{Động lượng chuẩn hóa theo thị phần}:
 \begin{equation}
   \text{Velocity} = \frac{N_{\text{recent}} - N_{\text{previous}}}{N_{\text{previous}}} \times 100\%
 \end{equation}
@@ -219,32 +219,45 @@ Sự kết hợp này tạo nên một chu trình khép kín:
 
 \begin{table}[htbp]
   \centering
-  \small
-  \caption{Bảng Tổng Hợp Siêu Tham Số (Hyperparameters) của 4 Trụ Cột Khai Phá và Hệ Thống RAG}
+  \normalsize
+  \caption{Tổng Hợp Siêu Tham Số (Hyperparameters) của 4 Trụ Cột Khai Phá và Hệ Thống RAG}
   \label{tab:hyperparameters}
-  \begin{tabularx}{\textwidth}{@{}l p{4.5cm} c L@{}}
-    \toprule
+  \vspace{4pt}
+  \noindent\resizebox{\textwidth}{!}{%
+  \begin{tabularx}{\textwidth}{|>{\raggedright\arraybackslash}p{3.8cm}|>{\raggedright\arraybackslash}p{4.5cm}|>{\centering\arraybackslash}p{2.2cm}|>{\raggedright\arraybackslash}X|}
+    \hline
     \textbf{Phân hệ} & \textbf{Tên Tham số} & \textbf{Giá trị} & \textbf{Mục đích \& Cơ sở Lựa chọn} \\
-    \midrule
+    \hline
     \multirow{3}{*}{\textbf{Pillar 1: FP-Growth}} & \texttt{min\_support} & 0.015 & Tần suất tối thiểu $1.5\%$ số giao dịch \\
+    \cline{2-4}
     & \texttt{min\_lift} & 1.20 & Lọc bỏ các luật độc lập ngẫu nhiên \\
+    \cline{2-4}
     & \texttt{top\_k\_rules} & 50 & Giới hạn các luật có độ nâng cao nhất \\
-    \midrule
+    \hline
     \multirow{4}{*}{\textbf{Pillar 2: Clustering}} & \texttt{vector\_dim} & 768 & Số chiều embedding Nomic Text v1.5 \\
-    & \texttt{n\_clusters (K)} & 6 & Cấu hình K-Means đạt cân bằng Silhouette \\
+    \cline{2-4}
+    & \texttt{n\_clusters} ($K$) & 6 & Cấu hình K-Means đạt cân bằng Silhouette \\
+    \cline{2-4}
     & \texttt{pca\_components} & 2 & Giảm chiều Centered PCA phục vụ trực quan 2D \\
+    \cline{2-4}
     & \texttt{dbscan\_eps / min\_samples} & 0.28 / 10 & Khoảng cách mật độ Cosine phân định vùng lõi \\
-    \midrule
+    \hline
     \multirow{2}{*}{\textbf{Pillar 3: Graph}} & \texttt{pagerank\_alpha} & 0.85 & Hệ số suy giảm chuẩn học thuật PageRank \\
+    \cline{2-4}
     & \texttt{authority\_boost\_beta} & 0.25 & Trọng số tối đa $+25\%$ thưởng cho landmark \\
-    \midrule
+    \hline
     \multirow{2}{*}{\textbf{Pillar 4: Anomalies}} & \texttt{isolation\_contamination} & 0.02 & Ngưỡng cô lập $2\%$ điểm ngoại lai cấu trúc \\
+    \cline{2-4}
     & \texttt{n\_estimators} & 100 & Số lượng cây quyết định cô lập ngẫu nhiên \\
-    \midrule
+    \hline
     \multirow{4}{*}{\textbf{Serving RAG}} & \texttt{candidate\_pool\_k} & 15 & Số lượng ứng viên thô từ Qdrant \\
+    \cline{2-4}
     & \texttt{reranker\_top\_k} & 5 & Số lượng đoạn trích sau khi lọc Cross-Encoder \\
-    & \texttt{rrf\_constant (k)} & 60 & Hằng số làm mịn Reciprocal Rank Fusion \\
+    \cline{2-4}
+    & \texttt{rrf\_constant} ($k$) & 60 & Hằng số làm mịn Reciprocal Rank Fusion \\
+    \cline{2-4}
     & \texttt{llm\_temperature} & 0.1 & Triệt tiêu tính ngẫu nhiên, chống ảo giác \\
-    \bottomrule
-  \end{tabularx}
+    \hline
+  \end{tabularx}%
+  }
 \end{table}

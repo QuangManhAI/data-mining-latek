@@ -40,13 +40,20 @@ Dữ liệu sau khi thu thập từ các nguồn thô được chuẩn hóa và 
 
 \section{Thống Kê Mô Tả Toàn Cảnh Hồ Dữ Liệu (Descriptive Statistics)}
 
-Dựa trên dữ liệu thực tế được tính toán bởi công cụ phân tích DuckDB OLAP (ghi nhận trong tệp \texttt{eda\_summary.json}), hồ dữ liệu đã xử lý hơn **13,000 bài báo khoa học**, trong đó đợt phân tích chuyên sâu chuẩn hóa ghi nhận **10,000 bài báo** với **9,015 bài báo có toàn văn HTML làm giàu thành công (đạt tỷ lệ làm giàu $90.15\%$)**. 
+Dựa trên dữ liệu thực tế được tính toán bởi công cụ phân tích DuckDB OLAP (ghi nhận trong tệp \texttt{eda\_summary.json}), hồ dữ liệu đã xử lý hơn \textbf{13,000 bài báo khoa học}, trong đó đợt phân tích chuyên sâu chuẩn hóa ghi nhận \textbf{10,000 bài báo} với \textbf{9,015 bài báo có toàn văn HTML làm giàu thành công (đạt tỷ lệ làm giàu $90.15\%$)}. 
 
-Toàn bộ kho dữ liệu chứa tổng cộng **47,782,707 từ vựng** (trung bình 4,778 từ/bài) và bảo toàn thành công **2,220,938 công thức toán học LaTeX** (trung bình 222.1 công thức/bài). Khi tính gộp toàn bộ các tầng dữ liệu (bao gồm cả các bài báo lịch sử và hội nghị CVPR/OpenReview), tổng số công thức toán học được bảo toàn lên tới **2,765,395 công thức** trên **60.98 triệu từ vựng**.
+Toàn bộ kho dữ liệu chứa tổng cộng \textbf{47,782,707 từ vựng} (trung bình 4,778 từ/bài) và bảo toàn thành công \textbf{2,220,938 công thức toán học LaTeX} (trung bình 222.1 công thức/bài). Khi tính gộp toàn bộ các tầng dữ liệu (bao gồm cả các bài báo lịch sử và hội nghị CVPR/OpenReview), tổng số công thức toán học được bảo toàn lên tới \textbf{2,765,395 công thức} trên \textbf{60.98 triệu từ vựng}.
 
 Bảng~\ref{tab:eda_categories} trình bày phân bố chi tiết số lượng bài báo, công thức toán và độ dài trung bình theo từng chuyên ngành khoa học.
 
 \input{tables/table_eda_categories.tex}
+
+\begin{figure}[htbp]
+  \centering
+  \includegraphics[width=\textwidth]{figures/eda_pareto_growth.png}
+  \caption{Giao diện Phân tích Khám phá Dữ liệu (EDA Dashboard) Thể hiện Phân bố Pareto 80\% và Động lượng Tăng trưởng Nghiên cứu AI/DS}
+  \label{fig:eda_pareto_growth}
+\end{figure}
 
 \section{Các Phát Hiện EDA Cốt Lõi (Core Domain Insights)}
 
@@ -55,8 +62,8 @@ Quá trình khám phá dữ liệu thực nghiệm (EDA) kết hợp truy vấn 
 \subsection{Insight 1: "Đế chế toán học" tập trung ở \texttt{cs.LG} và \texttt{stat.ML}}
 Số liệu Bảng~\ref{tab:eda_categories} cho thấy sự bất đối xứng rất lớn về hàm lượng toán học giữa các chuyên ngành:
 \begin{itemize}
-  \item Xét về \textbf{tổng số lượng công thức}: Chuyên ngành Học máy (\texttt{cs.LG}) chiếm vị trí thống trị tuyệt đối với **886,955 công thức toán** (chiếm tới gần 40\% toàn bộ công thức toán của cả kho dữ liệu). Mặc dù \texttt{cs.LG} và \texttt{cs.CV} có số bài xấp xỉ nhau (~2,300 bài), nhưng lượng công thức toán của \texttt{cs.LG} lại cao gấp **2.87 lần** so với \texttt{cs.CV}.
-  \item Xét về \textbf{mật độ toán học trên từng bài báo (Mathematical Density)}: Chuyên ngành Thống kê Học máy (\texttt{stat.ML}) mới thực sự là "ông vua lý thuyết". Trung bình mỗi bài báo \texttt{stat.ML} chứa tới **679.7 công thức toán**, cao gấp 1.8 lần so với \texttt{cs.LG} (372.7 công thức/bài), cao gấp 5.0 lần so với \texttt{cs.CV} (135.8 công thức/bài), và gấp gần 7.0 lần so với chuyên ngành Xử lý ngôn ngữ tự nhiên \texttt{cs.CL} (102.2 công thức/bài).
+  \item Xét về \textbf{tổng số lượng công thức}: Chuyên ngành Học máy (\texttt{cs.LG}) chiếm vị trí thống trị tuyệt đối với \textbf{886,955 công thức toán} (chiếm tới gần 40\% toàn bộ công thức toán của cả kho dữ liệu). Mặc dù \texttt{cs.LG} và \texttt{cs.CV} có số bài xấp xỉ nhau (~2,300 bài), nhưng lượng công thức toán của \texttt{cs.LG} lại cao gấp \textbf{2.87 lần} so với \texttt{cs.CV}.
+  \item Xét về \textbf{mật độ toán học trên từng bài báo (Mathematical Density)}: Chuyên ngành Thống kê Học máy (\texttt{stat.ML}) mới thực sự là "ông vua lý thuyết". Trung bình mỗi bài báo \texttt{stat.ML} chứa tới \textbf{679.7 công thức toán}, cao gấp 1.8 lần so với \texttt{cs.LG} (372.7 công thức/bài), cao gấp 5.0 lần so với \texttt{cs.CV} (135.8 công thức/bài), và gấp gần 7.0 lần so với chuyên ngành Xử lý ngôn ngữ tự nhiên \texttt{cs.CL} (102.2 công thức/bài).
 \end{itemize}
 
 \begin{calloutbox}{Ý nghĩa đối với thiết kế hệ thống}
@@ -66,10 +73,10 @@ Phát hiện này định hình chiến lược phân đoạn văn bản (chunki
 \subsection{Insight 2: \texttt{cs.AI} đóng vai trò "Trạm Trung chuyển Liên ngành" (Interdisciplinary Hub)}
 Một hiện tượng bất ngờ là chuyên ngành Trí tuệ Nhân tạo (\texttt{cs.AI}) chỉ đứng thứ 5 về số lượng bài báo đơn lẻ (453 bài, chiếm 4.53\% dữ liệu). Tuy nhiên, khi phân tích ma trận đồng xuất bản (\textbf{Co-occurrence Matrix}), nhãn \texttt{cs.AI} lại xuất hiện trong hầu hết các cặp liên ngành lớn nhất:
 \begin{itemize}
-  \item $\texttt{cs.AI} \times \texttt{cs.LG}$: **1,983 bài** (Cặp liên ngành lớn nhất toàn bộ hồ dữ liệu!).
-  \item $\texttt{cs.AI} \times \texttt{cs.CL}$: **1,046 bài** (Giao thoa giữa AI tổng quát và Ngôn ngữ học tính toán).
-  \item $\texttt{cs.CV} \times \texttt{cs.LG}$: **984 bài** (Thị giác máy tính kết hợp các kỹ thuật Học sâu).
-  \item $\texttt{cs.AI} \times \texttt{cs.CV}$: **845 bài** (Hướng tiếp cận Đa phương thức - Multimodal AI).
+  \item $\texttt{cs.AI} \times \texttt{cs.LG}$: \textbf{1,983 bài} (Cặp liên ngành lớn nhất toàn bộ hồ dữ liệu!).
+  \item $\texttt{cs.AI} \times \texttt{cs.CL}$: \textbf{1,046 bài} (Giao thoa giữa AI tổng quát và Ngôn ngữ học tính toán).
+  \item $\texttt{cs.CV} \times \texttt{cs.LG}$: \textbf{984 bài} (Thị giác máy tính kết hợp các kỹ thuật Học sâu).
+  \item $\texttt{cs.AI} \times \texttt{cs.CV}$: \textbf{845 bài} (Hướng tiếp cận Đa phương thức - Multimodal AI).
 \end{itemize}
 \textit{Ý nghĩa thực tiễn}: Trong cộng đồng nghiên cứu hiện đại, các tác giả hiếm khi xuất bản một bài báo thuần túy dán nhãn \texttt{cs.AI}. Nhãn \texttt{cs.AI} hoạt động như một "siêu nhãn" (umbrella tag) bao bọc các nghiên cứu ứng dụng thực nghiệm vào Thị giác (\texttt{cs.CV}) hoặc Ngôn ngữ (\texttt{cs.CL}). Đây là cơ sở khoa học để xây dựng luật kết hợp mở rộng truy vấn trong Trụ cột 1.
 
@@ -78,7 +85,7 @@ Phân tích chuỗi thời gian ngày công bố ghi nhận:
 \begin{itemize}
   \item Giai đoạn từ 2005 đến 2022: Tốc độ gia tăng tài liệu diễn ra từ từ, lũy tiến tuyến tính.
   \item Năm 2023: Tốc độ tăng tốc rõ rệt với gần 1,000 bài báo.
-  \item **Tháng 1 và Tháng 2 năm 2024**: Bùng nổ dữ dội với **8,838 bài báo** (chiếm tới 68\% tổng số dữ liệu thu thập).
+  \item \textbf{Tháng 1 và Tháng 2 năm 2024}: Bùng nổ dữ dội với \textbf{8,838 bài báo} (chiếm tới 68\% tổng số dữ liệu thu thập).
 \end{itemize}
 Điểm bùng phát này phản ánh chính xác làn sóng bùng nổ của kỷ nguyên Generative AI, các bài báo chuẩn bị cho các hội nghị đỉnh cao như CVPR 2024, ICML 2024 và ICLR 2024.
 

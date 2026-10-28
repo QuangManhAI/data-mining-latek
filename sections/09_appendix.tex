@@ -7,47 +7,18 @@
 \renewcommand{\thesection}{\Alph{section}}
 \setcounter{section}{0}
 
-\section{Bảng Đối Chiếu Chéo Giữa Báo Cáo và Mã Nguồn (Traceability Matrix)}
+\section{Đối Chiếu Nguồn Gốc Báo Cáo và Mã Nguồn Thực Tế (Traceability Overview)}
 
 Nhằm bảo đảm tính minh bạch học thuật, toàn bộ các nội dung, thuật toán, công thức toán và số liệu thực nghiệm trong báo cáo này đều có thể truy nguyên trực tiếp về các tệp mã nguồn và tệp dữ liệu tương ứng trong repository dự án:
 
-\begin{table}[htbp]
-  \centering
-  \small
-  \caption{Ma Trận Truy Nguyên Nguồn Gốc từ Báo Cáo tới Mã Nguồn và Tệp Dữ Liệu Thực Tế}
-  \label{tab:traceability_matrix}
-  \begin{tabularx}{\textwidth}{|l|p{4.5cm}|X|}
-    \hline
-    \textbf{Chương / Mục} & \textbf{Nội dung Trọng tâm} & \textbf{Đường dẫn Tệp Nguồn trong Repository} \\
-    \hline
-    \textbf{Chương 1} & Business Understanding \& KPI & \path{docs/OVERVIEW.md}, \path{SETUP.md} \\
-    \hline
-    \textbf{Chương 2} & Thống kê mô tả \& 4 Insights EDA & \path{data/gold/mining/eda_summary.json}, \path{src/mining/eda_engine.py} \\
-    \hline
-    \textbf{Chương 3} & Thu thập 3 tầng \& Medallion S3 & \path{src/ingestion/arxiv_batch_harvester.py}, \path{src/storage/duckdb_engine.py} \\
-    \hline
-    \textbf{Chương 3} & AcademicHTMLParser \& Chunking & \path{src/transformation/html_parser.py}, \path{src/indexing/chunker.py} \\
-    \hline
-    \textbf{Chương 3} & Embedding Nomic Text v1.5 & \path{src/indexing/embedder.py}, \path{src/indexing/qdrant_manager.py} \\
-    \hline
-    \textbf{Chương 4.1} & Trụ cột 1: FP-Growth Rules & \path{src/mining/association_rules.py}, \path{data/gold/mining/association_rules.json} \\
-    \hline
-    \textbf{Chương 4.2} & Trụ cột 2: K-Means \& DBSCAN & \path{src/mining/cluster_analysis.py}, \path{data/gold/mining/clusters.json} \\
-    \hline
-    \textbf{Chương 4.3} & Trụ cột 3: Graph Mining \& PageRank & \path{src/mining/graph_mining.py}, \path{data/gold/mining/graph_coauthorship.json} \\
-    \hline
-    \textbf{Chương 4.4} & Trụ cột 4: Trend \& Isolation Forest & \path{src/mining/trend_anomaly_mining.py}, \path{data/gold/mining/trends_anomalies.json} \\
-    \hline
-    \textbf{Chương 4.5} & Tích hợp RAG \& Authority Boost & \path{backend/app/services/retrieval_service.py}, \path{backend/app/services/rag_service.py} \\
-    \hline
-    \textbf{Chương 5.1} & Đánh giá Benchmark DeepEval 2.x & \path{docs/benchmarks/RAG_EVALUATION_REPORT_21_SAMPLES.md} \\
-    \hline
-    \textbf{Chương 5.2} & Đo lường Độ trễ GPU RTX 4060 & \path{docs/benchmarks/PERFORMANCE_BENCHMARK_REPORT.md} \\
-    \hline
-    \textbf{Chương 6} & Triển khai Docker, Airflow \& MinIO & \path{README.md}, \path{.env_example}, \path{dags/}, \path{backend/app/main.py} \\
-    \hline
-  \end{tabularx}
-\end{table}
+\begin{itemize}[leftmargin=1.5cm]
+  \item \textbf{Chương 1 (Hiểu bài toán \& KPI)}: \path{docs/OVERVIEW.md}, \path{SETUP.md}.
+  \item \textbf{Chương 2 (Khám phá EDA \& Thống kê)}: \path{data/gold/mining/eda_summary.json}, \path{src/mining/eda_engine.py}.
+  \item \textbf{Chương 3 (Thu thập 3 tầng \& Lakehouse)}: \path{src/ingestion/arxiv_batch_harvester.py}, \path{src/storage/duckdb_engine.py}, \path{src/transformation/html_parser.py}, \path{src/indexing/qdrant_manager.py}.
+  \item \textbf{Chương 4 (4 Trụ cột Khai phá Dữ liệu \& RAG)}: \path{src/mining/association_rules.py}, \path{src/mining/cluster_analysis.py}, \path{src/mining/graph_mining.py}, \path{src/mining/trend_anomaly_mining.py}, \path{backend/app/services/retrieval_service.py}.
+  \item \textbf{Chương 5 (Đánh giá DeepEval \& Hiệu năng GPU)}: \path{docs/benchmarks/RAG_EVALUATION_REPORT_21_SAMPLES.md}, \path{docs/benchmarks/PERFORMANCE_BENCHMARK_REPORT.md}.
+  \item \textbf{Chương 6 (Triển khai Vận hành)}: \path{README.md}, \path{.env_example}, \path{dags/}, \path{backend/app/main.py}.
+\end{itemize}
 
 \section{Trích Đoạn Mã Nguồn Tiêu Biểu (Key Code Listings)}
 

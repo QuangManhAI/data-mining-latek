@@ -1,13 +1,15 @@
 % ==============================================================================
-% BẢNG CÁC TÀI LIỆU DỊ BIỆT CẤU TRÚC PHÁT HIỆN BỞI ISOLATION FOREST (CHUẨN VIỀN LƯỚI)
+% BẢNG CÁC TÀI LIỆU DỊ BIỆT CẤU TRÚC PHÁT HIỆN BỞI ISOLATION FOREST (CHUẨN VIỀN LƯỚI & KHỔ TRANG)
 % ==============================================================================
 
 \begin{table}[htbp]
   \centering
-  \small
+  \normalsize
   \caption{Danh mục Các Bài báo Dị biệt Cấu trúc (P99 Outliers) Phát hiện bởi Mô hình Isolation Forest (Nguồn: \texttt{trends\_anomalies.json})}
   \label{tab:anomalies}
-  \begin{tabularx}{\textwidth}{|c|c|p{3.8cm}|c|r|r|X|}
+  \vspace{4pt}
+  \noindent\resizebox{\textwidth}{!}{%
+  \begin{tabularx}{\textwidth}{|>{\centering\arraybackslash}p{1.8cm}|>{\centering\arraybackslash}p{1.2cm}|>{\raggedright\arraybackslash}p{3.5cm}|>{\centering\arraybackslash}p{1.6cm}|>{\raggedleft\arraybackslash}p{1.4cm}|>{\raggedleft\arraybackslash}p{1.3cm}|>{\raggedright\arraybackslash}X|}
     \hline
     \textbf{Mã bài báo} & \textbf{Ngành} & \textbf{Tiêu đề rút gọn} & \textbf{Anomaly Score} & \textbf{Số công thức} & \textbf{Số từ} & \textbf{Lý do Cô lập (Outlier Reason)} \\
     \hline
@@ -21,5 +23,6 @@
     \hline
     \texttt{2501.05498} & \texttt{cs.AI} & Comprehensive Survey on Foundation... & -0.7950 & \textbf{5,470} & \textbf{74,303} & Khảo luận cực đại dạng sách (dài gấp 15 lần bài chuẩn). \\
     \hline
-  \end{tabularx}
+  \end{tabularx}%
+  }
 \end{table}

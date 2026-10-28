@@ -5,7 +5,7 @@
 \chapter{Đánh Giá Thực Nghiệm Hệ Thống (Evaluation)}
 \label{chap:evaluation}
 
-Chương này trình bày toàn bộ kết quả thẩm định thực nghiệm độc lập và định lượng của hệ thống, bao gồm đánh giá chất lượng 4 Trụ Cột Khai Phá Dữ Liệu, đánh giá chất lượng truy xuất và sinh câu trả lời RAG thông qua bộ tiêu chuẩn học thuật **DeepEval 2.x**, và hồ sơ đo lường độ trễ trên phần cứng máy trạm GPU.
+Chương này trình bày toàn bộ kết quả thẩm định thực nghiệm độc lập và định lượng của hệ thống, bao gồm đánh giá chất lượng 4 Trụ Cột Khai Phá Dữ Liệu, đánh giá chất lượng truy xuất và sinh câu trả lời RAG thông qua bộ tiêu chuẩn học thuật \textbf{DeepEval 2.x}, và hồ sơ đo lường độ trễ trên phần cứng máy trạm GPU.
 
 \section{Đánh Giá Định Lượng 4 Trụ Cột Khai Phá Dữ Liệu}
 
@@ -13,18 +13,18 @@ Cả 4 trụ cột khai phá dữ liệu đều được thực thi tự động
 
 \begin{enumerate}[label=\textbf{\arabic*.}]
   \item \textbf{Trụ cột 1 (FP-Growth)}:
-    Từ 282 giao dịch đa khái niệm, thuật toán hoàn thành trong **$0.49\text{ giây}$**, khai phá được **38 tập phổ biến** và **22 luật kết hợp** đã khử trùng lặp đối xứng. Độ nâng trung bình của các luật đạt $2.41$ (trong đó luật cao nhất đạt $\text{Lift} = 3.357$), chứng minh mối quan hệ giữa các khái niệm là có căn cứ thống kê mạnh mẽ, hoàn toàn vượt xa sự ngẫu nhiên.
+    Từ 282 giao dịch đa khái niệm, thuật toán hoàn thành trong \textbf{$0.49\text{ giây}$}, khai phá được \textbf{38 tập phổ biến} và \textbf{22 luật kết hợp} đã khử trùng lặp đối xứng. Độ nâng trung bình của các luật đạt $2.41$ (trong đó luật cao nhất đạt $\text{Lift} = 3.357$), chứng minh mối quan hệ giữa các khái niệm là có căn cứ thống kê mạnh mẽ, hoàn toàn vượt xa sự ngẫu nhiên.
   \item \textbf{Trụ cột 2 (Semantic Clustering)}:
-    Quá trình quét MiniBatchKMeans ($K \in \{4, 6, 8\}$) trên 3,000 vector embedding 768-D hoàn tất trong **$0.48\text{ giây}$**. Cấu hình $K=6$ đạt điểm Silhouette tối ưu ($0.0210$ trên toàn mẫu và $0.0629$ trên mẫu con), Davies-Bouldin Index đạt $5.3739$ và Calinski-Harabasz Index đạt $88.0$. DBSCAN với khoảng cách Cosine $\varepsilon=0.28$ xác nhận $53.5\%$ các bài báo nằm ở ranh giới giao thoa liên ngành, lý giải một cách khoa học cho độ phân tán mở của nghiên cứu AI.
+    Quá trình quét MiniBatchKMeans ($K \in \{4, 6, 8\}$) trên 3,000 vector embedding 768-D hoàn tất trong \textbf{$0.48\text{ giây}$}. Cấu hình $K=6$ đạt điểm Silhouette tối ưu ($0.0210$ trên toàn mẫu và $0.0629$ trên mẫu con), Davies-Bouldin Index đạt $5.3739$ và Calinski-Harabasz Index đạt $88.0$. DBSCAN với khoảng cách Cosine $\varepsilon=0.28$ xác nhận $53.5\%$ các bài báo nằm ở ranh giới giao thoa liên ngành, lý giải một cách khoa học cho độ phân tán mở của nghiên cứu AI.
   \item \textbf{Trụ cột 3 (Citation Network \& PageRank)}:
-    Dựng đồ thị và tính toán trong **$72.2\text{ giây}$** trên 35,117 tác giả với 130,082 cạnh đồng tác giả và 86,295 liên kết trích dẫn nội bộ. Thuật toán Directed PageRank ($\alpha=0.85$) phát hiện chính xác các đỉnh tác giả trung tâm (như Yang Liu, Hao Chen) và các công trình nền tảng kinh điển (như \textit{Attention Is All You Need} với $PR = 0.012632$, cao gấp 25 lần trung bình toàn mạng). Thuật toán Louvain phát hiện thành công 92 trường phái nghiên cứu gắn kết.
+    Dựng đồ thị và tính toán trong \textbf{$72.2\text{ giây}$} trên 35,117 tác giả với 130,082 cạnh đồng tác giả và 86,295 liên kết trích dẫn nội bộ. Thuật toán Directed PageRank ($\alpha=0.85$) phát hiện chính xác các đỉnh tác giả trung tâm (như Yang Liu, Hao Chen) và các công trình nền tảng kinh điển (như \textit{Attention Is All You Need} với $PR = 0.012632$, cao gấp 25 lần trung bình toàn mạng). Thuật toán Louvain phát hiện thành công 92 trường phái nghiên cứu gắn kết.
   \item \textbf{Trụ cột 4 (Trend Velocity \& Isolation Forest)}:
-    Thực thi trong **$0.14\text{ giây}$**, phân loại chính xác động lượng tăng trưởng của 20 chuyên ngành (chỉ ra \texttt{cs.AI} và \texttt{cs.CV} là các hướng bùng nổ mạnh nhất với mức tăng $>120\%$). Rừng cô lập phát hiện chính xác **200 bài báo dị biệt cấu trúc** (chiếm tỷ lệ $2.0\%$), nổi bật là các chuyên khảo toán học chứa tới 3,732 công thức và các tài liệu dài hơn 74,000 từ.
+    Thực thi trong \textbf{$0.14\text{ giây}$}, phân loại chính xác động lượng tăng trưởng của 20 chuyên ngành (chỉ ra \texttt{cs.AI} và \texttt{cs.CV} là các hướng bùng nổ mạnh nhất với mức tăng $>120\%$). Rừng cô lập phát hiện chính xác \textbf{200 bài báo dị biệt cấu trúc} (chiếm tỷ lệ $2.0\%$), nổi bật là các chuyên khảo toán học chứa tới 3,732 công thức và các tài liệu dài hơn 74,000 từ.
 \end{enumerate}
 
 \section{Đánh Giá Hiệu Năng RAG Qua Tiêu Chuẩn DeepEval 2.x}
 
-Hệ thống RAG được thẩm định tự động bằng bộ công cụ học thuật **DeepEval 2.x** trên tập 21 câu hỏi học thuật vàng (\texttt{gold-001} đến \texttt{gold-021}) bao quát các chủ đề chuyên sâu: FlashAttention, DPO, QLoRA, RoPE, Diffusion Schedulers, VAE, và Contrastive Learning. Mô hình đóng vai trò giám khảo đánh giá (LLM Judge) là \texttt{Qwen2.5-7B-Instruct} (GGUF Q4\_K\_M) vận hành cục bộ trên GPU.
+Hệ thống RAG được thẩm định tự động bằng bộ công cụ học thuật \textbf{DeepEval 2.x} trên tập 21 câu hỏi học thuật vàng (\texttt{gold-001} đến \texttt{gold-021}) bao quát các chủ đề chuyên sâu: FlashAttention, DPO, QLoRA, RoPE, Diffusion Schedulers, VAE, và Contrastive Learning. Mô hình đóng vai trò giám khảo đánh giá (LLM Judge) là \texttt{Qwen2.5-7B-Instruct} (GGUF Q4\_K\_M) vận hành cục bộ trên GPU.
 
 Hệ thống tiến hành so sánh đối đầu giữa hai cấu hình:
 \begin{itemize}
@@ -40,11 +40,11 @@ Bảng~\ref{tab:rag_benchmark} trình bày kết quả so sánh chi tiết trên
 
 \begin{enumerate}[label=\textbf{\arabic*.}]
   \item \textbf{Contextual Precision (Tăng vọt +35.0\%)}:
-    Đây là bước nhảy vọt ấn tượng nhất của hệ thống, tăng từ $0.637$ lên **$0.860$** (tỷ lệ đạt chuẩn tăng từ $60\%$ lên **$80\%$**). Trong mô hình cơ sở, các bài báo khảo cứu tổng quan (Survey Papers) thường có vector trung bình nằm gần nhiều khái niệm, dẫn đến việc chúng chiếm vị trí Top-1 và đẩy các bài báo chứa thuật toán gốc xuống dưới. Khi bổ sung Cross-Encoder, mô hình tính toán cơ chế tự chú ý chéo $\text{BERT}(q \circ d)$ giữa toàn bộ các cặp từ của câu hỏi và đoạn trích, chấm điểm phù hợp tuyệt đối ($>0.98$) cho đúng đoạn chứa công thức gốc. Trong **12 trên tổng số 20 trường hợp kiểm thử**, Contextual Precision đạt điểm số hoàn hảo **$1.000$**.
+    Đây là bước nhảy vọt ấn tượng nhất của hệ thống, tăng từ $0.637$ lên \textbf{$0.860$} (tỷ lệ đạt chuẩn tăng từ $60\%$ lên \textbf{$80\%$}). Trong mô hình cơ sở, các bài báo khảo cứu tổng quan (Survey Papers) thường có vector trung bình nằm gần nhiều khái niệm, dẫn đến việc chúng chiếm vị trí Top-1 và đẩy các bài báo chứa thuật toán gốc xuống dưới. Khi bổ sung Cross-Encoder, mô hình tính toán cơ chế tự chú ý chéo $\text{BERT}(q \circ d)$ giữa toàn bộ các cặp từ của câu hỏi và đoạn trích, chấm điểm phù hợp tuyệt đối ($>0.98$) cho đúng đoạn chứa công thức gốc. Trong \textbf{12 trên tổng số 20 trường hợp kiểm thử}, Contextual Precision đạt điểm số hoàn hảo \textbf{$1.000$}.
   \item \textbf{Contextual Recall (Đạt mức hoàn hảo 100\%)}:
-    Chỉ số đo lường mức độ bao phủ toàn diện các luận điểm khoa học trong câu trả lời so với đáp án chuẩn. Pipeline nâng cao đạt điểm số tuyệt đối **$1.000$** (tỷ lệ đạt chuẩn $100\%$), đảm bảo rằng không một luận điểm kỹ thuật then chốt nào bị bỏ sót.
+    Chỉ số đo lường mức độ bao phủ toàn diện các luận điểm khoa học trong câu trả lời so với đáp án chuẩn. Pipeline nâng cao đạt điểm số tuyệt đối \textbf{$1.000$} (tỷ lệ đạt chuẩn $100\%$), đảm bảo rằng không một luận điểm kỹ thuật then chốt nào bị bỏ sót.
   \item \textbf{Answer Relevancy (Tăng +9.4\%)}:
-    Điểm số trung bình tăng từ $0.687$ lên **$0.752$**. Nhờ hạ nhiệt độ sinh từ $\text{temp} = 0.7$ xuống $\text{temp} = 0.1$ và áp dụng Quy tắc 4 (\textit{"Answer directly and concisely without conversational filler"}), mô hình triệt tiêu hoàn toàn các câu chào hỏi rườm rà, đi thẳng vào bản chất công thức và cơ chế thuật toán. Các câu hỏi kỹ thuật hóc búa như FlashAttention (\texttt{gold-002}), DPO (\texttt{gold-003}) và QLoRA (\texttt{gold-012}) đều đạt điểm Relevancy tuyệt đối **$1.000$**.
+    Điểm số trung bình tăng từ $0.687$ lên \textbf{$0.752$}. Nhờ hạ nhiệt độ sinh từ $\text{temp} = 0.7$ xuống $\text{temp} = 0.1$ và áp dụng Quy tắc 4 (\textit{"Answer directly and concisely without conversational filler"}), mô hình triệt tiêu hoàn toàn các câu chào hỏi rườm rà, đi thẳng vào bản chất công thức và cơ chế thuật toán. Các câu hỏi kỹ thuật hóc búa như FlashAttention (\texttt{gold-002}), DPO (\texttt{gold-003}) và QLoRA (\texttt{gold-012}) đều đạt điểm Relevancy tuyệt đối \textbf{$1.000$}.
   \item \textbf{Faithfulness \& Chống Ảo Giác (Tăng +4.7\%)}:
     Đạt $0.699$ với tỷ lệ vượt qua ngưỡng khắt khe tăng lên $52.9\%$. Các quy tắc bảo toàn công thức toán LaTeX ngăn chặn hiện tượng mô hình tự biến đổi biểu thức toán học hoặc suy diễn sai lệch so với tài liệu trích dẫn.
   \item \textbf{Citation Grounding (Đạt 90.0\% Tỷ Lệ Vượt Chuẩn)}:
@@ -59,9 +59,9 @@ Các thử nghiệm độ trễ được tiến hành trên môi trường thự
 \input{tables/table_latency_profile.tex}
 
 \subsection{Tối Ưu Hóa Kết Nối Mạng (Connection Pooling)}
-Trong giai đoạn đầu phát triển, mỗi truy vấn tìm kiếm vector tới Qdrant Cloud qua giao thức HTTPS đều khởi tạo và đóng một phiên kết nối TCP/TLS mới (\texttt{requests.post}), dẫn đến độ trễ bị cộng dồn lên tới **$> 1,000\text{ ms}$/lần truy vấn**.
+Trong giai đoạn đầu phát triển, mỗi truy vấn tìm kiếm vector tới Qdrant Cloud qua giao thức HTTPS đều khởi tạo và đóng một phiên kết nối TCP/TLS mới (\texttt{requests.post}), dẫn đến độ trễ bị cộng dồn lên tới \textbf{$> 1,000\text{ ms}$/lần truy vấn}.
 
-Nhóm nghiên cứu đã khắc phục bằng cách thiết lập hàng đợi kết nối an toàn đa luồng \texttt{requests.Session()} với cấu hình \lstinline{HTTPAdapter(pool_connections=10, pool_maxsize=20)} trong \texttt{src/indexing/qdrant\_manager.py}. Kết quả: toàn bộ chi phí bắt tay TCP và đàm phán TLS bị triệt tiêu sau lần gọi đầu tiên, giúp độ trễ tìm kiếm vector giảm xuống chỉ còn **$\sim 260\text{ ms}$ (giảm hơn $70\%$ độ trễ mạng)**.
+Nhóm nghiên cứu đã khắc phục bằng cách thiết lập hàng đợi kết nối an toàn đa luồng \texttt{requests.Session()} với cấu hình \lstinline{HTTPAdapter(pool_connections=10, pool_maxsize=20)} trong \texttt{src/indexing/qdrant\_manager.py}. Kết quả: toàn bộ chi phí bắt tay TCP và đàm phán TLS bị triệt tiêu sau lần gọi đầu tiên, giúp độ trễ tìm kiếm vector giảm xuống chỉ còn \textbf{$\sim 260\text{ ms}$ (giảm hơn $70\%$ độ trễ mạng)}.
 
 \subsection{Kiểm Soát Bộ Nhớ Đồ Họa và Ổn Định Driver}
 Trong cấu hình ban đầu, hệ thống thiết lập kích thước ngữ cảnh $\text{context\_size} = 8,192\text{ tokens}$ với 2 luồng tính toán đồng thời (\lstinline{LLM_SEQUENCES=2}). Cấu hình này đòi hỏi bộ nhớ đệm KV Cache lên tới $\sim 3.8\text{ GB}$, kết hợp cùng $4.68\text{ GB}$ trọng số mô hình Qwen2.5-7B và bộ nhớ đệm hiển thị của hệ điều hành Windows, đẩy tổng nhu cầu VRAM vượt quá ngưỡng vật lý $8.0\text{ GB}$ của card đồ họa, gây ra lỗi nghiêm trọng mất thiết bị (\lstinline{VK_ERROR_DEVICE_LOST}).
@@ -71,14 +71,14 @@ Nhóm đã tối ưu hóa các tham số môi trường:
 LLM_CONTEXT_SIZE=4096
 LLM_SEQUENCES=1
 \end{lstlisting}
-Nhờ đó, dung lượng KV Cache giảm xuống còn $\sim 950\text{ MB}$, và tổng mức tiêu thụ VRAM thực tế ổn định ở mức **$5.7\text{ GB} / 8.0\text{ GB}$**, để lại $2.3\text{ GB}$ dung lượng an toàn cho hệ điều hành. Hệ thống đạt độ ổn định tuyệt đối $100\%$ qua hàng trăm lượt đánh giá RAG liên tục mà không gặp bất kỳ sự cố tràn bộ nhớ nào.
+Nhờ đó, dung lượng KV Cache giảm xuống còn $\sim 950\text{ MB}$, và tổng mức tiêu thụ VRAM thực tế ổn định ở mức \textbf{$5.7\text{ GB} / 8.0\text{ GB}$}, để lại $2.3\text{ GB}$ dung lượng an toàn cho hệ điều hành. Hệ thống đạt độ ổn định tuyệt đối $100\%$ qua hàng trăm lượt đánh giá RAG liên tục mà không gặp bất kỳ sự cố tràn bộ nhớ nào.
 
 \section{Phân Tích Lỗi và Các Nghiên Cứu Điển Hình (Case Studies)}
 
 \subsection{Nghiên cứu Điển hình 1: Cứu Nguy Độ Chính Xác Không Gian (The Zero-to-Hero Rescues)}
 Trong bài kiểm thử về thuật toán Direct Preference Optimization (DPO - \texttt{gold-003}), hệ thống cơ sở chỉ dựa vào tìm kiếm vector Cosine đơn thuần đã xếp bài khảo cứu tổng quan về RLHF ở vị trí Top-1, khiến câu trả lời chỉ đưa ra các khái niệm chung chung và trượt bài kiểm tra độ chính xác (Precision = 0.000). 
 
-Khi kích hoạt pipeline cải tiến, bộ so khớp từ vựng BM25 phát hiện cụm từ viết tắt đặc thù \textit{"DPO"} và biểu thức tổn thất log-ratio $\log \frac{\pi_\theta}{\pi_{\text{ref}}}$, kết hợp với Cross-Encoder tái định vị chính xác bài báo gốc của Rafailov et al. lên vị trí Top-1, nâng Contextual Precision từ **$0.000$ lên tuyệt đối $1.000$**. Hiện tượng tương tự cũng được ghi nhận trên bài toán Variational Autoencoders (VAE) và Constitutional AI.
+Khi kích hoạt pipeline cải tiến, bộ so khớp từ vựng BM25 phát hiện cụm từ viết tắt đặc thù \textit{"DPO"} và biểu thức tổn thất log-ratio $\log \frac{\pi_\theta}{\pi_{\text{ref}}}$, kết hợp với Cross-Encoder tái định vị chính xác bài báo gốc của Rafailov et al. lên vị trí Top-1, nâng Contextual Precision từ \textbf{$0.000$ lên tuyệt đối $1.000$}. Hiện tượng tương tự cũng được ghi nhận trên bài toán Variational Autoencoders (VAE) và Constitutional AI.
 
 \subsection{Nghiên cứu Điển hình 2: Bài Kiểm thử Phủ Định Thực (True Negative Test - SVGD)}
 Trong bài kiểm thử \texttt{gold-023}, người dùng đặt câu hỏi kỹ thuật về giải thuật Stein Variational Gradient Descent (SVGD) --- một chủ đề lý thuyết cố tình không được nạp vào hồ dữ liệu. 

@@ -1,15 +1,18 @@
 % ==============================================================================
-% BẢNG PHÂN BỐ DỮ LIỆU THEO CHUYÊN NGÀNH & ĐẶC TÍNH TOÁN HỌC (CHUẨN VIỀN LƯỚI)
+% BẢNG PHÂN BỐ DỮ LIỆU THEO CHUYÊN NGÀNH & ĐẶC TÍNH TOÁN HỌC (SIZE 13PT)
 % ==============================================================================
 
 \begin{table}[htbp]
   \centering
-  \small
-  \caption{Phân bố Số lượng Bài báo, Công thức Toán học và Độ dài Từ vựng theo Chuyên ngành trên Hồ Dữ liệu Học thuật (Nguồn: \texttt{eda\_summary.json})}
+  \normalsize
+  \caption{Phân Bố Số Lượng Bài Báo, Công Thức Toán Học và Độ Dài Từ Vựng Theo Chuyên Ngành trên Hồ Dữ Liệu Học Thuật (Nguồn: \texttt{eda\_summary.json})}
   \label{tab:eda_categories}
-  \begin{tabularx}{\textwidth}{|X|c|c|r|r|c|}
+  \vspace{4pt}
+  \noindent\resizebox{\textwidth}{!}{%
+  \setlength{\tabcolsep}{4.5pt}
+  \begin{tabular}{|>{\raggedright\arraybackslash}p{4.6cm}|>{\centering\arraybackslash}p{1.6cm}|>{\centering\arraybackslash}p{1.5cm}|>{\raggedleft\arraybackslash}p{2.2cm}|>{\raggedleft\arraybackslash}p{2.0cm}|>{\raggedleft\arraybackslash}p{2.2cm}|}
     \hline
-    \textbf{Chuyên ngành (arXiv Category)} & \textbf{Số bài báo} & \textbf{Tỷ lệ (\%)} & \textbf{Tổng công thức toán} & \textbf{Mật độ (ct/bài)} & \textbf{Số từ TB/bài} \\
+    \textbf{Chuyên ngành (arXiv Category)} & \textbf{Số bài báo} & \textbf{Tỷ lệ (\%)} & \textbf{Tổng công thức} & \textbf{Mật độ (ct/bài)} & \textbf{Số từ TB/bài} \\
     \hline
     \textbf{\texttt{cs.LG}} (Machine Learning) & 2,380 & 23.80\% & 886,955 & 372.7 & 5,099.7 \\
     \hline
@@ -32,5 +35,6 @@
     \rowcolor{LightGray}
     \textbf{Tổng cộng toàn tập dữ liệu} & \textbf{10,000} & \textbf{100.0\%} & \textbf{2,220,938} & \textbf{222.1} & \textbf{4,778.3} \\
     \hline
-  \end{tabularx}
+  \end{tabular}%
+  }
 \end{table}

@@ -1,37 +1,41 @@
 % ==============================================================================
-% BẢNG CÁC LUẬT KẾT HỢP KHAI PHÁ BỞI FP-GROWTH (CHUẨN VIỀN LƯỚI)
+% BẢNG CÁC LUẬT KẾT HỢP KHAI PHÁ BỞI FP-GROWTH (SIZE 13PT)
 % ==============================================================================
 
 \begin{table}[htbp]
   \centering
-  \small
-  \caption{Danh mục Các Luật Kết hợp Tiêu biểu Khai phá bằng Thuật toán FP-Growth trên Hồ Dữ liệu Học thuật (Nguồn: \texttt{association\_rules.json})}
+  \normalsize
+  \caption{Danh Mục Các Luật Kết Hợp Tiêu Biểu Khai Phá bằng Thuật Toán FP-Growth trên Hồ Dữ Liệu Học Thuật (Nguồn: \texttt{association\_rules.json})}
   \label{tab:association_rules}
-  \begin{tabularx}{\textwidth}{|c|X|X|c|c|c|c|}
+  \vspace{4pt}
+  \noindent\resizebox{\textwidth}{!}{%
+  \setlength{\tabcolsep}{4.0pt}
+  \begin{tabular}{|>{\centering\arraybackslash}p{0.8cm}|>{\raggedright\arraybackslash}p{3.8cm}|>{\raggedright\arraybackslash}p{3.8cm}|>{\centering\arraybackslash}p{1.4cm}|>{\centering\arraybackslash}p{1.3cm}|>{\centering\arraybackslash}p{1.3cm}|>{\centering\arraybackslash}p{1.8cm}|}
     \hline
     \textbf{STT} & \textbf{Tiền đề (Antecedents $X$)} & \textbf{Hệ quả (Consequents $Y$)} & \textbf{Support} & \textbf{Conf.} & \textbf{Lift} & \textbf{Conviction} \\
     \hline
-    \textbf{1} & \texttt{tag:model-quantization} & \texttt{tag:transformer} & 0.0177 & 0.500 & \textbf{3.357} & 1.702 \\
+    \textbf{1} & \texttt{model-quantization} & \texttt{transformer} & 0.0177 & 0.500 & \textbf{3.357} & 1.702 \\
     \hline
-    \textbf{2} & \texttt{tag:transformer} & \texttt{tag:model-quantization} & 0.0177 & 0.119 & \textbf{3.357} & 1.095 \\
+    \textbf{2} & \texttt{transformer} & \texttt{model-quantization} & 0.0177 & 0.119 & \textbf{3.357} & 1.095 \\
     \hline
-    \textbf{3} & \texttt{tag:knowledge-distillation} & \texttt{tag:federated-learning} & 0.0248 & 0.280 & \textbf{2.820} & 1.251 \\
+    \textbf{3} & \texttt{knowledge-distillation} & \texttt{federated-learning} & 0.0248 & 0.280 & \textbf{2.820} & 1.251 \\
     \hline
-    \textbf{4} & \texttt{tag:federated-learning} & \texttt{tag:knowledge-distillation} & 0.0248 & 0.250 & \textbf{2.820} & 1.215 \\
+    \textbf{4} & \texttt{federated-learning} & \texttt{knowledge-distillation} & 0.0248 & 0.250 & \textbf{2.820} & 1.215 \\
     \hline
-    \textbf{5} & \texttt{tag:zero-shot-learning} & \texttt{tag:diffusion-models} & 0.0213 & 0.231 & \textbf{1.860} & 1.139 \\
+    \textbf{5} & \texttt{zero-shot-learning} & \texttt{diffusion-models} & 0.0213 & 0.231 & \textbf{1.860} & 1.139 \\
     \hline
-    \textbf{6} & \texttt{tag:multimodal-ai} & \texttt{tag:attention-mech} & 0.0213 & 0.118 & \textbf{1.071} & 1.009 \\
+    \textbf{6} & \texttt{multimodal-ai} & \texttt{attention-mechanism} & 0.0213 & 0.118 & \textbf{1.071} & 1.009 \\
     \hline
-    \textbf{7} & \texttt{tag:convex-optimization} & \texttt{tag:reinforcement-learning} & 0.0248 & 0.200 & \textbf{0.910} & 0.975 \\
+    \textbf{7} & \texttt{convex-optimization} & \texttt{reinforcement-learning} & 0.0248 & 0.200 & \textbf{0.910} & 0.975 \\
     \hline
     \multicolumn{7}{|l|}{\cellcolor{LightGray}\textbf{Nhóm Luật Chuyên ngành Liên kết (Category Domain Rules)}} \\
     \hline
-    \textbf{8} & \{\texttt{cat:cs.AI}, \texttt{cat:cs.CV}\} & \{\texttt{cat:cs.LG}\} & 0.0650 & 0.852 & \textbf{2.540} & 4.980 \\
+    \textbf{8} & \{\texttt{cs.AI}, \texttt{cs.CV}\} & \{\texttt{cs.LG}\} & 0.0650 & 0.852 & \textbf{2.540} & 4.980 \\
     \hline
-    \textbf{9} & \{\texttt{cat:cs.AI}, \texttt{cat:cs.CL}\} & \{\texttt{cat:cs.LG}\} & 0.0520 & 0.784 & \textbf{2.330} & 3.420 \\
+    \textbf{9} & \{\texttt{cs.AI}, \texttt{cs.CL}\} & \{\texttt{cs.LG}\} & 0.0520 & 0.784 & \textbf{2.330} & 3.420 \\
     \hline
-    \textbf{10} & \{\texttt{cat:stat.ML}\} & \{\texttt{cat:cs.LG}\} & 0.0814 & 0.892 & \textbf{2.660} & 6.810 \\
+    \textbf{10} & \{\texttt{stat.ML}\} & \{\texttt{cs.LG}\} & 0.0814 & 0.892 & \textbf{2.660} & 6.810 \\
     \hline
-  \end{tabularx}
+  \end{tabular}%
+  }
 \end{table}

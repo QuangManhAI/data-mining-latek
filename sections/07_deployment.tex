@@ -23,7 +23,7 @@ Các thành phần hạ tầng cốt lõi bao gồm:
     Được cấu hình vận hành theo múi giờ chuẩn Việt Nam (\texttt{Asia/Ho\_Chi\_Minh - ICT}). Airflow quản lý 7 DAGs tự động hóa:
     \begin{itemize}
       \item \texttt{dag\_tier1\_realtime\_stream}: Kích hoạt lúc 02:00 AM hàng ngày quét RSS mới nhất.
-      \item \texttt{dag\_tier2\_near\_past\_harvest}: Kích hoạt lúc 02:10 AM hàng ngày quét 10k bài OAI-PMH.
+      \item \texttt{dag\_tier2\_near\_past\_harvest}: Kích hoạt lúc 02:10 AM hàng ngày quét 10,000 bài OAI-PMH.
       \item \texttt{dag\_recompute\_mining}: Tự động chạy định kỳ lúc 00:00 Chủ Nhật hàng tuần, gọi endpoint nội bộ \texttt{/api/mining/trigger} để tính toán lại toàn bộ EDA và 4 Trụ cột Khai phá trên dữ liệu mới tích lũy.
       \item \texttt{dag\_compact\_silver}: Nén và tối ưu hóa các tệp Parquet phân mảnh.
     \end{itemize}
@@ -43,7 +43,7 @@ Các thành phần hạ tầng cốt lõi bao gồm:
 
 \section{Bảo Mật và Phân Quyền Truy Cập (Zero Trust \& Role-Based Access)}
 
-Để phục vụ chia sẻ tài nguyên cho sinh viên và đồng môn trong lớp học nghiên cứu mà vẫn bảo vệ tuyệt đối tính toàn vẹn của hồ dữ liệu, hệ thống thiết lập cơ chế **Zero Trust Access** thông qua Cloudflare Tunnel:
+Để phục vụ chia sẻ tài nguyên cho sinh viên và đồng môn trong lớp học nghiên cứu mà vẫn bảo vệ tuyệt đối tính toàn vẹn của hồ dữ liệu, hệ thống thiết lập cơ chế \textbf{Zero Trust Access} thông qua Cloudflare Tunnel:
 
 \subsection{Phân quyền MinIO Object Storage}
 \begin{itemize}

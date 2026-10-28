@@ -1,29 +1,32 @@
 % ==============================================================================
-% BẢNG ĐO LƯỜNG ĐỘ TRỄ CHI TIẾT TỪNG CÔNG ĐOẠN TRÊN PHẦN CỨNG GPU (CHUẨN VIỀN LƯỚI)
+% BẢNG ĐO LƯỜNG ĐỘ TRỄ CHI TIẾT TỪNG CÔNG ĐOẠN TRÊN PHẦN CỨNG GPU (CHUẨN VIỀN LƯỚI & KHỔ TRANG)
 % ==============================================================================
 
 \begin{table}[htbp]
   \centering
-  \small
+  \normalsize
   \caption{Hồ Sơ Đo Lường Độ Trễ (Latency Profiling) và Tốc Độ Sinh Token trên GPU NVIDIA RTX 4060 Laptop (Nguồn: \texttt{PERFORMANCE\_BENCHMARK\_REPORT.md})}
   \label{tab:latency_profile}
-  \begin{tabularx}{\textwidth}{|p{4.2cm}|c|c|c|X|}
+  \vspace{4pt}
+  \noindent\resizebox{\textwidth}{!}{%
+  \begin{tabularx}{\textwidth}{|>{\raggedright\arraybackslash}p{3.8cm}|>{\centering\arraybackslash}p{2.5cm}|>{\centering\arraybackslash}p{2.8cm}|>{\centering\arraybackslash}p{2.0cm}|>{\raggedright\arraybackslash}X|}
     \hline
     \textbf{Công đoạn Pipeline} & \textbf{Vulkan / CPU Baseline} & \textbf{CUDA 12.4 + RTX 4060} & \textbf{Mức tăng tốc} & \textbf{Đánh giá Kỹ thuật} \\
     \hline
-    \textbf{Dense Query Embedding} & $350.0\text{ ms}$ (CPU) & \textbf{39.33 $\pm$ 21.64 ms} & \textbf{~9x nhanh hơn} & Vector hóa câu hỏi tức thì trên GPU \\
+    \textbf{Dense Query Embedding} & $350.0\text{ ms}$ (CPU) & \textbf{39.33 $\pm$ 21.64 ms} & \textbf{$\approx 9\times$ nhanh hơn} & Vector hóa câu hỏi tức thì trên GPU \\
     \hline
-    \textbf{Remote Qdrant Search} & $> 1,000\text{ ms}$ (Cold TCP) & \textbf{269.46 $\pm$ 12.44 ms} & \textbf{~3.8x nhanh hơn} & Tối ưu bằng \texttt{HTTPAdapter} Connection Pool \\
+    \textbf{Remote Qdrant Search} & $> 1,000\text{ ms}$ (Cold TCP) & \textbf{269.46 $\pm$ 12.44 ms} & \textbf{$\approx 3.8\times$ nhanh hơn} & Tối ưu bằng Connection Pool \\
     \hline
-    \textbf{Prompt Construction} & $5.0\text{ ms}$ & \textbf{0.04 $\pm$ 0.01 ms} & Tức thì & Ghép ngữ cảnh và quy tắc chống ảo giác \\
+    \textbf{Prompt Construction} & $5.0\text{ ms}$ & \textbf{0.04 $\pm$ 0.01 ms} & Tức thì & Ghép ngữ cảnh và chống ảo giác \\
     \hline
-    \textbf{Time To First Token (TTFT)} & $18,700\text{ ms}$ (18.7 s) & \textbf{609.77 $\pm$ 148.83 ms} & \textbf{~30.7x nhanh hơn} & Nạp KV cache trực tiếp vào VRAM CUDA \\
+    \textbf{Time To First Token (TTFT)} & $18,700\text{ ms}$ (18.7 s) & \textbf{609.77 $\pm$ 148.83 ms} & \textbf{$\approx 30.7\times$ nhanh hơn} & Nạp KV cache trực tiếp vào VRAM \\
     \hline
-    \textbf{Generation (50 tokens)} & $17,740\text{ ms}$ (17.7 s) & \textbf{1,079.43 $\pm$ 14.99 ms} & \textbf{~16.4x nhanh hơn} & Sinh chuỗi tự hồi quy trên nhân Tensor \\
+    \textbf{Generation (50 tokens)} & $17,740\text{ ms}$ (17.7 s) & \textbf{1,079.43 $\pm$ 14.99 ms} & \textbf{$\approx 16.4\times$ nhanh hơn} & Sinh chuỗi trên nhân Tensor \\
     \hline
-    \textbf{Tốc độ sinh token (Throughput)} & \textbf{3.64 tok/s} & \textbf{46.33 $\pm$ 0.64 tok/s} & \textbf{12.7x tăng vọt} & Trải nghiệm streaming mượt mà cho UI \\
+    \textbf{Tốc độ sinh token (Throughput)} & \textbf{3.64 tok/s} & \textbf{46.33 $\pm$ 0.64 tok/s} & \textbf{$12.7\times$ tăng vọt} & Streaming mượt mà cho UI \\
     \hline
-    \textbf{Tổng độ trễ End-to-End} & $37,310\text{ ms}$ (37.3 s) & \textbf{3,392.50 $\pm$ 607.22 ms} & \textbf{~11.0x nhanh hơn} & Thời gian phản hồi hoàn tất dưới 3.5 giây \\
+    \textbf{Tổng độ trễ End-to-End} & $37,310\text{ ms}$ (37.3 s) & \textbf{3,392.50 $\pm$ 607.22 ms} & \textbf{$\approx 11.0\times$ nhanh hơn} & Phản hồi hoàn tất dưới 3.5 giây \\
     \hline
-  \end{tabularx}
+  \end{tabularx}%
+  }
 \end{table}
