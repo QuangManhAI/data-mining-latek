@@ -2,6 +2,8 @@
 % CONFIGURATION: PREAMBLE & DANH MỤC GÓI MỞ RỘNG
 % ==============================================================================
 
+% extreport has no native 13pt option; set all relative font sizes explicitly.
+\usepackage[fontsize=13pt]{fontsize}
 \usepackage{ifxetex,ifluatex}
 \newif\ifxetexorluatex
 \ifxetex
@@ -58,7 +60,7 @@
   bottom=25mm,
   left=30mm,
   right=20mm,
-  headheight=16pt,
+  headheight=18pt,
   footskip=12mm
 ]{geometry}
 
@@ -91,6 +93,8 @@
 \usepackage{makecell}
 \usepackage{array}
 \usepackage{longtable}
+\usepackage{needspace}
+\usepackage{placeins}
 \newcolumntype{Y}{>{\centering\arraybackslash}X}
 \newcolumntype{L}{>{\raggedright\arraybackslash}X}
 
@@ -102,7 +106,13 @@
 \usepackage{listings}
 \lstset{
   backgroundcolor=\color{CodeBg},
-  basicstyle=\ttfamily\footnotesize,
+  basicstyle=\ttfamily\fontsize{9.5}{11.5}\selectfont,
+  columns=fullflexible,
+  keepspaces=true,
+  breakatwhitespace=false,
+  xleftmargin=1em,
+  xrightmargin=0.2em,
+  framexleftmargin=0.4em,
   breaklines=true,
   frame=single,
   rulecolor=\color{BorderGray},
@@ -172,6 +182,10 @@
 
 % --- Hỗ trợ ngắt dòng đường dẫn và URL tự động ---
 \usepackage{xurl}
+\setlength{\emergencystretch}{2em}
+\Urlmuskip=0mu plus 1mu
+\newcommand{\ReportNote}[1]{\par\smallskip{\footnotesize\raggedright #1\par}}
+\renewcommand{\arraystretch}{1.15}
 
 % --- Hyperlinks & Metadata PDF ---
 \usepackage{hyperref}
@@ -198,6 +212,8 @@
 % --- Chuẩn hóa nhãn tiếng Việt cho Bảng & Hình vẽ ---
 \renewcommand{\tablename}{Bảng}
 \renewcommand{\figurename}{Hình}
+\renewcommand{\bibname}{TÀI LIỆU THAM KHẢO}
+\renewcommand{\lstlistingname}{Đoạn mã}
 
 \usepackage{enumitem}
 \setlist{itemsep=2pt,topsep=2pt,parsep=0pt}

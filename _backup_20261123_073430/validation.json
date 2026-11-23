@@ -1,0 +1,14 @@
+{
+  "tex_files_checked": 23,
+  "structural_errors": [],
+  "citation_keys_verified": [
+    "blondel2008fast",
+    "ester1996density",
+    "han2000mining",
+    "liu2008isolation",
+    "page1999pagerank"
+  ],
+  "source_zip_verified": true,
+  "pdf_rebuilt": false,
+  "reason": "No installed XeLaTeX/BibTeX; no WSL distribution"
+}

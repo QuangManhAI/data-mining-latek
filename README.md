@@ -76,9 +76,9 @@ data-mining-latek/
 ## 4. Hướng Dẫn Biên Dịch Ra Tệp PDF
 
 Báo cáo được thiết kế chuẩn theo quy cách:
-- **Cỡ chữ:** `13pt` (sử dụng documentclass `extreport` với tuỳ chọn `[13pt,a4paper]`).
+- **Cỡ chữ:** `13pt` (class `extreport` nền 12pt, gói `fontsize` đặt cỡ chữ thực 13pt và các cỡ tương đối).
 - **Font chữ:** `Times New Roman` (chính thức qua `fontspec` trên XeLaTeX/LuaLaTeX, có hỗ trợ fallback `mathptmx` trên pdfLaTeX).
-- **Giãn dòng:** `1.25` chuẩn bài tập lớn / luận văn đại học.
+- **Giãn dòng:** `1.3` chuẩn bài tập lớn / luận văn đại học.
 
 ### Cách 1: Sử dụng Overleaf (Khuyến nghị — Nhanh nhất 1-Click)
 1. Nén toàn bộ thư mục `data-mining-latek` thành một tệp `.zip`.
@@ -115,3 +115,8 @@ Trang bìa (`sections/00_cover.tex`) được thiết kế bám sát 100% mẫu 
 3. **Logo UTH**: Bóc tách chính xác từ tệp mẫu, hiển thị cân đối ở trung tâm.
 4. **Tên Đề tài**: In hoa, in đậm, màu **Đỏ (UTHRed)** nổi bật.
 5. **Khối GVHD & SVTH**: Canh lề phải theo đúng bố cục truyền thống của trường.
+
+
+## Bản cập nhật ảnh ngày 23/11/2026
+
+Đã chèn 7 ảnh chụp tự động trong `figures/captured_20261123_082337/`, kèm chú thích nguồn và bảng phân biệt snapshot. PDF được biên dịch bằng Tectonic portable 0.17.0 và kiểm tra bố cục. `BUILD_VALIDATION.json` ghi số trang, vị trí ảnh và kết quả kiểm tra. Không chạy lại mining hoặc benchmark.

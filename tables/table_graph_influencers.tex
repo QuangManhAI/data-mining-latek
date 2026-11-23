@@ -1,40 +1,26 @@
-% ==============================================================================
-% BẢNG TOP TÁC GIẢ & CÔNG TRÌNH CÓ PAGERANK CAO NHẤT (CHUẨN VIỀN LƯỚI & KHỔ TRANG)
-% ==============================================================================
-
 \begin{table}[htbp]
-  \centering
-  \normalsize
-  \caption{Top Các Tác giả và Nút Tri thức có Điểm PageRank Centrality Cao nhất trong Mạng lưới Khoa học (Nguồn: \texttt{graph\_coauthorship.json})}
-  \label{tab:graph_influencers}
-  \vspace{4pt}
-  \noindent\resizebox{\textwidth}{!}{%
-  \begin{tabularx}{\textwidth}{|>{\centering\arraybackslash}p{1.0cm}|>{\raggedright\arraybackslash}p{3.8cm}|>{\centering\arraybackslash}p{1.8cm}|>{\centering\arraybackslash}p{1.4cm}|>{\centering\arraybackslash}p{1.2cm}|>{\centering\arraybackslash}p{2.0cm}|>{\raggedright\arraybackslash}X|}
-    \hline
-    \textbf{Hạng} & \textbf{Tác giả / Nút Mạng} & \textbf{PageRank} & \textbf{Bậc} & \textbf{Số bài} & \textbf{Cộng đồng} & \textbf{Vai trò Mạng lưới} \\
-    \hline
-    \textbf{1} & Yang Liu & \textbf{0.000509} & 237 & 38 & Community 0 & Hub liên kết nghiên cứu Học sâu \& Đa phương thức \\
-    \hline
-    \textbf{2} & Hao Chen & 0.000463 & 189 & 32 & Community 0 & Cầu nối Thị giác máy tính và Tối ưu hóa \\
-    \hline
-    \textbf{3} & Yang Li & 0.000310 & 134 & 20 & Community 0 & Nghiên cứu viên tích cực nhóm Xử lý Ảnh \\
-    \hline
-    \textbf{4} & Yu Qiao & 0.000281 & 153 & 19 & Community 0 & Chuyên gia Mô hình Nền tảng \& Thị giác \\
-    \hline
-    \textbf{5} & Wei Wang & 0.000275 & 103 & 17 & Community 2 & Trọng tâm mạng lưới Xử lý Ngôn ngữ Tự nhiên \\
-    \hline
-    \textbf{6} & Hao Wang & 0.000264 & 83 & 19 & Community 1 & Cầu nối nghiên cứu Hệ thống Khuyến nghị \\
-    \hline
-    \textbf{7} & Wei Zhang & 0.000253 & 101 & 17 & Community 0 & Nhóm Tối ưu hóa \& Học tăng cường \\
-    \hline
-    \multicolumn{7}{|l|}{\cellcolor{LightGray}\textbf{Các Công trình Nền tảng Kinh điển (Landmark Papers trên Đồ thị Trích dẫn)}} \\
-    \hline
-    -- & \textit{Attention Is All You Need} & \textbf{0.012632} & 2,840+ & -- & Seminal & Khởi nguồn kiến trúc Transformer \\
-    \hline
-    -- & \textit{Deep Residual Learning (ResNet)} & 0.009840 & 2,120+ & -- & Seminal & Đột phá mạng tích chập sâu cho Thị giác \\
-    \hline
-    -- & \textit{BERT: Pre-training of Deep Bidirectional...} & 0.008710 & 1,950+ & -- & Seminal & Khởi nguồn mô hình ngôn ngữ tự giám sát \\
-    \hline
-  \end{tabularx}%
-  }
+\centering
+\small
+\caption[PageRank tác giả trong mạng đồng tác giả]{PageRank tác giả trong mạng đồng tác giả}
+\label{tab:graph_influencers}
+\begin{tabularx}{\textwidth}{|L|L|p{1.2cm}|p{1.2cm}|L|}
+\hline
+\textbf{Tác giả} & \textbf{PageRank} & \textbf{Bậc} & \textbf{Số bài} & \textbf{Cộng đồng} \\
+\hline
+Yang Liu & 0.000509 & 237 & 38 & 0 \\
+\hline
+Hao Chen & 0.000463 & 189 & 32 & 0 \\
+\hline
+Yang Li & 0.000310 & 134 & 20 & 0 \\
+\hline
+Yu Qiao & 0.000281 & 153 & 19 & 0 \\
+\hline
+Wei Wang & 0.000275 & 103 & 17 & 2 \\
+\hline
+Hao Wang & 0.000264 & 83 & 19 & 1 \\
+\hline
+Wei Zhang & 0.000253 & 101 & 17 & 0 \\
+\hline
+\end{tabularx}
+\ReportNote{Nguồn: \path{data/gold/mining/graph_coauthorship.json}, snapshot local lịch sử; không phải PageRank trực tiếp của bài báo.}
 \end{table}

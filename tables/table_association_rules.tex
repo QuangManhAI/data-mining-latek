@@ -1,41 +1,24 @@
-% ==============================================================================
-% BẢNG CÁC LUẬT KẾT HỢP KHAI PHÁ BỞI FP-GROWTH (SIZE 13PT)
-% ==============================================================================
-
 \begin{table}[htbp]
-  \centering
-  \normalsize
-  \caption{Danh Mục Các Luật Kết Hợp Tiêu Biểu Khai Phá bằng Thuật Toán FP-Growth trên Hồ Dữ Liệu Học Thuật (Nguồn: \texttt{association\_rules.json})}
-  \label{tab:association_rules}
-  \vspace{4pt}
-  \noindent\resizebox{\textwidth}{!}{%
-  \setlength{\tabcolsep}{4.0pt}
-  \begin{tabular}{|>{\centering\arraybackslash}p{0.8cm}|>{\raggedright\arraybackslash}p{3.8cm}|>{\raggedright\arraybackslash}p{3.8cm}|>{\centering\arraybackslash}p{1.4cm}|>{\centering\arraybackslash}p{1.3cm}|>{\centering\arraybackslash}p{1.3cm}|>{\centering\arraybackslash}p{1.8cm}|}
-    \hline
-    \textbf{STT} & \textbf{Tiền đề (Antecedents $X$)} & \textbf{Hệ quả (Consequents $Y$)} & \textbf{Support} & \textbf{Conf.} & \textbf{Lift} & \textbf{Conviction} \\
-    \hline
-    \textbf{1} & \texttt{model-quantization} & \texttt{transformer} & 0.0177 & 0.500 & \textbf{3.357} & 1.702 \\
-    \hline
-    \textbf{2} & \texttt{transformer} & \texttt{model-quantization} & 0.0177 & 0.119 & \textbf{3.357} & 1.095 \\
-    \hline
-    \textbf{3} & \texttt{knowledge-distillation} & \texttt{federated-learning} & 0.0248 & 0.280 & \textbf{2.820} & 1.251 \\
-    \hline
-    \textbf{4} & \texttt{federated-learning} & \texttt{knowledge-distillation} & 0.0248 & 0.250 & \textbf{2.820} & 1.215 \\
-    \hline
-    \textbf{5} & \texttt{zero-shot-learning} & \texttt{diffusion-models} & 0.0213 & 0.231 & \textbf{1.860} & 1.139 \\
-    \hline
-    \textbf{6} & \texttt{multimodal-ai} & \texttt{attention-mechanism} & 0.0213 & 0.118 & \textbf{1.071} & 1.009 \\
-    \hline
-    \textbf{7} & \texttt{convex-optimization} & \texttt{reinforcement-learning} & 0.0248 & 0.200 & \textbf{0.910} & 0.975 \\
-    \hline
-    \multicolumn{7}{|l|}{\cellcolor{LightGray}\textbf{Nhóm Luật Chuyên ngành Liên kết (Category Domain Rules)}} \\
-    \hline
-    \textbf{8} & \{\texttt{cs.AI}, \texttt{cs.CV}\} & \{\texttt{cs.LG}\} & 0.0650 & 0.852 & \textbf{2.540} & 4.980 \\
-    \hline
-    \textbf{9} & \{\texttt{cs.AI}, \texttt{cs.CL}\} & \{\texttt{cs.LG}\} & 0.0520 & 0.784 & \textbf{2.330} & 3.420 \\
-    \hline
-    \textbf{10} & \{\texttt{stat.ML}\} & \{\texttt{cs.LG}\} & 0.0814 & 0.892 & \textbf{2.660} & 6.810 \\
-    \hline
-  \end{tabular}%
-  }
+\centering
+\small
+\caption[Một số luật kết hợp trong snapshot lịch sử]{Một số luật kết hợp trong snapshot lịch sử}
+\label{tab:association_rules}
+\begin{tabularx}{\textwidth}{|p{0.8cm}|L|L|p{1.5cm}|p{1.3cm}|p{1.3cm}|}
+\hline
+\textbf{STT} & \textbf{Tiền đề} & \textbf{Hệ quả} & \textbf{Support} & \textbf{Conf.} & \textbf{Lift} \\
+\hline
+1 & tag:transformer & tag:model-quantization & 0.0177 & 0.1190 & 3.3571 \\
+\hline
+2 & tag:model-quantization & tag:transformer & 0.0177 & 0.5000 & 3.3571 \\
+\hline
+3 & tag:knowledge-distillation & tag:federated-learning & 0.0248 & 0.2800 & 2.8200 \\
+\hline
+4 & tag:federated-learning & tag:knowledge-distillation & 0.0248 & 0.2500 & 2.8200 \\
+\hline
+5 & tag:autonomous-agents & tag:reinforcement-learning & 0.0993 & 0.6087 & 2.7686 \\
+\hline
+6 & tag:reinforcement-learning & tag:autonomous-agents & 0.0993 & 0.4516 & 2.7686 \\
+\hline
+\end{tabularx}
+\ReportNote{Nguồn: \path{data/gold/mining/association_rules.json}; 282 giao dịch. Artifact còn chứa luật đối xứng; không phải kết quả đã tái lập của phiên bản hiện tại.}
 \end{table}

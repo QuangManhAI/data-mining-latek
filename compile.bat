@@ -32,16 +32,20 @@ if %errorlevel% neq 0 (
 )
 
 echo [BƯỚC 1/4] Chạy XeLaTeX lần 1 để nạp nhãn và mục lục...
-xelatex -synctex=1 -interaction=nonstopmode main.tex
+xelatex -synctex=1 -interaction=nonstopmode -halt-on-error main.tex
+if errorlevel 1 exit /b 1
 
 echo [BƯỚC 2/4] Chạy BibTeX để đồng bộ trích dẫn tài liệu tham khảo...
 bibtex main
+if errorlevel 1 exit /b 1
 
 echo [BƯỚC 3/4] Chạy XeLaTeX lần 2 để cập nhật chỉ mục và trích dẫn...
-xelatex -synctex=1 -interaction=nonstopmode main.tex
+xelatex -synctex=1 -interaction=nonstopmode -halt-on-error main.tex
+if errorlevel 1 exit /b 1
 
 echo [BƯỚC 4/4] Chạy XeLaTeX lần 3 để hoàn thiện liên kết chéo và số trang...
-xelatex -synctex=1 -interaction=nonstopmode main.tex
+xelatex -synctex=1 -interaction=nonstopmode -halt-on-error main.tex
+if errorlevel 1 exit /b 1
 
 if exist main.pdf (
     echo.

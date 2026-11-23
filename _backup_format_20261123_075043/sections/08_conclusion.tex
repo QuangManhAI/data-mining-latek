@@ -1,0 +1,31 @@
+\chapter{Kết Luận và Hướng Phát Triển (Conclusion \& Future Work)}
+\label{chap:conclusion}
+\section{Tổng Kết Kết Quả và Phạm Vi Xác Nhận}
+Đồ án triển khai pipeline nghiên cứu khoa học theo Medallion Lakehouse, hai stage fetch/embed nối qua RabbitMQ, MinIO chứa Bronze và Silver papers/chunks, Qdrant lập chỉ mục vector 768-D và FastAPI/React phục vụ truy xuất, phân tích và hỏi đáp. Bản báo cáo đối chiếu source ở commit \texttt{e828310}, ngày 05/11/2026.
+
+Các thuật toán mining gồm FP-Growth; KMeans kết hợp PCA/GMM và DBSCAN; graph PageRank/Louvain với nhánh citation hoặc đồng tác giả; và Isolation Forest kết hợp phân tích thị phần. RAG có lexical scoring, RRF, authority multiplier tối đa 25\% và cross-encoder. Rule expansions hiện là annotation; clustering và anomaly phục vụ dashboard, chưa điều hướng trực tiếp truy xuất.
+
+Snapshot local lịch sử ghi 10,000 bài, 2,220,938 công thức và tỷ lệ làm giàu HTML 90.15\%; artifact luật có 282 giao dịch/22 luật; graph đồng tác giả có 35,117 tác giả, 130,082 cạnh, 3,740 cộng đồng; anomaly summary ghi 200 điểm và danh sách xuất 30 ví dụ. Các con số này không mô tả quy mô live hiện tại.
+
+DeepEval lịch sử ngày 05/10/2026 trên LanceDB cho thấy Precision tăng 0.637 lên 0.860; Recall 1.000 trên 19 mẫu hợp lệ; Faithfulness vẫn 0.699. Báo cáo phần cứng ngày 19/10/2026 ghi 46.33 tokens/s và TTFT 609.8 ms trên RTX 4060/CUDA. Cần đo lại sau thay đổi Qdrant/Silver chunks để kết luận về phiên bản hiện tại.
+
+\section{Đóng Góp và Giá Trị Ứng Dụng}
+Hệ thống kết nối xử lý dữ liệu học thuật, thuật toán khai phá và truy xuất có dẫn nguồn trong một kiến trúc có thể mở rộng. Việc tách text khỏi payload vector giúp quản lý chunk trong Silver và kiểm soát dữ liệu đọc khi hydrate. Dashboard hỗ trợ khám phá corpus, đồ thị, cụm và dị biệt; người dùng có thể kiểm tra nguồn của câu trả lời. Chưa có nghiên cứu người dùng để định lượng thời gian tiết kiệm hay mức độ ứng dụng thực tế.
+
+\section{Giới Hạn Còn Tồn Tại}
+\begin{enumerate}
+\item Snapshot thu thập tập trung vào tháng 01--02/2024, gây sai lệch khi diễn giải tăng trưởng của toàn miền AI/DS.
+\item Artifact local và benchmark được tạo ở các phiên bản khác nhau. Artifact luật còn đối xứng, title cụm có lỗi và report SVGD có mâu thuẫn nội bộ; chúng cần được tái lập thay vì xem là ground truth.
+\item Faithfulness chưa cao; prompt và trích dẫn không bảo đảm mọi câu trả lời đúng. Số mẫu đánh giá thành công khác nhau giữa metric và pipeline.
+\item Query expansion chưa được đưa vào embedding; authority dựa trên khớp tên tác giả, có nguy cơ nhập nhằng tên; clustering/anomaly chưa tác động trực tiếp tới retrieval.
+\item Hydrate Silver phụ thuộc mạng và tính đồng bộ giữa chunk table với vector index. Chưa đo độ trễ end-to-end của phiên bản mới trong lần cập nhật này.
+\item Silhouette thấp không đủ chứng minh nguyên nhân liên ngành; các nhãn dị biệt chưa được chuyên gia xác thực.
+\end{enumerate}
+
+\section{Hướng Phát Triển}
+\begin{itemize}
+\item Tái chạy mining và benchmark trên cùng commit, snapshot và cấu hình; lưu raw traces, số mẫu lỗi và manifest thống nhất. Thêm ablation để phân biệt tác động của reranker, authority, lexical/RRF và prompt.
+\item Đánh giá query expansion thực sự ở bước retrieval; thay khớp tên tác giả bằng định danh khi có dữ liệu. Kiểm tra đồng bộ Silver chunks/Qdrant và DLQ.
+\item Đánh giá và gán nhãn GMM bằng title/keyword/c-TF-IDF hoặc LLM có kiểm tra; bổ sung kiểm định thống kê phù hợp trước khi kết luận tương quan hoặc khác biệt.
+\item Mở rộng graph tri thức và multi-hop RAG sau khi xác nhận chất lượng dữ liệu citation và hiệu quả trên bộ câu hỏi độc lập.
+\end{itemize}

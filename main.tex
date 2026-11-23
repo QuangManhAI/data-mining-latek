@@ -8,7 +8,7 @@
 % Chuẩn biên dịch khuyến nghị: XeLaTeX hoặc LuaLaTeX (Font Times New Roman, Size 13pt)
 % ==============================================================================
 
-\documentclass[13pt,a4paper]{extreport}
+\documentclass[12pt,a4paper]{extreport}
 
 % 1. Nạp cấu hình gói mở rộng & kiểu dáng
 \input{config/preamble.tex}
@@ -22,10 +22,12 @@
 \begin{document}
 
 % --- TRANG BÌA CHUẨN MẪU UTH ---
+\hypersetup{pageanchor=false}
 \input{sections/00_cover.tex}
 
 % --- PHẦN ĐẦU (FRONT MATTER): ĐÁNH SỐ LA MÃ TỪ TRANG 2 (TRANG i) ---
 \pagenumbering{roman}
+\hypersetup{pageanchor=true}
 \setcounter{page}{1}
 
 % --- TRANG DANH SÁCH THÀNH VIÊN NHÓM & BẢNG PHÂN CÔNG NHIỆM VỤ ---

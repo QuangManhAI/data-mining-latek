@@ -4,12 +4,12 @@
 
 \begin{table}[htbp]
   \centering
-  \normalsize
-  \caption{Hồ Sơ Đo Lường Độ Trễ (Latency Profiling) và Tốc Độ Sinh Token trên GPU NVIDIA RTX 4060 Laptop (Nguồn: \texttt{PERFORMANCE\_BENCHMARK\_REPORT.md})}
+  \small
+  \setlength{\tabcolsep}{4pt}
+  \caption[Hiệu năng phần cứng trong lần đo ngày 19/10/2026]{Hiệu năng phần cứng trong lần đo ngày 19/10/2026}
   \label{tab:latency_profile}
   \vspace{4pt}
-  \noindent\resizebox{\textwidth}{!}{%
-  \begin{tabularx}{\textwidth}{|>{\raggedright\arraybackslash}p{3.8cm}|>{\centering\arraybackslash}p{2.5cm}|>{\centering\arraybackslash}p{2.8cm}|>{\centering\arraybackslash}p{2.0cm}|>{\raggedright\arraybackslash}X|}
+  \begin{tabularx}{\linewidth}{|>{\raggedright\arraybackslash}p{35mm}|Y|Y|Y|L|}
     \hline
     \textbf{Công đoạn Pipeline} & \textbf{Vulkan / CPU Baseline} & \textbf{CUDA 12.4 + RTX 4060} & \textbf{Mức tăng tốc} & \textbf{Đánh giá Kỹ thuật} \\
     \hline
@@ -25,8 +25,8 @@
     \hline
     \textbf{Tốc độ sinh token (Throughput)} & \textbf{3.64 tok/s} & \textbf{46.33 $\pm$ 0.64 tok/s} & \textbf{$12.7\times$ tăng vọt} & Streaming mượt mà cho UI \\
     \hline
-    \textbf{Tổng độ trễ End-to-End} & $37,310\text{ ms}$ (37.3 s) & \textbf{3,392.50 $\pm$ 607.22 ms} & \textbf{$\approx 11.0\times$ nhanh hơn} & Phản hồi hoàn tất dưới 3.5 giây \\
+    \textbf{Tổng độ trễ End-to-End} & $37,310\text{ ms}$ (37.3 s) & \textbf{3,392.50 $\pm$ 607.22 ms} & \textbf{$\approx 11.0\times$ nhanh hơn} & Mean 3.39 giây trong kịch bản đo \\
     \hline
-  \end{tabularx}%
-  }
+  \end{tabularx}
+\ReportNote{Nguồn: \path{docs/benchmarks/PERFORMANCE_BENCHMARK_REPORT.md}. Các giá trị thuộc kịch bản đo được tài liệu hóa; không phải cam kết độ trễ cho mọi truy vấn.}
 \end{table}

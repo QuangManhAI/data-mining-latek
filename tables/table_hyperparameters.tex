@@ -1,0 +1,39 @@
+\begingroup
+\small
+\setlength{\tabcolsep}{4pt}
+\setlength{\LTpre}{4pt}
+\setlength{\LTpost}{6pt}
+\begin{longtable}{|>{\raggedright\arraybackslash}p{27mm}|>{\raggedright\arraybackslash}p{40mm}|>{\centering\arraybackslash}p{15mm}|>{\raggedright\arraybackslash}p{61mm}|}
+\caption[Tham số cấu hình hệ thống]{Tham số cấu hình mặc định của hệ thống}
+\label{tab:hyperparameters}\\
+\hline
+\textbf{Phân hệ} & \textbf{Tham số} & \textbf{Giá trị} & \textbf{Ý nghĩa} \\ \hline
+\endfirsthead
+\multicolumn{4}{l}{\small Bảng \thetable{} (tiếp theo)}\\
+\hline
+\textbf{Phân hệ} & \textbf{Tham số} & \textbf{Giá trị} & \textbf{Ý nghĩa} \\ \hline
+\endhead
+\hline
+\multicolumn{4}{r}{\small Còn tiếp ở trang sau}\\
+\endfoot
+\hline
+\endlastfoot
+FP-Growth & \path{min_support} & 0.02 & Mặc định; snapshot cũ dùng 0.015 \\ \hline
+FP-Growth & \path{min_lift} & 1.20 & Ngưỡng lift ban đầu; có fallback \\ \hline
+FP-Growth & \path{top_k} & 50 & Giới hạn số luật trả về \\ \hline
+FP-Growth & \path{min_abs_transactions} & 25 & Số giao dịch hỗ trợ tuyệt đối tối thiểu \\ \hline
+Clustering & \path{vector_dim} & 768 & Số chiều embedding Nomic \\ \hline
+Clustering & \path{n_clusters} & 6 & Mặc định KMeans và GMM \\ \hline
+Clustering & \path{pca_components} & 2 & Chiếu 2D để hiển thị và fit GMM \\ \hline
+Clustering & \path{dbscan_eps / min_samples} & 0.28 / 10 & DBSCAN dùng khoảng cách cosine trên mẫu \\ \hline
+Graph & \path{pagerank_alpha} & 0.85 & Hệ số suy giảm PageRank \\ \hline
+Graph & \path{authority_beta} & 0.25 & Hệ số uy tín theo tác giả; tối đa +25\% \\ \hline
+Anomalies & \path{contamination} & 0.02 & Tỷ lệ dị biệt cấu trúc đặt trước \\ \hline
+Anomalies & \path{n_estimators} & 100 & Số cây trong Isolation Forest \\ \hline
+RAG & \path{RERANKER_CANDIDATE_K} & 8 & Ứng viên retrieval trả cho reranker; pool Qdrant mặc định 25 \\ \hline
+RAG & \path{RERANKER_TOP_K} & 5 & Số đoạn giữ lại; request có thể ghi đè \\ \hline
+RAG & \path{rrf_constant} & 60 & Hằng số làm mịn RRF \\ \hline
+Chat & \path{temperature} & 0.1 & Mặc định của ChatRequest \\ \hline
+\end{longtable}
+\ReportNote{Nguồn: các module mining, cấu hình backend và ChatRequest tại commit \texttt{e828310}. Giá trị trong môi trường chạy hoặc request có thể ghi đè các mặc định cấu hình.}
+\endgroup

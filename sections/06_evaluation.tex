@@ -1,97 +1,53 @@
-% ==============================================================================
-% CHƯƠNG 5: ĐÁNH GIÁ THỰC NGHIỆM HỆ THỐNG (EVALUATION)
-% ==============================================================================
-
 \chapter{Đánh Giá Thực Nghiệm Hệ Thống (Evaluation)}
 \label{chap:evaluation}
-
-Chương này trình bày toàn bộ kết quả thẩm định thực nghiệm độc lập và định lượng của hệ thống, bao gồm đánh giá chất lượng 4 Trụ Cột Khai Phá Dữ Liệu, đánh giá chất lượng truy xuất và sinh câu trả lời RAG thông qua bộ tiêu chuẩn học thuật \textbf{DeepEval 2.x}, và hồ sơ đo lường độ trễ trên phần cứng máy trạm GPU.
-
-\section{Đánh Giá Định Lượng 4 Trụ Cột Khai Phá Dữ Liệu}
-
-Cả 4 trụ cột khai phá dữ liệu đều được thực thi tự động thông qua \texttt{MiningEngine} và kiểm tra tính toàn vẹn tại tệp \texttt{mining\_manifest.json}:
-
-\begin{enumerate}[label=\textbf{\arabic*.}]
-  \item \textbf{Trụ cột 1 (FP-Growth)}:
-    Từ 282 giao dịch đa khái niệm, thuật toán hoàn thành trong \textbf{$0.49\text{ giây}$}, khai phá được \textbf{38 tập phổ biến} và \textbf{22 luật kết hợp} đã khử trùng lặp đối xứng. Độ nâng trung bình của các luật đạt $2.41$ (trong đó luật cao nhất đạt $\text{Lift} = 3.357$), chứng minh mối quan hệ giữa các khái niệm là có căn cứ thống kê mạnh mẽ, hoàn toàn vượt xa sự ngẫu nhiên.
-  \item \textbf{Trụ cột 2 (Semantic Clustering)}:
-    Quá trình quét MiniBatchKMeans ($K \in \{4, 6, 8\}$) trên 3,000 vector embedding 768-D hoàn tất trong \textbf{$0.48\text{ giây}$}. Cấu hình $K=6$ đạt điểm Silhouette tối ưu ($0.0210$ trên toàn mẫu và $0.0629$ trên mẫu con), Davies-Bouldin Index đạt $5.3739$ và Calinski-Harabasz Index đạt $88.0$. DBSCAN với khoảng cách Cosine $\varepsilon=0.28$ xác nhận $53.5\%$ các bài báo nằm ở ranh giới giao thoa liên ngành, lý giải một cách khoa học cho độ phân tán mở của nghiên cứu AI.
-  \item \textbf{Trụ cột 3 (Citation Network \& PageRank)}:
-    Dựng đồ thị và tính toán trong \textbf{$72.2\text{ giây}$} trên 35,117 tác giả với 130,082 cạnh đồng tác giả và 86,295 liên kết trích dẫn nội bộ. Thuật toán Directed PageRank ($\alpha=0.85$) phát hiện chính xác các đỉnh tác giả trung tâm (như Yang Liu, Hao Chen) và các công trình nền tảng kinh điển (như \textit{Attention Is All You Need} với $PR = 0.012632$, cao gấp 25 lần trung bình toàn mạng). Thuật toán Louvain phát hiện thành công 92 trường phái nghiên cứu gắn kết.
-  \item \textbf{Trụ cột 4 (Trend Velocity \& Isolation Forest)}:
-    Thực thi trong \textbf{$0.14\text{ giây}$}, phân loại chính xác động lượng tăng trưởng của 20 chuyên ngành (chỉ ra \texttt{cs.AI} và \texttt{cs.CV} là các hướng bùng nổ mạnh nhất với mức tăng $>120\%$). Rừng cô lập phát hiện chính xác \textbf{200 bài báo dị biệt cấu trúc} (chiếm tỷ lệ $2.0\%$), nổi bật là các chuyên khảo toán học chứa tới 3,732 công thức và các tài liệu dài hơn 74,000 từ.
-\end{enumerate}
-
-\section{Đánh Giá Hiệu Năng RAG Qua Tiêu Chuẩn DeepEval 2.x}
-
-Hệ thống RAG được thẩm định tự động bằng bộ công cụ học thuật \textbf{DeepEval 2.x} trên tập 21 câu hỏi học thuật vàng (\texttt{gold-001} đến \texttt{gold-021}) bao quát các chủ đề chuyên sâu: FlashAttention, DPO, QLoRA, RoPE, Diffusion Schedulers, VAE, và Contrastive Learning. Mô hình đóng vai trò giám khảo đánh giá (LLM Judge) là \texttt{Qwen2.5-7B-Instruct} (GGUF Q4\_K\_M) vận hành cục bộ trên GPU.
-
-Hệ thống tiến hành so sánh đối đầu giữa hai cấu hình:
+\section{Phạm Vi Chứng Cứ và Khác Biệt Phiên Bản}
+Phạm vi mô tả hệ thống được xác định tại commit \texttt{e828310} (05/11/2026). Các số liệu thực nghiệm trong chương được tổng hợp từ chứng cứ lưu trữ, không phải phép đo lại trên hệ thống hiện tại. Ảnh mới ngày 23/11/2026 ở các chương khác sử dụng các artifact trên kho có phạm vi riêng (Bảng~\ref{tab:snapshot_sources}); không gộp với các kết quả dưới đây. Ba nhóm chứng cứ được tách riêng:
 \begin{itemize}
-  \item \textbf{Pipeline Cơ sở (Dense Baseline)}: Chỉ sử dụng tìm kiếm vector Cosine đơn thuần trên Qdrant (Top-5), prompt tiêu chuẩn với nhiệt độ $\text{temp} = 0.7$, không có reranker và không có ràng buộc phủ định.
-  \item \textbf{Pipeline Nâng cao (Upgraded RAG)}: Thu hồi vùng ứng viên rộng ($k=15$), hòa trộn Reciprocal Rank Fusion (RRF $k=60$) kết hợp điểm từ vựng BM25 và bộ nhân PageRank Boost (+25\%), tái xếp hạng bằng Cross-Encoder \texttt{ms-marco-MiniLM-L-6-v2} lấy Top-5, và áp dụng 6 quy tắc kiểm soát phủ định nghiêm ngặt (\textit{Strict Negative Constraints}) tại $\text{temp} = 0.1$.
+\item Artifact local trong \path{data/gold/mining/}, được manifest 04/10/2026 tham chiếu. Manifest còn ghi nguồn LanceDB/local; đây không phải manifest chạy code hiện tại trên MinIO/Qdrant.
+\item Báo cáo DeepEval ngày 05/10/2026, commit được báo cáo là \texttt{6cb1c52}, dùng LanceDB và hơn 143 nghìn chunk trên Cloudflare R2.
+\item Báo cáo phần cứng ngày 19/10/2026, gồm phép đo Qdrant và phép đo LLM RTX 4060/CUDA.
 \end{itemize}
+Các con số được giữ theo chứng cứ đã lưu, chưa được tái lập độc lập. Không gộp chúng thành một lần chạy end-to-end của phiên bản mới.
 
-Bảng~\ref{tab:rag_benchmark} trình bày kết quả so sánh chi tiết trên 6 độ đo học thuật của DeepEval.
+\section{Đánh Giá Định Lượng Các Artifact Mining Lịch Sử}
+\begin{enumerate}
+\item \textbf{EDA}: 10,000 bài, 9,015 bài làm giàu HTML, 2,220,938 công thức, 47,782,707 từ.
+\item \textbf{FP-Growth}: 282 giao dịch, 38 itemset, 22 luật; manifest ghi 0.49 giây. Artifact còn luật đối xứng và có giá trị lift dưới threshold khai báo; số luật này không đại diện cho kết quả đã khử đối xứng của code mới.
+\item \textbf{Clustering}: summary ghi 5,000 mẫu, 768 chiều, $K=6$; validity metrics là 0.0210 (Silhouette), 5.3739 (Davies--Bouldin), 88.0 (Calinski--Harabasz). DBSCAN có một cụm, noise ratio 0.0. Manifest ghi 0.48 giây cho module cũ; không dùng thời gian này để ước lượng toàn bộ PCA/GMM hiện tại.
+\item \textbf{Graph}: snapshot đồng tác giả có 35,117 tác giả, 130,082 cạnh, 3,740 cộng đồng và 3,516 thành phần liên thông. Manifest ghi 72.2 giây. Artifact này không chứng minh số cạnh citation hoặc PageRank của landmark.
+\item \textbf{Isolation Forest}: summary ghi 200 điểm dị biệt trên 10,000 bài (2\%), danh sách xuất chỉ có 30 bản ghi. Manifest ghi 30 vì đếm danh sách và ghi 0.14 giây; cần phân biệt số phát hiện với số xuất. Artifact trend cũ có 20 ngành nhưng còn nhãn ACCELERATING, không phải đầu ra chuẩn hóa thị phần của code hiện tại.
+\end{enumerate}
+Tổng runtime 73.33 giây thuộc manifest cũ, không phải SLA của hệ thống mới. Các điểm dị biệt chưa có nhãn ground truth để tính precision/recall phát hiện bất thường.
+
+\section{Benchmark DeepEval 2.x trên Kiến Trúc LanceDB Lịch Sử}
+Nguồn là \path{docs/benchmarks/RAG_EVALUATION_REPORT_21_SAMPLES.md}. Báo cáo so sánh dense baseline với pipeline nâng cao trên 21 câu hỏi curated (gold-001 đến gold-021), dùng Qwen2.5-7B-Instruct làm LLM judge. Cấu hình lịch sử dùng Top-5 baseline, pool nâng cao 15, cross-encoder, fusion và guardrail; không đồng nhất với pool mặc định 8 của backend hiện tại. Tài liệu cũ gọi lexical matching là BM25; implementation hiện tại dùng heuristic lexical scoring.
 
 \input{tables/table_rag_benchmark.tex}
 
-\subsection{Phân Tích Chi Tiết Từng Chỉ Số}
+\subsection{Diễn Giải và Giới Hạn Đánh Giá}
+\begin{itemize}
+\item Contextual Precision tăng 0.637 lên 0.860 (+35.0\% tương đối), pass 16/20 mẫu hợp lệ. Đây là kết quả aggregate đã ghi trong báo cáo cũ, không phải kiểm định ý nghĩa thống kê.
+\item Contextual Recall 1.000 và pass 19/19 chỉ áp dụng cho các mẫu tính được metric. Không đồng nghĩa 21/21 câu hỏi đều đầy đủ, hay mọi câu trả lời mới có độ phủ 100\%.
+\item Answer Relevancy tăng 0.687 lên 0.752, pass 11/20. Baseline và upgraded có số mẫu hợp lệ khác nhau cho một số metric; không xem đây là đối chứng cặp hoàn chỉnh.
+\item Faithfulness 0.699, pass 9/17 (52.9\%), cho thấy hạn chế grounding còn tồn tại. Guardrail và dẫn nguồn không chứng minh đã loại bỏ hoàn toàn ảo giác.
+\item Citation Grounding GEval có score trung bình 0.720, pass 18/20; score giảm từ 0.757. Tỷ lệ pass không chỉ là phép đếm định dạng trích dẫn. Contextual Relevancy cũng giảm 0.578 xuống 0.562; cải thiện không đồng đều trên mọi metric.
+\end{itemize}
 
-\begin{enumerate}[label=\textbf{\arabic*.}]
-  \item \textbf{Contextual Precision (Tăng vọt +35.0\%)}:
-    Đây là bước nhảy vọt ấn tượng nhất của hệ thống, tăng từ $0.637$ lên \textbf{$0.860$} (tỷ lệ đạt chuẩn tăng từ $60\%$ lên \textbf{$80\%$}). Trong mô hình cơ sở, các bài báo khảo cứu tổng quan (Survey Papers) thường có vector trung bình nằm gần nhiều khái niệm, dẫn đến việc chúng chiếm vị trí Top-1 và đẩy các bài báo chứa thuật toán gốc xuống dưới. Khi bổ sung Cross-Encoder, mô hình tính toán cơ chế tự chú ý chéo $\text{BERT}(q \circ d)$ giữa toàn bộ các cặp từ của câu hỏi và đoạn trích, chấm điểm phù hợp tuyệt đối ($>0.98$) cho đúng đoạn chứa công thức gốc. Trong \textbf{12 trên tổng số 20 trường hợp kiểm thử}, Contextual Precision đạt điểm số hoàn hảo \textbf{$1.000$}.
-  \item \textbf{Contextual Recall (Đạt mức hoàn hảo 100\%)}:
-    Chỉ số đo lường mức độ bao phủ toàn diện các luận điểm khoa học trong câu trả lời so với đáp án chuẩn. Pipeline nâng cao đạt điểm số tuyệt đối \textbf{$1.000$} (tỷ lệ đạt chuẩn $100\%$), đảm bảo rằng không một luận điểm kỹ thuật then chốt nào bị bỏ sót.
-  \item \textbf{Answer Relevancy (Tăng +9.4\%)}:
-    Điểm số trung bình tăng từ $0.687$ lên \textbf{$0.752$}. Nhờ hạ nhiệt độ sinh từ $\text{temp} = 0.7$ xuống $\text{temp} = 0.1$ và áp dụng Quy tắc 4 (\textit{"Answer directly and concisely without conversational filler"}), mô hình triệt tiêu hoàn toàn các câu chào hỏi rườm rà, đi thẳng vào bản chất công thức và cơ chế thuật toán. Các câu hỏi kỹ thuật hóc búa như FlashAttention (\texttt{gold-002}), DPO (\texttt{gold-003}) và QLoRA (\texttt{gold-012}) đều đạt điểm Relevancy tuyệt đối \textbf{$1.000$}.
-  \item \textbf{Faithfulness \& Chống Ảo Giác (Tăng +4.7\%)}:
-    Đạt $0.699$ với tỷ lệ vượt qua ngưỡng khắt khe tăng lên $52.9\%$. Các quy tắc bảo toàn công thức toán LaTeX ngăn chặn hiện tượng mô hình tự biến đổi biểu thức toán học hoặc suy diễn sai lệch so với tài liệu trích dẫn.
-  \item \textbf{Citation Grounding (Đạt 90.0\% Tỷ Lệ Vượt Chuẩn)}:
-    $18/20$ câu trả lời tuân thủ nghiêm ngặt định dạng chuẩn \lstinline{[Paper: <paper_id>, Section: <section_title>]}, cho phép người dùng có thể nhấp chuột kiểm tra chéo nguồn gốc ngay lập tức trên giao diện.
-\end{enumerate}
-
-\section{Đo Lường Độ Trễ và Tối Ưu Hóa Tài Nguyên Phần Cứng}
-
-\subsection{Hồ sơ Đo lường Độ trễ (Latency Profiling)}
-Các thử nghiệm độ trễ được tiến hành trên môi trường thực tế: Windows 11, Python 3.12, GPU NVIDIA GeForce RTX 4060 Laptop (8GB VRAM GDDR6). Kết quả đo lường trung bình qua 20 lần chạy kiểm thử độc lập được tổng hợp tại Bảng~\ref{tab:latency_profile}.
+\section{Đo Lường Phần Cứng Ngày 19/10/2026}
+Nguồn \path{docs/benchmarks/PERFORMANCE_BENCHMARK_REPORT.md} ghi Windows 11, Python 3.12, RTX 4060 Laptop 8 GB, CUDA 12.4 và 20 lần đo mỗi scenario truy vấn Qdrant. Top-5 không lọc có mean 269.46 ms và median 268.10 ms. LLM đạt TTFT 609.77 ms, sinh 46.33 tokens/s; end-to-end 3,392.50 ms thuộc kịch bản benchmark cụ thể, không phải cam kết độ trễ cho mọi câu hỏi.
 
 \input{tables/table_latency_profile.tex}
 
-\subsection{Tối Ưu Hóa Kết Nối Mạng (Connection Pooling)}
-Trong giai đoạn đầu phát triển, mỗi truy vấn tìm kiếm vector tới Qdrant Cloud qua giao thức HTTPS đều khởi tạo và đóng một phiên kết nối TCP/TLS mới (\texttt{requests.post}), dẫn đến độ trễ bị cộng dồn lên tới \textbf{$> 1,000\text{ ms}$/lần truy vấn}.
+Code Qdrant dùng \texttt{requests.Session()} và \texttt{HTTPAdapter} (\path{pool_connections=10}, \path{pool_maxsize=20}) để tái sử dụng kết nối. Báo cáo lịch sử ghi cấu hình context 4096, sequences 1 và mức VRAM 5.7 GB/8 GB; đây là cấu hình của phép đo. Backend hiện có mặc định \path{LLM_CONTEXT_WINDOW}=16384, có thể ghi đè qua môi trường; không suy ra cấu hình runtime hiện tại từ benchmark cũ.
 
-Nhóm nghiên cứu đã khắc phục bằng cách thiết lập hàng đợi kết nối an toàn đa luồng \texttt{requests.Session()} với cấu hình \lstinline{HTTPAdapter(pool_connections=10, pool_maxsize=20)} trong \texttt{src/indexing/qdrant\_manager.py}. Kết quả: toàn bộ chi phí bắt tay TCP và đàm phán TLS bị triệt tiêu sau lần gọi đầu tiên, giúp độ trễ tìm kiếm vector giảm xuống chỉ còn \textbf{$\sim 260\text{ ms}$ (giảm hơn $70\%$ độ trễ mạng)}.
+\section{Các Nghiên Cứu Điển Hình và Giới Hạn Nguồn}
+\subsection{DPO (gold-003)}
+Báo cáo lịch sử ghi Contextual Precision tăng từ 0.000 lên 1.000 sau nâng cấp pipeline. Vì thay đổi đồng thời reranker, lexical/fusion và prompt, chưa thể quy mức tăng cho riêng một thành phần nếu không có ablation.
 
-\subsection{Kiểm Soát Bộ Nhớ Đồ Họa và Ổn Định Driver}
-Trong cấu hình ban đầu, hệ thống thiết lập kích thước ngữ cảnh $\text{context\_size} = 8,192\text{ tokens}$ với 2 luồng tính toán đồng thời (\lstinline{LLM_SEQUENCES=2}). Cấu hình này đòi hỏi bộ nhớ đệm KV Cache lên tới $\sim 3.8\text{ GB}$, kết hợp cùng $4.68\text{ GB}$ trọng số mô hình Qwen2.5-7B và bộ nhớ đệm hiển thị của hệ điều hành Windows, đẩy tổng nhu cầu VRAM vượt quá ngưỡng vật lý $8.0\text{ GB}$ của card đồ họa, gây ra lỗi nghiêm trọng mất thiết bị (\lstinline{VK_ERROR_DEVICE_LOST}).
+\subsection{SVGD (gold-020)}
+Case study ghi mô hình từ chối vì thiếu tài liệu hỗ trợ về Stein Variational Gradient Descent. Tuy nhiên bảng diagnostic trong cùng báo cáo ghi Faithfulness của gold-020 từ 0.86 xuống 0.00. Do mâu thuẫn nội bộ của nguồn, trường hợp này chưa đủ chứng cứ để kết luận từ chối luôn đúng hoặc đạt Faithfulness tối đa. Cần kiểm tra raw trace và đánh giá lại.
 
-Nhóm đã tối ưu hóa các tham số môi trường:
-\begin{lstlisting}[language=bash]
-LLM_CONTEXT_SIZE=4096
-LLM_SEQUENCES=1
-\end{lstlisting}
-Nhờ đó, dung lượng KV Cache giảm xuống còn $\sim 950\text{ MB}$, và tổng mức tiêu thụ VRAM thực tế ổn định ở mức \textbf{$5.7\text{ GB} / 8.0\text{ GB}$}, để lại $2.3\text{ GB}$ dung lượng an toàn cho hệ điều hành. Hệ thống đạt độ ổn định tuyệt đối $100\%$ qua hàng trăm lượt đánh giá RAG liên tục mà không gặp bất kỳ sự cố tràn bộ nhớ nào.
+\section{Cấu Hình Hiện Tại và Yêu Cầu Tái Lập}
+Backend mặc định bật reranker ms-marco-MiniLM-L-6-v2 (fallback bge-reranker-base), lấy 8 ứng viên từ retrieval rồi Top-5 theo request/cấu hình. Pool thô Qdrant dùng công thức $\min(\max(2k,25),40)$; hybrid RRF dùng hằng số 60, authority tối đa 25\%, ChatRequest temperature 0.1. Khi tắt reranker, chat yêu cầu ít nhất 15 ứng viên từ retrieval.
 
-\section{Phân Tích Lỗi và Các Nghiên Cứu Điển Hình (Case Studies)}
-
-\subsection{Nghiên cứu Điển hình 1: Cứu Nguy Độ Chính Xác Không Gian (The Zero-to-Hero Rescues)}
-Trong bài kiểm thử về thuật toán Direct Preference Optimization (DPO - \texttt{gold-003}), hệ thống cơ sở chỉ dựa vào tìm kiếm vector Cosine đơn thuần đã xếp bài khảo cứu tổng quan về RLHF ở vị trí Top-1, khiến câu trả lời chỉ đưa ra các khái niệm chung chung và trượt bài kiểm tra độ chính xác (Precision = 0.000). 
-
-Khi kích hoạt pipeline cải tiến, bộ so khớp từ vựng BM25 phát hiện cụm từ viết tắt đặc thù \textit{"DPO"} và biểu thức tổn thất log-ratio $\log \frac{\pi_\theta}{\pi_{\text{ref}}}$, kết hợp với Cross-Encoder tái định vị chính xác bài báo gốc của Rafailov et al. lên vị trí Top-1, nâng Contextual Precision từ \textbf{$0.000$ lên tuyệt đối $1.000$}. Hiện tượng tương tự cũng được ghi nhận trên bài toán Variational Autoencoders (VAE) và Constitutional AI.
-
-\subsection{Nghiên cứu Điển hình 2: Bài Kiểm thử Phủ Định Thực (True Negative Test - SVGD)}
-Trong bài kiểm thử \texttt{gold-023}, người dùng đặt câu hỏi kỹ thuật về giải thuật Stein Variational Gradient Descent (SVGD) --- một chủ đề lý thuyết cố tình không được nạp vào hồ dữ liệu. 
-\begin{itemize}
-  \item Ở mô hình cơ sở: LLM cố gắng "bịa" ra một câu trả lời suy diễn dài dòng nhưng hoàn toàn sai lệch so với nguồn tài liệu trích dẫn (Faithfulness tụt xuống $0.15$).
-  \item Ở mô hình nâng cao: Nhờ Quy tắc Ràng buộc Phủ định 2 (\textit{"If the retrieved context does not contain sufficient technical details, state clearly..."}), mô hình đã trả lời một cách trung thực: \textit{"Tài liệu khoa học được cung cấp trong hồ dữ liệu hiện tại không chứa thông tin chi tiết về giải thuật Stein Variational Gradient Descent"}. Điểm Faithfulness được bảo toàn ở mức tối đa.
-\end{itemize}
-
-\section{Lựa Chọn Cấu Hình Sản Xuất Cuối Cùng (Production Trade-offs)}
-
-Dựa trên các phân tích định lượng, cấu hình sản xuất được lựa chọn là sự cân bằng tối ưu giữa chất lượng khoa học, tốc độ phản hồi và chi phí phần cứng:
-\begin{itemize}
-  \item \textbf{Bộ thu hồi}: Qdrant HNSW với vùng ứng viên $k=15$, kết hợp RRF ($k=60$) và PageRank Authority Multiplier ($\beta=0.25$).
-  \item \textbf{Bộ tái xếp hạng}: Cross-Encoder \texttt{ms-marco-MiniLM-L-6-v2} lấy Top-5 (chỉ mất thêm $\sim 45\text{ ms}$ nhưng đem lại mức tăng $+35\%$ Precision).
-  \item \textbf{Bộ suy luận}: \texttt{Qwen2.5-7B-Instruct} (GGUF Q4\_K\_M) vận hành trên nền tảng CUDA 12.4, ngữ cảnh $4,096\text{ tokens}$, nhiệt độ $0.1$.
-\end{itemize}
+Để xác nhận bản mới cần lưu commit, cấu hình thực tế, snapshot dữ liệu, model, số mẫu lỗi và raw traces rồi chạy lại trên Qdrant với hydrate Silver chunks. Các kết quả lịch sử được giữ với phạm vi và thời điểm đo tường minh.

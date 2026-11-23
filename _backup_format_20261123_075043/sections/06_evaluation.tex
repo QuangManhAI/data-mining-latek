@@ -1,0 +1,53 @@
+\chapter{Đánh Giá Thực Nghiệm Hệ Thống (Evaluation)}
+\label{chap:evaluation}
+\section{Phạm Vi Chứng Cứ và Khác Biệt Phiên Bản}
+Bản cập nhật báo cáo đối chiếu implementation tại commit \texttt{e828310} (05/11/2026). Không thực hiện thu thập, mining hay benchmark live trong lần chỉnh sửa này. Ba nhóm chứng cứ được tách riêng:
+\begin{itemize}
+\item Artifact local trong \path{data/gold/mining/}, được manifest 04/10/2026 tham chiếu. Manifest còn ghi nguồn LanceDB/local; đây không phải manifest chạy code hiện tại trên MinIO/Qdrant.
+\item Báo cáo DeepEval ngày 05/10/2026, commit được báo cáo là \texttt{6cb1c52}, dùng LanceDB và hơn 143 nghìn chunk trên Cloudflare R2.
+\item Báo cáo phần cứng ngày 19/10/2026, gồm phép đo Qdrant và phép đo LLM RTX 4060/CUDA.
+\end{itemize}
+Các con số được giữ theo chứng cứ đã lưu, chưa được tái lập độc lập. Không gộp chúng thành một lần chạy end-to-end của phiên bản mới.
+
+\section{Đánh Giá Định Lượng Các Artifact Mining Lịch Sử}
+\begin{enumerate}
+\item \textbf{EDA}: 10,000 bài, 9,015 bài làm giàu HTML, 2,220,938 công thức, 47,782,707 từ.
+\item \textbf{FP-Growth}: 282 giao dịch, 38 itemset, 22 luật; manifest ghi 0.49 giây. Artifact còn luật đối xứng và có giá trị lift dưới threshold khai báo; số luật này không đại diện cho kết quả đã khử đối xứng của code mới.
+\item \textbf{Clustering}: summary ghi 5,000 mẫu, 768 chiều, $K=6$; validity metrics là 0.0210 (Silhouette), 5.3739 (Davies--Bouldin), 88.0 (Calinski--Harabasz). DBSCAN có một cụm, noise ratio 0.0. Manifest ghi 0.48 giây cho module cũ; không dùng thời gian này để ước lượng toàn bộ PCA/GMM hiện tại.
+\item \textbf{Graph}: snapshot đồng tác giả có 35,117 tác giả, 130,082 cạnh, 3,740 cộng đồng và 3,516 thành phần liên thông. Manifest ghi 72.2 giây. Artifact này không chứng minh số cạnh citation hoặc PageRank của landmark.
+\item \textbf{Isolation Forest}: summary ghi 200 điểm dị biệt trên 10,000 bài (2\%), danh sách xuất chỉ có 30 bản ghi. Manifest ghi 30 vì đếm danh sách và ghi 0.14 giây; cần phân biệt số phát hiện với số xuất. Artifact trend cũ có 20 ngành nhưng còn nhãn ACCELERATING, không phải đầu ra chuẩn hóa thị phần của code hiện tại.
+\end{enumerate}
+Tổng runtime 73.33 giây thuộc manifest cũ, không phải SLA của hệ thống mới. Các điểm dị biệt chưa có nhãn ground truth để tính precision/recall phát hiện bất thường.
+
+\section{Benchmark DeepEval 2.x trên Kiến Trúc LanceDB Lịch Sử}
+Nguồn là \path{docs/benchmarks/RAG_EVALUATION_REPORT_21_SAMPLES.md}. Báo cáo so sánh dense baseline với pipeline nâng cao trên 21 câu hỏi curated (gold-001 đến gold-021), dùng Qwen2.5-7B-Instruct làm LLM judge. Cấu hình lịch sử dùng Top-5 baseline, pool nâng cao 15, cross-encoder, fusion và guardrail; không đồng nhất với pool mặc định 8 của backend hiện tại. Tài liệu cũ gọi lexical matching là BM25; implementation hiện tại dùng heuristic lexical scoring.
+
+\input{tables/table_rag_benchmark.tex}
+
+\subsection{Diễn Giải và Giới Hạn Đánh Giá}
+\begin{itemize}
+\item Contextual Precision tăng 0.637 lên 0.860 (+35.0\% tương đối), pass 16/20 mẫu hợp lệ. Đây là kết quả aggregate đã ghi trong báo cáo cũ, không phải kiểm định ý nghĩa thống kê.
+\item Contextual Recall 1.000 và pass 19/19 chỉ áp dụng cho các mẫu tính được metric. Không đồng nghĩa 21/21 câu hỏi đều đầy đủ, hay mọi câu trả lời mới có độ phủ 100\%.
+\item Answer Relevancy tăng 0.687 lên 0.752, pass 11/20. Baseline và upgraded có số mẫu hợp lệ khác nhau cho một số metric; không xem đây là đối chứng cặp hoàn chỉnh.
+\item Faithfulness 0.699, pass 9/17 (52.9\%), cho thấy hạn chế grounding còn tồn tại. Guardrail và dẫn nguồn không chứng minh đã loại bỏ hoàn toàn ảo giác.
+\item Citation Grounding GEval có score trung bình 0.720, pass 18/20; score giảm từ 0.757. Tỷ lệ pass không chỉ là phép đếm định dạng trích dẫn. Contextual Relevancy cũng giảm 0.578 xuống 0.562; cải thiện không đồng đều trên mọi metric.
+\end{itemize}
+
+\section{Đo Lường Phần Cứng Ngày 19/10/2026}
+Nguồn \path{docs/benchmarks/PERFORMANCE_BENCHMARK_REPORT.md} ghi Windows 11, Python 3.12, RTX 4060 Laptop 8 GB, CUDA 12.4 và 20 lần đo mỗi scenario truy vấn Qdrant. Top-5 không lọc có mean 269.46 ms và median 268.10 ms. LLM đạt TTFT 609.77 ms, sinh 46.33 tokens/s; end-to-end 3,392.50 ms thuộc kịch bản benchmark cụ thể, không phải cam kết độ trễ cho mọi câu hỏi.
+
+\input{tables/table_latency_profile.tex}
+
+Code Qdrant dùng \texttt{requests.Session()} và \texttt{HTTPAdapter} (pool\_connections=10, pool\_maxsize=20) để tái sử dụng kết nối. Báo cáo lịch sử ghi cấu hình context 4096, sequences 1 và mức VRAM 5.7 GB/8 GB; đây là cấu hình của phép đo. Backend hiện có mặc định \texttt{LLM\_CONTEXT\_WINDOW}=16384, có thể ghi đè qua môi trường; không suy ra cấu hình runtime hiện tại từ benchmark cũ.
+
+\section{Các Nghiên Cứu Điển Hình và Giới Hạn Nguồn}
+\subsection{DPO (gold-003)}
+Báo cáo lịch sử ghi Contextual Precision tăng từ 0.000 lên 1.000 sau nâng cấp pipeline. Vì thay đổi đồng thời reranker, lexical/fusion và prompt, chưa thể quy mức tăng cho riêng một thành phần nếu không có ablation.
+
+\subsection{SVGD (gold-020)}
+Case study ghi mô hình từ chối vì thiếu tài liệu hỗ trợ về Stein Variational Gradient Descent. Tuy nhiên bảng diagnostic trong cùng báo cáo ghi Faithfulness của gold-020 từ 0.86 xuống 0.00. Nguồn có mâu thuẫn nội bộ, nên không khẳng định case này đạt Faithfulness tối đa hoặc dùng để chứng minh mọi từ chối đều đúng. Cần raw trace và đánh giá lại để giải quyết mâu thuẫn; không gán mã gold-023 cho SVGD.
+
+\section{Cấu Hình Hiện Tại và Yêu Cầu Tái Lập}
+Backend mặc định bật reranker ms-marco-MiniLM-L-6-v2 (fallback bge-reranker-base), lấy 8 ứng viên từ retrieval rồi Top-5 theo request/cấu hình. Pool thô Qdrant dùng công thức $\min(\max(2k,25),40)$; hybrid RRF dùng hằng số 60, authority tối đa 25\%, ChatRequest temperature 0.1. Khi tắt reranker, chat yêu cầu ít nhất 15 ứng viên từ retrieval.
+
+Để xác nhận bản mới cần lưu commit, cấu hình thực tế, snapshot dữ liệu, model, số mẫu lỗi và raw traces rồi chạy lại trên Qdrant với hydrate Silver chunks. Báo cáo hiện giữ kết quả lịch sử có nhãn thay vì suy diễn kết quả đo mới.

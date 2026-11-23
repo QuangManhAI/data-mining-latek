@@ -1,28 +1,20 @@
-% ==============================================================================
-% BẢNG CÁC TÀI LIỆU DỊ BIỆT CẤU TRÚC PHÁT HIỆN BỞI ISOLATION FOREST (CHUẨN VIỀN LƯỚI & KHỔ TRANG)
-% ==============================================================================
-
 \begin{table}[htbp]
-  \centering
-  \normalsize
-  \caption{Danh mục Các Bài báo Dị biệt Cấu trúc (P99 Outliers) Phát hiện bởi Mô hình Isolation Forest (Nguồn: \texttt{trends\_anomalies.json})}
-  \label{tab:anomalies}
-  \vspace{4pt}
-  \noindent\resizebox{\textwidth}{!}{%
-  \begin{tabularx}{\textwidth}{|>{\centering\arraybackslash}p{1.8cm}|>{\centering\arraybackslash}p{1.2cm}|>{\raggedright\arraybackslash}p{3.5cm}|>{\centering\arraybackslash}p{1.6cm}|>{\raggedleft\arraybackslash}p{1.4cm}|>{\raggedleft\arraybackslash}p{1.3cm}|>{\raggedright\arraybackslash}X|}
-    \hline
-    \textbf{Mã bài báo} & \textbf{Ngành} & \textbf{Tiêu đề rút gọn} & \textbf{Anomaly Score} & \textbf{Số công thức} & \textbf{Số từ} & \textbf{Lý do Cô lập (Outlier Reason)} \\
-    \hline
-    \texttt{2401.13216} & \texttt{cs.LG} & On Principled Local Optimization... & \textbf{-0.7707} & 3,732 & 26,576 & Mật độ toán lý thuyết cực đại, liên ngành 4 danh mục. \\
-    \hline
-    \texttt{2401.12418} & \texttt{cs.LG} & Towards Improved Variational... & -0.7681 & 3,421 & 40,554 & Quy mô dạng chuyên khảo, 3,421 phương trình Bayesian. \\
-    \hline
-    \texttt{2401.10819} & \texttt{cs.AI} & Optimisation in Neurosymbolic... & -0.7681 & 3,972 & 41,271 & Công trình kết hợp logic hình thức và học sâu nặng toán. \\
-    \hline
-    \texttt{2308.07520} & \texttt{stat.ML} & Nonlinearity, Feedback and... & -0.7603 & 3,101 & 24,276 & Lý thuyết suy luận nhân quả thống kê chuyên sâu. \\
-    \hline
-    \texttt{2501.05498} & \texttt{cs.AI} & Comprehensive Survey on Foundation... & -0.7950 & \textbf{5,470} & \textbf{74,303} & Khảo luận cực đại dạng sách (dài gấp 15 lần bài chuẩn). \\
-    \hline
-  \end{tabularx}%
-  }
+\centering
+\small
+\caption[Một số bài báo dị biệt trong snapshot lịch sử]{Một số bài báo dị biệt trong snapshot lịch sử}
+\label{tab:anomalies}
+\begin{tabularx}{\textwidth}{|p{2cm}|L|p{1.5cm}|p{1.5cm}|p{1.5cm}|}
+\hline
+\textbf{Mã bài} & \textbf{Tiêu đề} & \textbf{Điểm} & \textbf{Công thức} & \textbf{Số từ} \\
+\hline
+2401.13216 & On Principled Local Optimization Methods for Federated Learning & -0.7707 & 3,732 & 26,576 \\
+\hline
+2401.12418 & Towards Improved Variational Inference for Deep Bayesian Models & -0.7681 & 3,421 & 40,554 \\
+\hline
+2401.10819 & Optimisation in Neurosymbolic Learning Systems & -0.7681 & 3,972 & 41,271 \\
+\hline
+2308.07520 & Nonlinearity, Feedback and Uniform Consistency in Causal Structural Learning & -0.7603 & 3,101 & 24,276 \\
+\hline
+\end{tabularx}
+\ReportNote{Nguồn: \path{data/gold/mining/trends_anomalies.json}. Summary ghi 200 điểm dị biệt; danh sách chỉ xuất 30 ví dụ.}
 \end{table}

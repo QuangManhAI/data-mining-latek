@@ -1,56 +1,31 @@
-% ==============================================================================
-% CHƯƠNG 7: KẾT LUẬN VÀ HƯỚNG PHÁT TRIỂN (CONCLUSION & FUTURE WORK)
-% ==============================================================================
-
 \chapter{Kết Luận và Hướng Phát Triển (Conclusion \& Future Work)}
 \label{chap:conclusion}
+\section{Tổng Kết Kết Quả và Phạm Vi Xác Nhận}
+Đồ án triển khai pipeline nghiên cứu khoa học theo Medallion Lakehouse, hai stage fetch/embed nối qua RabbitMQ, MinIO chứa Bronze và Silver papers/chunks, Qdrant lập chỉ mục vector 768-D và FastAPI/React phục vụ truy xuất, phân tích và hỏi đáp. Bản báo cáo đối chiếu source ở commit \texttt{e828310}, ngày 05/11/2026.
 
-\section{Tổng Kết Các Kết Quả Đạt Được}
+Các thuật toán mining gồm FP-Growth; KMeans kết hợp PCA/GMM và DBSCAN; graph PageRank/Louvain với nhánh citation hoặc đồng tác giả; và Isolation Forest kết hợp phân tích thị phần. RAG có lexical scoring, RRF, authority multiplier tối đa 25\% và cross-encoder. Rule expansions hiện là annotation; clustering và anomaly phục vụ dashboard, chưa điều hướng trực tiếp truy xuất.
 
-Đồ án bài tập lớn môn \textbf{Khai thác Dữ liệu} với đề tài \textit{"Khai thác dữ liệu nghiên cứu khoa học thời gian thực hướng tới xây dựng hệ thống truy xuất tri thức tăng cường (RAG) cho miền AI/DS"} đã hoàn thành xuất sắc toàn bộ các mục tiêu đặt ra:
+Snapshot local lịch sử ghi 10,000 bài, 2,220,938 công thức và tỷ lệ làm giàu HTML 90.15\%; artifact luật có 282 giao dịch/22 luật; graph đồng tác giả có 35,117 tác giả, 130,082 cạnh, 3,740 cộng đồng; anomaly summary ghi 200 điểm và danh sách xuất 30 ví dụ. Các con số này không mô tả quy mô live hiện tại.
 
-\begin{enumerate}[label=\textbf{\arabic*.}]
-  \item \textbf{Xây dựng thành công Hồ dữ liệu Học thuật Medallion Lakehouse}:
-    Thu thập và xử lý hơn \textbf{13,000 bài báo khoa học} với hơn \textbf{2.76 triệu công thức toán học LaTeX} được bóc tách và bảo toàn nguyên vẹn từ mã nguồn HTML5, đạt tỷ lệ làm giàu nội dung $90.15\%$. Dữ liệu được tổ chức dạng cột nén Apache Parquet phân vùng theo năm, cho phép công cụ DuckDB OLAP quét phân tích với hiệu năng cao vượt trội.
-  \item \textbf{Thực thi toàn diện và sâu sắc 4 Trụ Cột Khai Phá Dữ Liệu}:
-    \begin{itemize}
-      \item \textit{Trụ cột 1 (FP-Growth)}: Khai phá 22 luật kết hợp liên ngành có ý nghĩa thực tế cao ($\text{Lift} > 2.5$), mở ra khả năng mở rộng truy vấn tự động cho hệ thống RAG.
-      \item \textit{Trụ cột 2 (Clustering)}: Phân cụm không gian vector 768-D thành 6 trường phái nghiên cứu bằng MiniBatchKMeans và DBSCAN, giải thích khoa học cho bản chất ranh giới mở của văn bản AI liên ngành.
-      \item \textit{Trụ cột 3 (Citation Graph)}: Xây dựng đồ thị trích dẫn 86,295 liên kết và đồ thị đồng tác giả 35,117 tác giả, áp dụng Directed PageRank ($\alpha=0.85$) phát hiện các công trình bước ngoặt và tích hợp bộ nhân uy tín (+25\%) vào thuật toán tìm kiếm.
-      \item \textit{Trụ cột 4 (Trend \& Anomalies)}: Đo lường động lượng xu hướng chuẩn hóa theo thị phần ($\Delta \text{Share}$) và áp dụng Isolation Forest phát hiện chính xác 260 bài báo dị biệt cấu trúc.
-    \end{itemize}
-  \item \textbf{Đột phá trong Hiệu năng RAG và Thẩm định DeepEval}:
-    Hệ thống RAG cải tiến kết hợp Cross-Encoder reranker, Reciprocal Rank Fusion, PageRank boost và negative guardrails đạt \textbf{Contextual Precision $0.860$ (+35.0\% so với baseline)}, \textbf{Contextual Recall $1.000$ (100\%)}, và \textbf{Citation Grounding đạt $90.0\%$}.
-  \item \textbf{Kiến trúc Triển khai Phân tán và Tối ưu Hóa Phần Cứng}:
-    Đóng gói hoàn chỉnh hệ thống trên nền tảng Docker với MinIO S3, Qdrant HNSW vector engine, RabbitMQ broker và Apache Airflow 2.10. Tối ưu hóa thành công trên phần cứng GPU NVIDIA RTX 4060 với CUDA 12.4, đạt tốc độ sinh token $46.33\text{ tok/s}$, thời gian TTFT $609.8\text{ ms}$, và kiểm soát VRAM ổn định ở mức $5.7\text{ GB} / 8.0\text{ GB}$.
+DeepEval lịch sử ngày 05/10/2026 trên LanceDB cho thấy Precision tăng 0.637 lên 0.860; Recall 1.000 trên 19 mẫu hợp lệ; Faithfulness vẫn 0.699. Báo cáo phần cứng ngày 19/10/2026 ghi 46.33 tokens/s và TTFT 609.8 ms trên RTX 4060/CUDA. Cần đo lại sau thay đổi Qdrant/Silver chunks để kết luận về phiên bản hiện tại.
+
+\section{Đóng Góp và Giá Trị Ứng Dụng}
+Hệ thống kết nối xử lý dữ liệu học thuật, thuật toán khai phá và truy xuất có dẫn nguồn trong một kiến trúc có thể mở rộng. Việc tách text khỏi payload vector giúp quản lý chunk trong Silver và kiểm soát dữ liệu đọc khi hydrate. Dashboard hỗ trợ khám phá corpus, đồ thị, cụm và dị biệt; người dùng có thể kiểm tra nguồn của câu trả lời. Chưa có nghiên cứu người dùng để định lượng thời gian tiết kiệm hay mức độ ứng dụng thực tế.
+
+\section{Giới Hạn Còn Tồn Tại}
+\begin{enumerate}
+\item Snapshot thu thập tập trung vào tháng 01--02/2024, gây sai lệch khi diễn giải tăng trưởng của toàn miền AI/DS.
+\item Artifact local và benchmark được tạo ở các phiên bản khác nhau. Artifact luật còn đối xứng, title cụm có lỗi và report SVGD có mâu thuẫn nội bộ; chúng cần được tái lập thay vì xem là ground truth.
+\item Faithfulness chưa cao; prompt và trích dẫn không bảo đảm mọi câu trả lời đúng. Số mẫu đánh giá thành công khác nhau giữa metric và pipeline.
+\item Query expansion chưa được đưa vào embedding; authority dựa trên khớp tên tác giả, có nguy cơ nhập nhằng tên; clustering/anomaly chưa tác động trực tiếp tới retrieval.
+\item Hydrate Silver phụ thuộc mạng và tính đồng bộ giữa chunk table với vector index. Chưa đo độ trễ end-to-end của phiên bản mới trong lần cập nhật này.
+\item Silhouette thấp không đủ chứng minh nguyên nhân liên ngành; các nhãn dị biệt chưa được chuyên gia xác thực.
 \end{enumerate}
 
-\section{Đóng Góp Khoa Học và Giá Trị Ứng Dụng Thực Tiễn}
-
-\subsection{Về mặt học thuật và phương pháp luận}
-Công trình đã chứng minh một luận điểm quan trọng trong kỹ thuật trí tuệ nhân tạo hiện đại: \textbf{Trí tuệ Nhân tạo Tạo sinh (Generative AI) không thể thay thế Khai phá Dữ liệu (Data Mining), mà ngược lại, Khai phá Dữ liệu chính là nền tảng tri thức điều hướng giúp Generative AI hoạt động chính xác, trung thực và có chiều sâu}. Các thuật toán khai phá cổ điển (FP-Growth, PageRank, Isolation Forest) khi được kết hợp khéo léo với mô hình nhúng vector (Nomic Embed v1.5) và mô hình ngôn ngữ lớn (Qwen2.5-7B) đã khắc phục triệt để hiện tượng ảo giác học thuật.
-
-\subsection{Về mặt ứng dụng thực tiễn}
-Hệ thống là một công cụ thực chiến hoàn chỉnh phục vụ đắc lực cho sinh viên, giảng viên và nghiên cứu sinh ngành AI/DS tại Trường Đại học Giao thông Vận tải TP.HCM. Việc cung cấp giao diện trực quan hóa Bento Grid, trình đọc công thức toán học KaTeX và cơ chế dẫn nguồn chính xác giúp tiết kiệm hàng trăm giờ lao động khảo cứu tài liệu.
-
-\section{Các Điểm Hạn Chế Còn Tồn Tại}
-
-Dưới góc độ một công trình nghiên cứu nghiêm túc, nhóm tác giả thẳng thắn nhìn nhận các điểm hạn chế khách quan của hệ thống:
-\begin{enumerate}[label=\textbf{\arabic*.}]
-  \item \textbf{Độ lệch thời gian do nhịp thu thập (Collection Artifact)}: Sự tập trung hơn 5,000 bài báo vào tháng 01/2024 tạo nên một gai nhọn cục bộ trên đồ thị tăng trưởng thời gian, chưa phản ánh được sự biến thiên liên tục trong suốt 12 tháng của năm.
-  \item \textbf{Tên các cụm đề tài còn mang tính kỹ thuật}: Hiện tại các cụm ngữ nghĩa đang được định danh sơ bộ (\texttt{Cluster 0}, \texttt{Cluster 1}, ...), người dùng phải tự đọc danh sách tiêu đề mẫu để suy đoán ý nghĩa chủ đề.
-  \item \textbf{Chưa kiểm định giả thuyết thống kê chính thức}: Hệ thống quan sát thấy mối tương quan giữa mật độ công thức toán và độ dài bài báo, nhưng chưa triển khai các kiểm định thống kê suy diễn chính thức (như kiểm định tương quan Spearman hoặc kiểm định sai khác ANOVA/Kruskal-Wallis).
-  \item \textbf{Độ trễ mạng đường dài (Network RTT)}: Việc kết nối với cụm máy chủ Qdrant và MinIO Cloud qua mạng WAN (HTTPS) vẫn chiếm tỷ trọng lớn trong tổng thời gian thu hồi vector ($\sim 260\text{ ms}$).
-\end{enumerate}
-
-\section{Đề Xuất Hướng Phát Triển Tiếp Theo}
-
-Gắn liền với các hạn chế đã xác định, nhóm đề xuất lộ trình nâng cấp hệ thống trong các giai đoạn tiếp theo:
+\section{Hướng Phát Triển}
 \begin{itemize}
-  \item \textbf{Giai đoạn 1: Tự động Gán nhãn Ngữ nghĩa Cụm bằng c-TF-IDF}:
-    Ứng dụng giải thuật Class-based TF-IDF (c-TF-IDF) kết hợp với mô hình ngôn ngữ lớn cục bộ để tự động sinh ra các nhãn chủ đề tiếng Việt chuẩn mực cho từng cụm (ví dụ: \textit{"Cụm 0: Thị giác Đa phương thức \& Mô hình Nền tảng"}, \textit{"Cụm 2: Tối ưu hóa Hội tụ cho Học Tăng Cường"}).
-  \item \textbf{Giai đoạn 2: Bổ sung Module Kiểm định Thống kê Tương quan (Hypothesis Testing)}:
-    Tích hợp hàm tính toán ma trận hệ số tương quan Spearman giữa các thuộc tính văn bản (số từ, số công thức toán, số section, số tác giả) và hiển thị bảng kiểm định giá trị $p$-value trực tiếp trên giao diện Dashboard.
-  \item \textbf{Giai đoạn 3: Nâng cấp Toàn diện lên Graph RAG (Knowledge Graph Augmented RAG)}:
-    Mở rộng đồ thị trích dẫn hiện tại thành một đồ thị tri thức phong phú (Knowledge Graph), trong đó các thực thể phương pháp (ví dụ: \textit{LoRA, Transformer, Contrastive Loss}) và bài báo liên kết với nhau qua các quan hệ ngữ nghĩa (\textit{extends, improves, evaluates on}), cho phép hệ thống RAG thực hiện các phép suy luận đa bước (Multi-hop Reasoning) qua đồ thị tri thức.
+\item Tái chạy mining và benchmark trên cùng commit, snapshot và cấu hình; lưu raw traces, số mẫu lỗi và manifest thống nhất. Thêm ablation để phân biệt tác động của reranker, authority, lexical/RRF và prompt.
+\item Đánh giá query expansion thực sự ở bước retrieval; thay khớp tên tác giả bằng định danh khi có dữ liệu. Kiểm tra đồng bộ Silver chunks/Qdrant và DLQ.
+\item Đánh giá và gán nhãn GMM bằng title/keyword/c-TF-IDF hoặc LLM có kiểm tra; kiểm chứng kết quả Pearson/Spearman đã được tính trong module EDA, hiệu chỉnh nhiều phép so sánh và bổ sung kiểm định khác biệt phù hợp.
+\item Mở rộng graph tri thức và multi-hop RAG sau khi xác nhận chất lượng dữ liệu citation và hiệu quả trên bộ câu hỏi độc lập.
 \end{itemize}

@@ -5,11 +5,16 @@
 \chapter*{PHỤ LỤC}
 \addcontentsline{toc}{chapter}{Phụ lục}
 \renewcommand{\thesection}{\Alph{section}}
+\renewcommand{\theHsection}{appendix.\Alph{section}}
 \setcounter{section}{0}
+\counterwithin{figure}{section}
+\renewcommand{\theHfigure}{appendix.\thesection.\arabic{figure}}
+\counterwithout{lstlisting}{chapter}
+\counterwithin{lstlisting}{section}
 
 \section{Đối Chiếu Nguồn Gốc Báo Cáo và Mã Nguồn Thực Tế (Traceability Overview)}
 
-Nhằm bảo đảm tính minh bạch học thuật, toàn bộ các nội dung, thuật toán, công thức toán và số liệu thực nghiệm trong báo cáo này đều có thể truy nguyên trực tiếp về các tệp mã nguồn và tệp dữ liệu tương ứng trong repository dự án:
+Nhằm bảo đảm tính minh bạch học thuật, bản cập nhật phân biệt implementation hiện tại, artifact local lịch sử và benchmark được tài liệu hóa; các nguồn tương ứng được liệt kê dưới đây:
 
 \begin{itemize}[leftmargin=1.5cm]
   \item \textbf{Chương 1 (Hiểu bài toán \& KPI)}: \path{docs/OVERVIEW.md}, \path{SETUP.md}.
@@ -20,10 +25,36 @@ Nhằm bảo đảm tính minh bạch học thuật, toàn bộ các nội dung,
   \item \textbf{Chương 6 (Triển khai Vận hành)}: \path{README.md}, \path{.env_example}, \path{dags/}, \path{backend/app/main.py}.
 \end{itemize}
 
+\subsection{Mốc Đối Chiếu và Tính Tái Lập}
+Mã nguồn: commit \texttt{e828310}, ngày 05/11/2026; ngày cập nhật báo cáo 23/11/2026. Không chạy lại mining hoặc benchmark; frontend/backend chỉ được khởi chạy tạm để đọc dữ liệu và chụp ảnh. Các file JSON local được xem là snapshot lịch sử; manifest tham chiếu ngày 04/10/2026 không xác nhận mọi artifact đã được tái lập cùng một lần chạy.
+
+DeepEval: report 05/10/2026 ghi commit \texttt{6cb1c52}, LanceDB, hơn 143 nghìn chunk. Hiệu năng phần cứng: report 19/10/2026. Kết quả từ các mốc này không được gán cho commit hiện tại. Các số quy mô citation và landmark chưa có artifact đối chiếu được loại khỏi bảng kết quả.
+
+\subsection{Nguồn Bổ Sung cho Kiến Trúc Mới}
+\begin{itemize}
+\item \path{src/storage/chunk_store.py}, \path{src/indexing/qdrant_manager.py}: schema chunk, payload tối thiểu, hydrate và compaction.
+\item \path{src/ingestion/queue_consumer.py}, \path{dags/dag_tier1_realtime_stream.py}, \path{dags/dag_tier2_near_past_harvest.py}, \path{dags/dag_compact_silver.py}: hai stage, lịch và backpressure.
+\item \path{src/utils/hasher.py}, \path{src/storage/known_papers.py}, \path{src/transformation/silver_writer.py}: abstract hash và dedup.
+\item \path{backend/app/core/config.py}, \path{backend/app/schemas/chat.py}, \path{backend/app/services/rag_service.py}: mặc định reranker/chat.
+\end{itemize}
+
+\subsection{Bộ Ảnh Chụp Tự Động Ngày 23/11/2026}
+Bộ ảnh gồm Pipeline, metadata Bronze, EDA Silver, hai ma trận tương quan, GMM và manifest Gold. PNG gốc, nguồn API, thời điểm chụp và SHA-256 nằm trong \path{figures/captured_20261123_082337/manifest.json}; các response dùng đối chiếu nằm trong thư mục \path{evidence/} cùng bộ ảnh.
+
+Không có ảnh kiểm định vector Qdrant trực tiếp hoặc câu trả lời RAG mới: Qdrant trả HTTP 502 và dịch vụ LLM không hoạt động trong phiên chụp. Các ảnh không được dùng để suy ra chất lượng RAG hiện tại. Ngày chụp giao diện khác ngày tạo artifact; các snapshot được phân biệt ở Bảng~\ref{tab:snapshot_sources}.
+\begin{figure}[!htbp]
+\centering
+\includegraphics[width=\linewidth,height=0.68\textheight,keepaspectratio]{figures/captured_20261123_082337/07_gold_mining_manifest.png}
+\caption[Manifest của các sản phẩm khai phá Gold]{Manifest của các sản phẩm khai phá Gold}
+\label{fig:gold_manifest_capture}
+\ReportNote{Nguồn: \path{gold/mining/mining_manifest.json}, mở trong Explorer và chụp 23/11/2026. Trường \texttt{lancedb\_source} phản ánh lần chạy lịch sử; manifest này không chứng minh trạng thái Qdrant hiện tại hoặc thay thế EDA Gold vector.}
+\end{figure}
+\FloatBarrier
+
 \section{Trích Đoạn Mã Nguồn Tiêu Biểu (Key Code Listings)}
 
 \subsection{Thuật toán Khai phá Luật Kết hợp FP-Growth với Khử Trùng lặp Đối xứng}
-Đoạn mã trích từ \texttt{src/mining/association\_rules.py} thể hiện quá trình một-nóng hóa giao dịch, dựng cây FP-Tree và lọc luật đối xứng theo giá trị Lift và Confidence:
+Đoạn mã trích từ \path{src/mining/association_rules.py} thể hiện quá trình một-nóng hóa giao dịch, dựng cây FP-Tree và lọc luật đối xứng theo giá trị Lift và Confidence:
 
 \begin{lstlisting}[language=Python, caption={Khử trùng lặp luật đối xứng trong AssociationRuleMiner}]
 # Trich doan tu src/mining/association_rules.py
@@ -36,7 +67,8 @@ frequent_itemsets = fpgrowth(df_encoded, min_support=min_support, use_colnames=T
 
 # Sinh luat ket hop theo do nang Lift
 rules = association_rules(frequent_itemsets, metric="lift", min_threshold=min_lift)
-sorted_rules = rules.sort_values(by=["lift", "confidence"], ascending=[False, False])
+rules = rules.assign(_lift_key=rules["lift"].round(6))
+sorted_rules = rules.sort_values(by=["_lift_key", "confidence"], ascending=[False, False])
 
 # Khu trung lap luat doi xung: giu lai chieu co Confidence cao hon
 deduped_rows = []
@@ -52,7 +84,7 @@ for _, row in sorted_rules.iterrows():
 \end{lstlisting}
 
 \subsection{Cơ chế Tăng cường Điểm Uy tín PageRank trong Thuật toán Tìm kiếm Lai (RAG Retrieval)}
-Đoạn mã trích từ \texttt{backend/app/services/retrieval\_service.py} thể hiện việc ánh xạ tác giả bài báo với các nút có điểm PageRank cao trong đồ thị trích dẫn:
+Đoạn mã trích từ \path{backend/app/services/retrieval_service.py} thể hiện việc ánh xạ tác giả bài báo với các nút có điểm PageRank cao trong artifact graph được nạp (citation hoặc đồng tác giả):
 
 \begin{lstlisting}[language=Python, caption={Bộ nhân uy tín PageRank Authority Multiplier}]
 # Trich doan tu backend/app/services/retrieval_service.py
@@ -78,8 +110,9 @@ def _match_authority(self, authors: List[str]) -> Tuple[float, Optional[str]]:
     return 0.0, None
 \end{lstlisting}
 
+\Needspace{9\baselineskip}
 \subsection{Phát hiện Bài báo Dị biệt Cấu trúc Bằng Rừng Cô Lập với Chuẩn hóa $\log(1+x)$}
-Đoạn mã trích từ \texttt{src/mining/trend\_anomaly\_mining.py}:
+Đoạn mã trích từ \path{src/mining/trend_anomaly_mining.py}:
 
 \begin{lstlisting}[language=Python, caption={Isolation Forest tren dac trung log1p}]
 # Trich doan tu src/mining/trend_anomaly_mining.py
@@ -104,6 +137,16 @@ anomaly_scores = iso_forest.score_samples(X_log)
 df["is_anomaly"] = preds == -1
 \end{lstlisting}
 
+
+\subsection{Payload Vector Tối Thiểu và Hydrate từ Silver}
+Đoạn mã được trích từ \path{src/storage/chunk_store.py} và \path{src/indexing/qdrant_manager.py}, mốc commit \texttt{e828310}. Qdrant giữ trường định danh/lọc; kết quả thiếu text được bổ sung từ bảng chunk Silver. Các dấu ngắt dưới đây phân tách các đoạn trích từ hai module, không biểu diễn một script độc lập.
+\lstinputlisting[language=Python,caption={Trường payload và hydrate nội dung từ Silver},label={lst:payload_hydrate}]{listings/qdrant_payload_hydrate.py}
+
+\subsection{Ghi Silver Chunks Trước Khi Upsert Vector}
+Đoạn trích từ \path{src/ingestion/queue_consumer.py}, commit \texttt{e828310}, cho thấy thứ tự ghi chunk table và nhánh bỏ qua các bài thuộc phân vùng ghi thất bại. Chỉ các đoạn liên quan được giữ; vị trí lược bớt được đánh dấu bằng chú thích.
+\lstinputlisting[language=Python,caption={Thứ tự ghi Silver chunks và upsert Qdrant},label={lst:silver_before_vector}]{listings/silver_before_vector.py}
+
+\Needspace{12\baselineskip}
 \section{Hướng Dẫn Cài Đặt và Khởi Chạy Nhanh Dự Án}
 
 \subsection{Cài đặt môi trường Python}
@@ -120,9 +163,9 @@ pip install -r requirements.txt
 pip install -e .
 \end{lstlisting}
 
-\subsection{Khởi động toàn bộ phân hệ kiểm thử 1-Click}
+\subsection{Các lệnh kiểm thử tham khảo}
 \begin{lstlisting}[language=bash]
-# Chay toan bo test suite kiem thu tu dong (Unit, Integration, Performance)
+# Unit tests; integration tests require configured external services
 pytest tests/unit/ -v
 pytest tests/integration/ -v
 \end{lstlisting}
