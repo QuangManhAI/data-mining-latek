@@ -10,7 +10,7 @@ Chương này chuyển các quan sát EDA thành bốn nhiệm vụ: tìm liên 
 \section{Trụ Cột 1: Khai Phá Tập Phổ Biến và Luật Kết Hợp (FP-Growth)}
 
 \subsection{Bài toán và Định nghĩa Giao dịch}
-Mỗi bài đầu vào được mã hóa thành một basket gồm các mục nhãn hoặc khái niệm. Chỉ basket có ít nhất hai mục mới được giữ trong tập giao dịch $D_{\mathrm{tx}}$. Vì vậy mẫu số dùng tính support là số giao dịch hợp lệ, không mặc nhiên là toàn bộ corpus 10,000 bài. Một giao dịch có dạng:
+Mỗi bài đầu vào được mã hóa thành một basket gồm các mục nhãn hoặc khái niệm. Chỉ basket có ít nhất hai mục mới được giữ trong tập giao dịch $D_{\mathrm{tx}}$. Vì vậy mẫu số dùng tính support là số giao dịch hợp lệ (61,319 giao dịch trên tổng 71,927 bài trong lần chạy 04/11/2026, đạt độ phủ 85.3\%), không mặc nhiên là tổng số bài thô. Một giao dịch có dạng:
 \begin{equation}
   T_p = \{\text{cat}:c_i\} \cup \{\text{topic}:t_i\} \cup \{\text{kw}:w_i\} \cup \{\text{tag}:k_i\}
 \end{equation}
@@ -43,13 +43,11 @@ Một luật kết hợp có dạng $X \Rightarrow Y$, trong đó $X \cap Y = \e
   \item $\text{Conviction} \to \infty$: Khi $P(Y)<1$ và confidence tiến tới 1, không quan sát phản ví dụ trong tập giao dịch. Trường hợp $P(Y)=1$ làm biểu thức suy biến; confidence 100\% cũng không bảo đảm luật đúng ngoài mẫu.
 \end{itemize}
 
-\subsection{Cấu Hình và Kết Quả Luật trong Snapshot}
+\subsection{Cấu Hình và Kết Quả Luật Thực Nghiệm}
 Phiên bản hiện tại gọi FP-Growth với \texttt{min\_support}=0.02, \texttt{min\_lift}=1.2, tối đa 50 luật và ít nhất 25 giao dịch hỗ trợ tuyệt đối. Code có fallback support 0.01 khi không có itemset và lift 1.0 khi không có luật; lift được làm tròn trước khi sắp xếp để confidence quyết định chiều luật đối xứng giữ lại.
 
-Artifact local lịch sử ghi 282 giao dịch, 38 itemset, 22 luật, support 0.015 và lift threshold 1.2. Artifact còn cả hai chiều luật và có luật dưới threshold khai báo, nên không được coi là đầu ra đã xác minh của implementation hiện tại. Bảng sau chép các dòng có thể đối chiếu trực tiếp; không suy rộng thành quan hệ nhân quả hoặc xu hướng của toàn miền AI/DS.
+Trong phiên chạy toàn phần ngày 04/11/2026 (\path{logs/run/backend.log}, 36.26 giây), FP-Growth trích xuất được \textbf{61,319 giao dịch hợp lệ} từ 71,927 bài báo (độ phủ 85.3\%), tìm thấy \textbf{96 frequent itemsets} và khai phá thành công \textbf{45 luật kết hợp đã khử đối xứng} với \textbf{top lift đạt 34.940}. Bảng~\ref{tab:association_rules} dưới đây trích xuất một số ví dụ minh họa cấu trúc luật từ artifact lịch sử (\path{data/gold/mining/association_rules.json}, 282 giao dịch); không dùng mẫu 282 giao dịch cũ này để đại diện cho phân phối của corpus 71,927 bài hiện tại.
 \input{tables/table_association_rules.tex}
-
-Trong artifact cũ, 282 là mẫu số của support. Không có thông tin truy vết đủ chi tiết để tái dựng chính xác tập bài và các bước lọc tạo ra con số này, nên không xem các luật là đại diện cho corpus 10,000 bài. Support 0.0177 tương ứng khoảng 5 giao dịch; 0.0248 khoảng 7 và 0.0993 khoảng 28, suy từ support đã làm tròn. Một luật có lift cao nhưng chỉ khoảng 5 giao dịch hỗ trợ cần được kiểm tra độ ổn định trên tập khác trước khi dùng để mở rộng query. Đây cũng là lý do code hiện tại đặt ngưỡng hỗ trợ tuyệt đối 25 giao dịch.
 
 \subsection{Thông tin Luật Trả về trong RAG}
 Hàm \texttt{\_expand\_rules(query, category)} khớp chuỗi tiền đề trong query hoặc category và trả tối đa ba hệ quả. Các mục được gắn vào \texttt{rule\_expansions} của response. Embedding vẫn được tính từ \texttt{req.query} gốc; code chưa ghép các từ mở rộng vào embedding hoặc chạy thêm lượt retrieval. Vì vậy chưa có cơ sở nói luật đã trực tiếp cải thiện độ phủ truy xuất.
@@ -82,7 +80,7 @@ Hệ thống đặt mặc định $K=6$, không tự quét các giá trị $K$. 
 
 PCA chiếu xuống 2D và nhân tọa độ với 5 để hiển thị. GMM (6 thành phần, covariance full, n\_init=3, tối đa 200 vòng) được fit trên tọa độ 2D để tạo xác suất, nhãn hiển thị, ellipse 2-sigma và lưới mật độ. Nhãn/profile GMM khác nhãn KMeans dùng tính validity metrics. DBSCAN~\cite{ester1996density} dùng cosine, eps=0.28, min\_samples=10 trên tối đa 3,000 mẫu. MiningEngine mặc định lấy toàn bộ abstract vector phân biệt theo paper ID; tiêu đề được tra từ Silver cho các điểm hiển thị.
 
-Bảng~\ref{tab:clustering_metrics} là snapshot cũ gồm 5,000 mẫu, không có kết quả GMM của phiên bản hiện tại.
+Trong phiên chạy ngày 04/11/2026 (\path{logs/run/backend.log}, 39.94 giây), Pillar 2 đã nạp \textbf{70,539 vector bài báo phân biệt} từ Qdrant để chạy K-Means ($K=6$) và PCA 2D + GMM ($K=6$), ghi nhận \textbf{BIC = 246,306.5}, \textbf{AIC = 245,985.8}, \textbf{Log-Likelihood = -1.7431} và \textbf{Silhouette = 0.0490} (tính trên 5,000 mẫu), đồng thời chạy DBSCAN trên 3,000 mẫu. Bảng~\ref{tab:clustering_metrics} dưới đây lưu lại số liệu đối chiếu từ snapshot 5,000 mẫu cũ trước khi tích hợp GMM.
 
 \input{tables/table_clustering_metrics.tex}
 
@@ -185,7 +183,7 @@ Bảng~\ref{tab:anomalies} tổng hợp danh sách các bài báo ngoại lai c�
 \input{tables/table_anomalies.tex}
 
 \begin{calloutbox}{Phạm vi Ứng dụng Dị biệt}
-Snapshot ghi 200 điểm được mô hình gắn nhãn dị biệt trên 10,000 bài, tương ứng cấu hình contamination 2\%, và xuất 30 ví dụ. Con số 2\% không phải tỷ lệ bất thường thực tế được đo độc lập. Đây là nhãn của mô hình chưa có ground truth kiểm chứng; độ chính xác phát hiện chưa được xác nhận bằng đánh giá chuyên gia. Chunker được áp dụng chung, chưa có nhánh kích hoạt hierarchical sub-chunking từ nhãn Isolation Forest.
+Trong phiên chạy ngày 04/11/2026 trên 71,927 bài (\path{logs/run/backend.log}, 2.89 giây), Isolation Forest (\texttt{contamination=0.020}) gắn nhãn \textbf{1,000 bài báo dị biệt cấu trúc} (giới hạn \texttt{top\_anomalies=1000}) và đánh giá \textbf{48 nhánh xu hướng}. Con số 2\% là tham số đặt trước của mô hình, chưa có ground truth kiểm chứng độc lập bằng đánh giá chuyên gia. Chunker được áp dụng chung, chưa có nhánh kích hoạt hierarchical sub-chunking từ nhãn Isolation Forest.
 \end{calloutbox}
 
 \FloatBarrier

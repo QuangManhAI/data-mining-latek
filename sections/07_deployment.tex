@@ -40,9 +40,9 @@ Các thành phần hạ tầng cốt lõi bao gồm:
   \item \textbf{Tầng Dịch vụ API Backend (FastAPI)}:
     Lắng nghe tại cổng \texttt{:8000}, cung cấp các RESTful API cho phép tìm kiếm lai (RRF Hybrid Search), phân tích khai phá dữ liệu (\path{/api/mining/*}), và truyền câu trả lời sinh tự hồi quy qua Server-Sent Events (SSE).
   \item \textbf{Tầng Giao diện Người dùng (Frontend Dashboard - React 19)}:
-    Lắng nghe tại cổng \texttt{:5173}, xây dựng trên nền tảng React 19, Vite, TailwindCSS và bố cục dashboard. Dashboard tích hợp canvas đường ống dữ liệu, thanh giám sát trạng thái pipeline thời gian thực, bảng phân tích 4 Trụ cột Khai phá tương tác, và giao diện hỏi đáp RAG hỗ trợ hiển thị công thức toán học KaTeX.
-  \item \textbf{Tầng Mô hình Cục bộ (Local LLM Microservice)}:
-    Khởi chạy mô hình \texttt{Qwen2.5-7B-Instruct} (GGUF Q4\_K\_M) thông qua \texttt{node-llama-cpp} hoặc \texttt{llama-server} tại cổng \texttt{:9001}, cung cấp giao diện tương thích chuẩn OpenAI API (\path{/v1/chat/completions}), có thể cấu hình backend GPU theo môi trường. Cấu hình CUDA đã được mô tả trong benchmark lịch sử cần được kiểm tra lại khi chạy phiên bản mới.
+    Lắng nghe tại cổng \texttt{:5173}, xây dựng trên nền tảng React 19, TypeScript 6, Vite 8, KaTeX và hệ thống CSS design tokens tùy biến (\path{frontend/src/theme/}). Dashboard tích hợp canvas đường ống dữ liệu, thanh giám sát trạng thái pipeline thời gian thực, bảng phân tích 4 Trụ cột Khai phá tương tác, và giao diện hỏi đáp RAG hỗ trợ hiển thị công thức toán học KaTeX.
+  \item \textbf{Tầng Mô hình Ngôn ngữ \& Reranker (Local LLM \& Cross-Encoder)}:
+    Khởi chạy mô hình \texttt{Qwen2.5-7B-Instruct} (GGUF Q4\_K\_M) thông qua \texttt{llama-cpp-python} (hỗ trợ tăng tốc Apple Silicon Metal hoặc CUDA), \texttt{llama-server}, \texttt{node-llama-cpp} tại cổng \texttt{:9001}, Ollama (:11434) hoặc dự phòng Groq API (\path{backend/app/services/llm_client.py}). Tầng reranker trên backend FastAPI sử dụng \path{cross-encoder/ms-marco-MiniLM-L-6-v2} (fallback \path{BAAI/bge-reranker-base}); ngoài ra nhánh thử nghiệm \texttt{RAG\_TS} sử dụng mô hình Laya v0.4.27 fine-tune xuất ONNX (\path{notebooks/laya_onnx_20261108-2053_seed0/}). Cấu hình \texttt{LLM\_CONTEXT\_WINDOW} mặc định ở backend là 16,384 (trong khi benchmark phần cứng 19/10/2026 chạy ở 4,096).
 \end{enumerate}
 
 \FloatBarrier
@@ -101,8 +101,8 @@ python -m src.ingestion.queue_consumer --stage embed
   \end{lstlisting}
   \item \textbf{Khởi chạy Mô hình Ngôn ngữ LLM Cục bộ}:
   \begin{lstlisting}[language=bash]
-# Chay Qwen2.5-7B Instruct qua llama-server voi CUDA
-.\llama-server.exe -m models\qwen2.5-7b-instruct-q4_k_m\qwen2.5-7b-instruct-q4_k_m.gguf --port 9001 --ctx-size 4096 -ngl -1
+# Chay Qwen2.5-7B Instruct qua llama-server (CUDA/Metal)
+./llama-server -m models/qwen2.5-7b-instruct-q4_k_m/qwen2.5-7b-instruct-q4_k_m.gguf --port 9001 --ctx-size 16384 -ngl -1
   \end{lstlisting}
   \item \textbf{Khởi chạy Backend FastAPI và Frontend React}:
   \begin{lstlisting}[language=bash]

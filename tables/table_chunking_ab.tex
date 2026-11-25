@@ -1,0 +1,30 @@
+\begin{table}[htbp]
+  \centering
+  \small
+  \caption[So sánh A/B chiến lược phân đoạn văn bản (Chunking A/B)]{So sánh A/B chiến lược phân đoạn văn bản (\path{logs/benchmarks/chunking_ab/summary.json})}
+  \label{tab:chunking_ab}
+  \vspace{4pt}
+  \setlength{\tabcolsep}{4pt}
+  \begin{tabularx}{\linewidth}{|>{\raggedright\arraybackslash}p{36mm}|Y|Y|Y|}
+    \hline
+    \textbf{Chỉ số} & \textbf{A\_old\_fixed50} & \textbf{B\_new\_pct15} & \textbf{C\_new\_pct0} \\
+    \hline
+    Tổng số chunks & 18,449 & 18,440 & 17,218 \\
+    \hline
+    Độ dài trung vị (từ) & 450 & 380 & 366 \\
+    \hline
+    Phân vị $p_{10}$ (từ) & 103 & \textbf{166} & 159 \\
+    \hline
+    Recall@5 $\uparrow$ & 0.7143 & \textbf{0.7679} & 0.7500 \\
+    \hline
+    Recall@10 $\uparrow$ & 0.8571 & 0.8929 & \textbf{0.9286} \\
+    \hline
+    MRR@10 $\uparrow$ & 0.6126 & 0.6153 & \textbf{0.6291} \\
+    \hline
+    nDCG@10 $\uparrow$ & 0.6635 & 0.6701 & \textbf{0.6844} \\
+    \hline
+    Chunk Hit@5 $\uparrow$ & 0.7143 & \textbf{0.7321} & \textbf{0.7321} \\
+    \hline
+  \end{tabularx}
+  \ReportNote{Nguồn: Thử nghiệm A/B phân đoạn trên cùng tập corpus (\path{logs/benchmarks/chunking_ab/summary.json}). Cấu hình \texttt{B\_new\_pct15} tương ứng \texttt{AcademicChunker} (overlap 15\%, gộp đuôi ngắn).}
+\end{table}

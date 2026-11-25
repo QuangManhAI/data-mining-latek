@@ -7,15 +7,21 @@
 
 \section{Nguồn Thu Thập Dữ Liệu Nghiên Cứu Khoa Học}
 
-Để xác định đầu vào cho pipeline ở chương tiếp theo, cần phân biệt nguồn metadata, nguồn nội dung và nguồn bổ trợ. Các nguồn dưới đây xuất hiện trong thiết kế hoặc module thu thập; mức đóng góp của từng nguồn vào snapshot chưa có bảng thống kê đầy đủ:
+Để xác định đầu vào cho pipeline, cần phân biệt rõ **các nguồn đang được Airflow DAGs lập lịch thu thập trực tiếp** với **các nguồn module bổ trợ/lịch sử trong Bronze**:
 
 \begin{enumerate}[label=\textbf{\arabic*.}]
-  \item \textbf{arXiv RSS Feeds \& OAI-PMH API}: Nguồn dữ liệu chủ lực cung cấp các công trình nghiên cứu mới nhất thuộc các nhóm ngành Khoa học Máy tính (Computer Science) và Thống kê (Statistics). Hệ thống sử dụng giao thức OAI-PMH với cơ chế phân trang tự động \texttt{resumptionToken} để thu thập hàng chục nghìn bài báo kèm siêu dữ liệu chuẩn Dublin Core.
-  \item \textbf{arXiv HTML5 / ar5iv Project}: Nguồn văn bản giàu định dạng (rich document source) do dự án ar5iv (hợp tác cùng nhóm LaTeXML tại Viện Tiêu chuẩn và Kỹ thuật Quốc gia Hoa Kỳ - NIST) chuyển đổi trực tiếp từ mã nguồn TeX của tác giả sang định dạng HTML5 ngữ nghĩa. Nguồn này hỗ trợ bóc tách LaTeX khi HTML có annotation hoặc alttext phù hợp; mức độ bảo toàn phụ thuộc chất lượng tài liệu nguồn.
-  \item \textbf{OpenAlex \& Semantic Scholar}: Nguồn metadata và liên kết học thuật bổ trợ. Việc có module truy cập các dịch vụ này không xác nhận corpus đã có đầy đủ cạnh citation; phạm vi graph thực tế được kiểm tra ở Chương~\ref{chap:modeling}.
-  \item \textbf{OpenReview.net}: Thu thập các bài báo hội nghị (ICLR, NeurIPS) và có module thu thập review. Schema Silver papers/chunks hiện chưa chứng minh việc đưa toàn bộ review, score và rebuttal vào ngữ cảnh RAG.
-  \item \textbf{Computer Vision Foundation (CVF) Open Access}: Bổ sung các bài báo hội nghị chuyên ngành Thị giác máy tính đỉnh cao như CVPR 2024.
-  \item \textbf{Zenodo Open Repository}: Lưu trữ các tập dữ liệu thực nghiệm và tài liệu bổ trợ khoa học.
+  \item \textbf{arXiv (RSS Feeds, OAI-PMH \& HTML5/ar5iv)} [Nguồn chủ lực trong DAGs]:
+    \begin{itemize}
+      \item \textit{Tier 1 (\texttt{dag\_tier1\_realtime\_stream})}: Quét arXiv RSS hàng ngày cho 5 nhóm chính (\texttt{cs.AI, cs.LG, cs.CV, cs.CL, stat.ML}).
+      \item \textit{Tier 2 (\texttt{dag\_tier2\_near\_past\_harvest})}: Cào hàng loạt qua OAI-PMH (\path{oaipmh.arxiv.org}, sets \texttt{cs, stat, eess}) lùi dần về mốc \texttt{2024-01-01} với cơ chế cursor và tuân thủ \texttt{Retry-After}.
+      \item \textit{Nội dung toàn văn}: \texttt{UnifiedContentResolver} ưu tiên tải arXiv HTML5, dự phòng sang ar5iv HTML5, rồi tới PDF (\texttt{pymupdf}) hoặc tóm tắt.
+    \end{itemize}
+  \item \textbf{Computer Vision Foundation (CVF Open Access)} [Nguồn chủ lực Tier 2]:
+    Luân phiên theo khung giờ (1 giờ/lượt) với arXiv OAI-PMH trong \texttt{dag\_tier2\_near\_past\_harvest}, thu thập các hội nghị chính (CVPR, ICCV, WACV, kể cả findings) và các workshop từ 2024 trở đi; các bài có liên kết arXiv ID được tự động nối sang luồng tải arXiv HTML5.
+  \item \textbf{Semantic Scholar (Bulk Search)} [Nguồn chủ lực Tier 3]:
+    Sử dụng trong \texttt{dag\_tier3\_landmark\_harvest} để lấy top 3,000 bài AI/CV/NLP/Robotics có số trích dẫn cao nhất (\texttt{MIN\_CITATIONS = 500}), kết hợp gọi arXiv API để chuẩn hóa metadata và \texttt{dag\_tier3\_pdf\_backfill} cho các bài kinh điển ngoài arXiv.
+  \item \textbf{OpenAlex, OpenReview \& Zenodo} [Nguồn bổ trợ / dữ liệu Bronze lịch sử]:
+    Repository có sẵn các module \texttt{openreview\_harvester.py} và \texttt{zenodo\_harvester.py} cùng các bản ghi OpenAlex lưu từ các đợt thu thập trước trong Bronze (như minh họa tại Hình~\ref{fig:bronze_raw_capture}), nhưng ba nguồn này không nằm trong lịch chạy định kỳ của 3 DAG Airflow hiện tại.
 \end{enumerate}
 
 \section{Cấu Trúc Bản Ghi và Siêu Dữ Liệu Học Thuật (Silver Schema)}
@@ -40,20 +46,20 @@ Dữ liệu được chuẩn hóa vào bảng Silver papers. Lược đồ quy �
 
 \section{Thống Kê Mô Tả Toàn Cảnh Hồ Dữ Liệu (Descriptive Statistics)}
 
-Snapshot local \path{data/gold/mining/eda_summary.json}, được manifest ngày 04/10/2026 tham chiếu, ghi nhận \textbf{10,000 bài}, trong đó \textbf{9,015 bài mang nhãn làm giàu HTML} ($90.15\%$), \textbf{47,782,707 từ} và \textbf{2,220,938 công thức}. Trung bình có 4,778.27 từ và 222.09 công thức/bài. Ngày công bố trong snapshot từ 28/12/2005 đến 21/02/2024.
+Phiên chạy EDA đầy đủ gần nhất được ghi nhận trong \path{logs/run/backend.log} (ngày 04/11/2026, chạy trong 39.09 giây trên dữ liệu Silver MinIO và Qdrant) đạt quy mô \textbf{71,927 bài báo phân biệt} (Catalog và Fulltext view hợp nhất) với \textbf{1,043,594 vector} trong Qdrant (\path{scientific_papers_gold}). Do tệp \path{eda_summary.json} chi tiết của đợt 71,927 bài được lưu trực tiếp trên MinIO (không nằm trong repo Git cục bộ), các bảng phân rã chi tiết theo từng chuyên ngành dưới đây sử dụng hai snapshot lưu trữ chi tiết gần hơn có sẵn bản trích xuất: snapshot UI trên kho ngày 17/10/2026 (13,000 bài, 11,619 bài làm giàu HTML = 89.38\%, 2,825,871 công thức và 62,288,266 từ) và snapshot local lịch sử ngày 04/10/2026 (10,000 bài, 9,015 bài làm giàu = 90.15\%, 47,782,707 từ và 2,220,938 công thức).
 
-Ở implementation được đối chiếu, nhãn làm giàu được tính bằng điều kiện \texttt{total\_sections > 1}, chia cho số dòng của \texttt{fulltext\_view}. Đây là chỉ dấu nội dung có cấu trúc; không kiểm tra trực tiếp độ đúng của công thức hay độ đầy đủ của toàn văn. Artifact cũ lưu tỷ lệ 90.15\%; báo cáo giữ giá trị này theo nguồn, không dùng nó như độ chính xác trích xuất. Tương tự, tổng công thức là số đơn vị được parser đếm, không phải số công thức đã được kiểm định bảo toàn.
+Ở implementation được đối chiếu, nhãn làm giàu được tính bằng điều kiện \texttt{total\_sections > 1}, chia cho số dòng của \texttt{fulltext\_view}. Đây là chỉ dấu nội dung có cấu trúc; không kiểm tra trực tiếp độ đúng của công thức hay độ đầy đủ của toàn văn. Tương tự, tổng công thức là số đơn vị được parser đếm, không phải số công thức đã được kiểm định bảo toàn.
 
-Bảng~\ref{tab:eda_categories} trình bày phân bố chi tiết số lượng bài báo, công thức toán và độ dài trung bình theo từng chuyên ngành khoa học.
+Bảng~\ref{tab:eda_categories} trình bày phân bố chi tiết theo chuyên ngành trên bản trích xuất lưu trữ chi tiết (10,000 bài) để minh họa sự chênh lệch mật độ công thức giữa các nhánh AI/DS.
 
 \input{tables/table_eda_categories.tex}
 
 \subsection{Nguồn và Phạm Vi của Các Snapshot}
-Các bảng thống kê trong chương được tổng hợp từ tập dữ liệu chuẩn 10,000 bài báo. Đối với các biểu đồ trực quan hóa giao diện, hệ thống trích xuất trực tiếp từ các artifact lưu trữ trên kho dữ liệu (tháng 10/2026). Bảng~\ref{tab:snapshot_sources} mô tả chi tiết nguồn gốc và quy mô tương ứng của từng phân hệ dữ liệu.
+Bảng~\ref{tab:snapshot_sources} đối chiếu các mốc dữ liệu từ snapshot chi tiết tháng 10/2026 đến phiên chạy toàn phần 71,927 bài và 1,043,594 vector ngày 04/11/2026.
 \input{tables/table_snapshot_sources.tex}
 
 \subsection{Ảnh EDA từ Artifact trên Kho}
-Ảnh~\ref{fig:eda_pareto_growth} hiển thị snapshot EDA trên kho lưu trữ, gồm 13,000 bài, 11,619 bài làm giàu cấu trúc HTML (89.38\%), 2,825,871 công thức toán và 62,288,266 từ. Các số liệu này mô tả artifact dùng trong ảnh, thuộc đợt khác với bảng local 10,000 bài; chúng chưa phải phép đo khả năng mở rộng hoặc hiệu năng của giao diện.
+Ảnh~\ref{fig:eda_pareto_growth} hiển thị giao diện EDA trên kho lưu trữ tại mốc 17/10/2026 (13,000 bài, 11,619 bài làm giàu cấu trúc HTML = 89.38\%, 2,825,871 công thức toán và 62,288,266 từ, ứng với 8.15 GB / 20 GB ngân sách và 10,452 đối tượng trên MinIO), minh họa trực quan bố cục phân tích trước khi corpus mở rộng lên 71,927 bài và 1,043,594 vector vào ngày 04/11/2026.
 \begin{figure}[!htbp]
 \centering
 \includegraphics[width=\linewidth,height=0.68\textheight,keepaspectratio]{figures/captured_20261123_082337/03_eda_silver_overview.png}

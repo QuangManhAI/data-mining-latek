@@ -1,27 +1,27 @@
 \chapter{Đánh Giá Thực Nghiệm Hệ Thống (Evaluation)}
 \label{chap:evaluation}
 \section{Phạm Vi Chứng Cứ và Khác Biệt Phiên Bản}
-Đánh giá cần trả lời hai vấn đề khác nhau: các đầu ra mining mô tả được điều gì về corpus và pipeline RAG đạt chất lượng/độ trễ ra sao. Source xác nhận chức năng tại commit \texttt{e828310} (05/11/2026), còn các kết quả dưới đây được tổng hợp từ chứng cứ lưu trữ. Ba nhóm nguồn chính gồm:
+Đánh giá cần trả lời hai vấn đề khác nhau: các đầu ra mining mô tả được điều gì về corpus và pipeline RAG đạt chất lượng/độ trễ ra sao. Source xác nhận chức năng tại commit \texttt{f421707} (09/11/2026), còn các kết quả dưới đây được tổng hợp từ chứng cứ lưu trữ theo từng mốc:
 \begin{itemize}
-\item Artifact local trong \path{data/gold/mining/}, được manifest 04/10/2026 tham chiếu, còn ghi nguồn LanceDB/local. Đây là nguồn thống kê mô tả và kết quả mining lịch sử.
+\item Artifact local trong \path{data/gold/mining/}, được manifest 04/10/2026 tham chiếu, còn ghi nguồn LanceDB/local (hiện trên repo local giữ \path{association_rules.json} và \path{graph_coauthorship.json}; các artifact còn lại lưu trên MinIO). Đây là nguồn thống kê mô tả và kết quả mining lịch sử.
 \item Báo cáo DeepEval 05/10/2026, ghi commit \texttt{6cb1c52}, dùng LanceDB và hơn 143 nghìn chunk trên Cloudflare R2. Đây là nguồn so sánh chất lượng RAG lịch sử.
 \item Báo cáo phần cứng 19/10/2026 gồm benchmark Qdrant độc lập và benchmark end-to-end với LLM trên RTX 4060/CUDA. Hai kịch bản có phạm vi và cách đo khác nhau.
+\item Các benchmark mới (06--08/11/2026) trong \path{logs/benchmarks/} và \path{notebooks/}: thử nghiệm Chunking A/B (\path{chunking_ab/summary.json}), fine-tune mô hình Laya v0.4.27 sang ONNX (\path{laya_onnx_20261108-2053_seed0/RUN_INFO.json}), và bộ đánh giá Retrieval v1 cùng Evidence Gate (\path{rag_eval/report_retrieval.json}) trên backend TypeScript/Node (\texttt{RAG\_TS}) kết hợp Qdrant/BM25.
 \end{itemize}
 
 Hai giai đoạn được liên hệ ở mức ý tưởng thiết kế, không mặc nhiên tương đương về hiệu quả. Benchmark LanceDB là chứng cứ thăm dò cho cấu hình và tập câu hỏi đã đo; một số metric tăng và một số giảm, chưa xác nhận ưu thế tổng quát hoặc tính đúng đắn của toàn pipeline. Qdrant và Silver chunks thay đổi cách lập chỉ mục, lấy nội dung và quản lý dữ liệu. Khả năng mở rộng, thông lượng đồng thời và độ trễ hydrate của kiến trúc mới cần phép đo tải cùng cấu hình được kiểm soát; chưa có kết quả để khẳng định đạt quy mô công nghiệp hoặc giữ nguyên hiệu quả truy xuất sau chuyển đổi.
 
 Quy ước chung là giữ kết quả theo nguồn, phân biệt điều quan sát được với hiệu quả chưa được xác nhận. Không nối các nguồn thành một lần chạy của phiên bản mới. Các ảnh phục vụ minh họa có phạm vi riêng ở Bảng~\ref{tab:snapshot_sources}; chi tiết truy vết nằm ở phụ lục.
 
-\section{Đánh Giá Định Lượng Các Artifact Mining Lịch Sử}
+\section{Đánh Giá Định Lượng Pipeline Mining Trên 71,927 Bài (04/11/2026)}
+Phiên chạy toàn phần ngày 04/11/2026 (\path{logs/run/backend.log}) thực thi trên toàn bộ dữ liệu Silver MinIO và Qdrant (\texttt{scientific\_papers\_gold}), hoàn thành EDA và 4 trụ cột trong tổng thời gian \textbf{234.57 giây}:
 \begin{enumerate}
-\item \textbf{EDA}: 10,000 bài, 9,015 bài mang nhãn làm giàu, 2,220,938 công thức và 47,782,707 từ. Các số này xác nhận quy mô được ghi trong artifact. Để đánh giá chất lượng cần kiểm tra thêm metadata thiếu, lỗi parser và độ đúng của công thức trên mẫu tài liệu.
-\item \textbf{FP-Growth}: 282 giao dịch, 38 itemset, 22 luật; manifest ghi 0.49 giây. Các ví dụ có số giao dịch hỗ trợ nhỏ như phân tích ở Chương~\ref{chap:modeling}. Artifact còn luật đối xứng và có lift dưới threshold khai báo, nên chưa dùng để xác nhận hiệu quả khử đối xứng của code mới hoặc lợi ích query expansion.
-\item \textbf{Clustering}: snapshot 5,000 mẫu, 768 chiều, $K=6$, có Silhouette 0.0210, Davies--Bouldin 5.3739 và Calinski--Harabasz 88.0. Silhouette cho thấy mức tách biệt thấp theo metric đã dùng. DBSCAN cho một cụm, noise ratio 0.0; chưa có cơ sở gán nhãn chủ đề chính xác hoặc kết luận đã phát hiện các trường phái. Runtime 0.48 giây thuộc module cũ, không bao gồm toàn bộ pipeline PCA/GMM hiện tại.
-\item \textbf{Graph}: mạng đồng tác giả ghi 35,117 tác giả, 130,082 cạnh, 3,740 cộng đồng và 3,516 thành phần liên thông; runtime 72.2 giây. Số thành phần liên thông cùng số cộng đồng cho thấy cần khảo sát kích thước và mức phân mảnh trước khi diễn giải từng cộng đồng. Thứ hạng ở đây là của tác giả trong mạng hợp tác, không phải đánh giá landmark bằng citation.
-\item \textbf{Dị biệt và xu hướng}: summary ghi 200 điểm được gắn nhãn, danh sách xuất có 30 bản ghi, còn manifest đếm 30 và ghi 0.14 giây. Tỷ lệ 2\% gắn với contamination đặt trước; cần chuyên gia hoặc tập nhãn để đánh giá khả năng phát hiện dị biệt có ý nghĩa. Trend cũ dùng nhãn ACCELERATING và số lượng thô, chưa đánh giá công thức thị phần mới.
+\item \textbf{EDA (39.09 giây)}: Hợp nhất Catalog và Fulltext view đạt \textbf{71,927 bài báo phân biệt} cùng \textbf{1,043,594 vector} trong Qdrant. (Bảng chi tiết theo chuyên ngành ở Chương~\ref{chap:data_understanding} dùng bản trích xuất lưu trữ 10,000 bài / 2,220,938 công thức làm minh họa cấu trúc).
+\item \textbf{FP-Growth (36.26 giây)}: Trích xuất \textbf{61,319 giao dịch hợp lệ} từ 71,927 bài (độ phủ 85.3\%), tìm thấy 96 frequent itemsets và \textbf{45 luật kết hợp đã khử đối xứng} (\texttt{min\_support=0.0200}, \texttt{min\_lift=1.20}, top lift \textbf{34.940}).
+\item \textbf{Clustering (39.94 giây)}: Nạp \textbf{70,539 vector bài báo phân biệt} từ Qdrant; chạy K-Means ($K=6$) và PCA 2D + GMM ($K=6$) đạt \textbf{BIC = 246,306.5}, \textbf{AIC = 245,985.8}, \textbf{LL = -1.7431} và \textbf{Silhouette = 0.0490} (trên 5,000 mẫu), kèm DBSCAN trên 3,000 mẫu.
+\item \textbf{Graph (116.39 giây)}: Xây dựng mạng đồng tác giả từ toàn bộ bảng Silver papers trên MinIO (\path{silver/papers/**/*.parquet}). Đây là khâu chiếm tỷ trọng thời gian lớn nhất (49.6\% tổng runtime).
+\item \textbf{Dị biệt và xu hướng (2.89 giây)}: Isolation Forest (\texttt{contamination=0.020}) gắn nhãn \textbf{1,000 bài dị biệt cấu trúc} và đánh giá \textbf{48 nhánh xu hướng}.
 \end{enumerate}
-
-Tổng runtime manifest là 73.33 giây; riêng graph chiếm phần lớn với 72.2 giây. Đây là gợi ý ưu tiên đo lại graph khi khảo sát chi phí mining, không phải kết luận về nút thắt của phiên bản mới. Toàn bộ kết quả trên hỗ trợ mô tả corpus và chỉ ra vấn đề dữ liệu; số artifact hoặc tốc độ xuất artifact không tự xác nhận giá trị học thuật hay tác động tới RAG.
 
 \section{Benchmark DeepEval 2.x trên Kiến Trúc LanceDB Lịch Sử}
 Nguồn \path{docs/benchmarks/RAG_EVALUATION_REPORT_21_SAMPLES.md} so sánh dense baseline với pipeline nâng cao trên 21 câu hỏi được tuyển chọn (gold-001 đến gold-021), dùng Qwen2.5-7B-Instruct làm LLM judge. Baseline dùng Top-5; pipeline nâng cao dùng pool 15 cùng reranker, fusion và guardrail. Đây là so sánh nhiều thay đổi đồng thời; cấu hình khác với backend hiện tại lấy mặc định 8 ứng viên trước reranking.
@@ -60,7 +60,27 @@ Nguồn ghi Contextual Precision tăng từ 0.000 lên 1.000 sau nâng cấp. Đ
 \subsection{SVGD (gold-020)}
 Case study ghi mô hình từ chối vì thiếu tài liệu về Stein Variational Gradient Descent, nhưng bảng diagnostic cùng nguồn ghi Faithfulness của gold-020 giảm từ 0.86 xuống 0.00. Do mâu thuẫn nội bộ, trường hợp này được giữ như điểm cần kiểm tra trace, không dùng làm minh chứng guardrail từ chối đúng.
 
+\section{Thử Nghiệm Chunking A/B và Retrieval v1 với Laya Fine-tune}
+Nhằm đánh giá trực tiếp các cải tiến phân đoạn và truy xuất giai đoạn 06--08/11/2026, repository bổ sung hai bộ thực nghiệm định lượng độc lập với benchmark LanceDB cũ:
+
+\subsection{So Sánh Chiến Lược Phân Đoạn (Chunking A/B)}
+Thử nghiệm trong \path{logs/benchmarks/chunking_ab/summary.json} đối chiếu ba cấu hình trên cùng tập corpus: phân đoạn cố định cũ (\texttt{A\_old\_fixed50}), phân đoạn cân bằng có overlap 15\% và gộp đuôi ngắn (\texttt{B\_new\_pct15}, tương ứng \texttt{AcademicChunker} hiện tại), và phân đoạn không overlap (\texttt{C\_new\_pct0}). Bảng~\ref{tab:chunking_ab} cho thấy việc chuyển sang \texttt{B\_new\_pct15} nâng phân vị $p_{10}$ độ dài chunk từ 103 lên 166 từ (giảm chunk quá ngắn) và tăng Recall@5 từ 0.7143 lên 0.7679; cấu hình không overlap \texttt{C\_new\_pct0} đạt Recall@10 (0.9286) và nDCG@10 (0.6844) cao nhất trong ba cấu hình.
+\input{tables/table_chunking_ab.tex}
+
+\subsection{Fine-tune Laya ONNX và Đánh Giá Retrieval v1 (100 + 50 Câu)}
+Mô hình \texttt{convaiinnovations/laya} (phiên bản \texttt{laya 0.4.27}) được fine-tune bằng hàm mất mát \texttt{soft-ce} (\texttt{max\_len=512}) và xuất sang định dạng ONNX (\path{notebooks/laya_onnx_20261108-2053_seed0/}). Trên tập dev (175 nhóm, 1 epoch tại \path{RUN_INFO.json}), AUC tăng từ 0.6848 lên 0.8928 và MRR tăng từ 0.7070 lên 0.9546; ở lần chạy 4 epochs trên 130 nhóm (\path{notebooks/laya_finetune/report_seed0.json}), AUC đạt 0.9085, MRR đạt 0.9590 và tỷ lệ chấp nhận câu bịa (\texttt{fabricated} tại ngưỡng 0.6) giảm từ 0.574 xuống 0.015.
+
+Trên tập kiểm thử đóng \texttt{rag\_eval} gồm 100 câu có đáp án và 50 câu không có đáp án (\texttt{off\_topic}, \texttt{fabricated}, \texttt{absent\_fact}, \texttt{missing\_detail}), kết quả từ \path{logs/benchmarks/rag_eval/report_retrieval.json} (Bảng~\ref{tab:retrieval_v1}) ghi nhận:
+\begin{itemize}
+\item Kết hợp Hybrid (Vector + BM25) nâng Hit@5 từ 0.720 (\texttt{vector}) lên 0.910 và MRR@10 từ 0.553 lên 0.690 ở độ trễ trung bình tương đương (577 ms so với 566 ms).
+\item Khi bổ sung Laya fine-tune 1 epoch kết hợp Hybrid (\texttt{laya\_ft1\_hybrid}), Hit@1 đạt 0.730, Hit@5 đạt 0.940, Recall@5 đạt 0.754, MRR@10 đạt 0.824, nDCG@10 đạt 0.850 và \texttt{gold\_chunk@5} đạt 0.830 (độ trễ trung bình 5,391 ms do chi phí suy luận mô hình xếp hạng).
+\item Ở bài toán Evidence Gate (ngưỡng 0.6), \texttt{laya\_ft1\_hybrid} đạt AUROC \textbf{0.986} (so với 0.870 của \texttt{laya\_hybrid}), chặn chính xác 50/50 câu không có đáp án trong khi giữ lại 86/100 câu có đáp án.
+\end{itemize}
+\input{tables/table_retrieval_v1.tex}
+
+Lưu ý phạm vi: bộ \texttt{rag\_eval} trên được đo trên backend \texttt{RAG\_TS} (NodeJS/TypeScript + BM25 SQLite + Laya ONNX), không phải phép đo end-to-end DeepEval của backend Python FastAPI (\texttt{ms-marco-MiniLM-L-6-v2} / \texttt{bge-reranker-base} + Qwen2.5-7B).
+
 \section{Kết Quả Đối Chiếu và Yêu Cầu Tái Lập}
-Với câu hỏi về tổ chức dữ liệu, source xác nhận các bước fetch/embed, lưu Silver chunks và hydrate; cần kiểm tra vận hành để xác nhận tính đầy đủ cùng đồng bộ. Với câu hỏi về mining, artifact cho kết quả mô tả nhưng còn hạn chế về cỡ mẫu, nhãn và tính diễn giải. Với câu hỏi về RAG, benchmark lịch sử cho thấy một số metric tốt lên, đồng thời grounding còn hạn chế và chưa đo lại kiến trúc mới.
+Với câu hỏi về tổ chức dữ liệu, source xác nhận các bước fetch/embed, lưu Silver chunks và hydrate; cần kiểm tra vận hành để xác nhận tính đầy đủ cùng đồng bộ. Với câu hỏi về mining, artifact cho kết quả mô tả nhưng còn hạn chế về cỡ mẫu, nhãn và tính diễn giải. Với câu hỏi về RAG, các thực nghiệm mới (\texttt{chunking\_ab}, \texttt{rag\_eval}, \texttt{laya\_finetune}) đã cung cấp chứng cứ định lượng mạnh cho khâu phân đoạn, tìm kiếm lai và cổng kiểm tra bằng chứng (AUROC 0.986), trong khi phần sinh câu trả lời end-to-end trên backend Python FastAPI + Qdrant/Silver chunks vẫn cần một vòng đánh giá DeepEval thống nhất.
 
 Phép đánh giá tiếp theo cần cố định commit, corpus, model và cấu hình; lưu raw traces, số mẫu lỗi và cặp câu hỏi chung. Ablation phải tách dense, lexical/RRF, authority và reranker; query expansion chỉ được đánh giá sau khi thực sự đưa vào retrieval. Kiểm tra công thức, nhãn dị biệt và cụm cần thêm đánh giá nội dung. Từ các giới hạn này, chương triển khai tập trung vào khả năng theo dõi trạng thái, đồng bộ Silver/Qdrant và xử lý lỗi thay vì suy ra độ sẵn sàng từ ảnh giao diện.

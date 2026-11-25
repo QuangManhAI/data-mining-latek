@@ -28,9 +28,9 @@ Nhằm bảo đảm tính minh bạch học thuật, bản cập nhật phân bi
 \subsection{Mốc Đối Chiếu và Tính Tái Lập}
 Quy ước của báo cáo: source xác nhận đường xử lý đã triển khai; artifact ghi đầu ra của một snapshot; benchmark ghi kết quả của một phép đo; ảnh giao diện minh họa cách hiển thị. Chứng cứ thuộc loại này không tự thay thế loại khác. Các phép tính bổ sung như số giao dịch hỗ trợ, tổng thời gian hoặc tỷ số đều được suy từ số đã lưu và ghi rõ giới hạn làm tròn; không có lần chạy mining/benchmark mới.
 
-Mã nguồn: commit \texttt{e828310}, ngày 05/11/2026; ngày cập nhật báo cáo 23/11/2026. Không chạy lại mining hoặc benchmark; frontend/backend chỉ được khởi chạy tạm để đọc dữ liệu và chụp ảnh. Các file JSON local được xem là snapshot lịch sử; manifest tham chiếu ngày 04/10/2026 không xác nhận mọi artifact đã được tái lập cùng một lần chạy.
+Mã nguồn: commit \texttt{f421707}, ngày 09/11/2026; ngày cập nhật báo cáo 25/11/2026. Không chạy lại mining hoặc benchmark; frontend/backend không bị sửa đổi. Các file JSON local được xem là snapshot lịch sử; manifest tham chiếu ngày 04/10/2026 không xác nhận mọi artifact đã được tái lập cùng một lần chạy.
 
-DeepEval: report 05/10/2026 ghi commit \texttt{6cb1c52}, LanceDB, hơn 143 nghìn chunk. Hiệu năng phần cứng: report 19/10/2026. Kết quả từ các mốc này không được gán cho commit hiện tại. Các số quy mô citation và landmark chưa có artifact đối chiếu được loại khỏi bảng kết quả.
+DeepEval: report 05/10/2026 ghi commit \texttt{6cb1c52}, LanceDB, hơn 143 nghìn chunk. Hiệu năng phần cứng: report 19/10/2026. Các benchmark bổ sung giai đoạn 06--08/11/2026 nằm tại \path{logs/benchmarks/} (\path{chunking_ab/summary.json}, \path{rag_eval/report_retrieval.json}) và \path{notebooks/} (\path{laya_onnx_20261108-2053_seed0/RUN_INFO.json}, \path{laya_finetune/report_seed0.json}). Các số quy mô citation và landmark chưa có artifact đối chiếu được loại khỏi bảng kết quả.
 
 \subsection{Nguồn Bổ Sung cho Kiến Trúc Mới}
 \begin{itemize}
@@ -38,6 +38,7 @@ DeepEval: report 05/10/2026 ghi commit \texttt{6cb1c52}, LanceDB, hơn 143 nghì
 \item \path{src/ingestion/queue_consumer.py}, \path{dags/dag_tier1_realtime_stream.py}, \path{dags/dag_tier2_near_past_harvest.py}, \path{dags/dag_compact_silver.py}: hai stage, lịch và backpressure.
 \item \path{src/utils/hasher.py}, \path{src/storage/known_papers.py}, \path{src/transformation/silver_writer.py}: abstract hash và dedup.
 \item \path{backend/app/core/config.py}, \path{backend/app/schemas/chat.py}, \path{backend/app/services/rag_service.py}: mặc định reranker/chat.
+\item \path{benchmarks/rag_eval/}, \path{benchmarks/laya_finetune/}, \path{benchmarks/chunking_ab/}: bộ đánh giá Retrieval v1, fine-tune Laya ONNX và Chunking A/B.
 \end{itemize}
 
 \subsection{Bộ Ảnh Chụp Tự Động Ngày 23/11/2026}
@@ -141,11 +142,11 @@ df["is_anomaly"] = preds == -1
 
 
 \subsection{Payload Vector Tối Thiểu và Hydrate từ Silver}
-Đoạn mã được trích từ \path{src/storage/chunk_store.py} và \path{src/indexing/qdrant_manager.py}, mốc commit \texttt{e828310}. Qdrant giữ trường định danh/lọc; kết quả thiếu text được bổ sung từ bảng chunk Silver. Các dấu ngắt dưới đây phân tách các đoạn trích từ hai module, không biểu diễn một script độc lập.
+Đoạn mã được trích từ \path{src/storage/chunk_store.py} và \path{src/indexing/qdrant_manager.py}, đối chiếu tới commit \texttt{f421707}. Qdrant giữ trường định danh/lọc; kết quả thiếu text được bổ sung từ bảng chunk Silver. Các dấu ngắt dưới đây phân tách các đoạn trích từ hai module, không biểu diễn một script độc lập.
 \lstinputlisting[language=Python,caption={Trường payload và hydrate nội dung từ Silver},label={lst:payload_hydrate}]{listings/qdrant_payload_hydrate.py}
 
 \subsection{Ghi Silver Chunks Trước Khi Upsert Vector}
-Đoạn trích từ \path{src/ingestion/queue_consumer.py}, commit \texttt{e828310}, cho thấy thứ tự ghi chunk table và nhánh bỏ qua các bài thuộc phân vùng ghi thất bại. Chỉ các đoạn liên quan được giữ; vị trí lược bớt được đánh dấu bằng chú thích.
+Đoạn trích từ \path{src/ingestion/queue_consumer.py}, đối chiếu tới commit \texttt{f421707}, cho thấy thứ tự ghi chunk table và nhánh bỏ qua các bài thuộc phân vùng ghi thất bại. Chỉ các đoạn liên quan được giữ; vị trí lược bớt được đánh dấu bằng chú thích.
 \lstinputlisting[language=Python,caption={Thứ tự ghi Silver chunks và upsert Qdrant},label={lst:silver_before_vector}]{listings/silver_before_vector.py}
 
 \Needspace{12\baselineskip}

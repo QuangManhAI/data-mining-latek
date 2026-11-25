@@ -33,7 +33,8 @@ Anomalies & \path{n_estimators} & 100 & Số cây trong Isolation Forest \\ \hli
 RAG & \path{RERANKER_CANDIDATE_K} & 8 & Ứng viên retrieval trả cho reranker; pool Qdrant mặc định 25 \\ \hline
 RAG & \path{RERANKER_TOP_K} & 5 & Số đoạn giữ lại; request có thể ghi đè \\ \hline
 RAG & \path{rrf_constant} & 60 & Hằng số làm mịn RRF \\ \hline
-Chat & \path{temperature} & 0.1 & Mặc định của ChatRequest \\ \hline
+Chat & \path{temperature} & 0.1 & Mặc định của \texttt{ChatRequest}; config backend là 0.7 \\ \hline
+LLM & \path{LLM_CONTEXT_WINDOW} & 16,384 & Ngữ cảnh mặc định backend; \texttt{QwenGGUFEngine} là 4,096 \\ \hline
 \end{longtable}
 \ReportNote{Nguồn: Tổng hợp các tham số siêu cấu hình phục vụ vận hành từ mã nguồn và cấu hình backend hệ thống.}
 \endgroup

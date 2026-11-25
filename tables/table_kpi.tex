@@ -45,7 +45,9 @@
     \hline
     \textbf{LaTeX Math Extracted} & Số công thức parser đếm được & Thống kê DuckDB OLAP & $> 1.5\text{M}$ & \textbf{2,220,938} & \path{eda_summary} \\
     \hline
-    \textbf{Mining Engine Runtime} & Thời gian hoàn thành 4 trụ cột Mining định kỳ & Đo tổng thời gian chạy & $< 120\text{ s}$ & \textbf{73.33 s} & \texttt{mining\_mf} \\
+    \textbf{Corpus \& Vectors} & Quy mô bài Silver và vector Qdrant & Log vận hành 04/11/2026 & $> 50\text{k}$ bài & \textbf{71,927 bài / 1.04M vec} & \path{backend.log} \\
+    \hline
+    \textbf{Mining Engine Runtime} & Thời gian hoàn thành EDA + 4 trụ cột (71,927 bài) & Đo tổng thời gian chạy & $< 300\text{ s}$ & \textbf{234.57 s} & \path{backend.log} \\
     \hline
 
 \end{longtable}
