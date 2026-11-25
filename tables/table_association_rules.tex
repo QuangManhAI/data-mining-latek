@@ -1,0 +1,24 @@
+\begin{table}[htbp]
+\centering
+\small
+\caption[Một số luật kết hợp trong snapshot lịch sử]{Một số luật kết hợp trong snapshot lịch sử}
+\label{tab:association_rules}
+\begin{tabularx}{\textwidth}{|p{0.8cm}|L|L|p{1.5cm}|p{1.3cm}|p{1.3cm}|}
+\hline
+\textbf{STT} & \textbf{Tiền đề} & \textbf{Hệ quả} & \textbf{Support} & \textbf{Conf.} & \textbf{Lift} \\
+\hline
+1 & tag:transformer & tag:model-quantization & 0.0177 & 0.1190 & 3.3571 \\
+\hline
+2 & tag:model-quantization & tag:transformer & 0.0177 & 0.5000 & 3.3571 \\
+\hline
+3 & tag:knowledge-distillation & tag:federated-learning & 0.0248 & 0.2800 & 2.8200 \\
+\hline
+4 & tag:federated-learning & tag:knowledge-distillation & 0.0248 & 0.2500 & 2.8200 \\
+\hline
+5 & tag:autonomous-agents & tag:reinforcement-learning & 0.0993 & 0.6087 & 2.7686 \\
+\hline
+6 & tag:reinforcement-learning & tag:autonomous-agents & 0.0993 & 0.4516 & 2.7686 \\
+\hline
+\end{tabularx}
+\ReportNote{Nguồn: \path{data/gold/mining/association_rules.json}; 282 giao dịch. Artifact còn chứa luật đối xứng; không phải kết quả đã tái lập của phiên bản hiện tại.}
+\end{table}

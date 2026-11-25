@@ -1,0 +1,30 @@
+% ==============================================================================
+% BẢNG ĐÁNH GIÁ HIỆU NĂNG RAG BẰNG DEEPEVAL 2.X (CHUẨN VIỀN LƯỚI & KHỔ TRANG)
+% ==============================================================================
+
+\begin{table}[htbp]
+  \centering
+  \small
+  \caption[Kết quả DeepEval trên LanceDB ngày 05/10/2026]{Kết quả DeepEval trên LanceDB ngày 05/10/2026}
+  \label{tab:rag_benchmark}
+  \vspace{4pt}
+  \setlength{\tabcolsep}{4.0pt}
+  \begin{tabularx}{\linewidth}{|>{\raggedright\arraybackslash}p{31mm}|Y|Y|Y|Y|Y|Y|}
+    \hline
+    \textbf{Chỉ số DeepEval} & \textbf{Baseline (Top-5)} & \textbf{Tỷ lệ Đạt} & \textbf{Upgraded RAG} & \textbf{Tỷ lệ Đạt} & \textbf{Mức tăng $\Delta$} & \textbf{Tăng tương đối} \\
+    \hline
+    \textbf{Contextual Precision} $\uparrow$ & 0.637 & 60.0\% (12/20) & \textbf{0.860} & \textbf{80.0\% (16/20)} & \textbf{+0.223} & \textbf{+35.0\%} \\
+    \hline
+    \textbf{Answer Relevancy} $\uparrow$ & 0.687 & 47.4\% (9/19) & \textbf{0.752} & \textbf{55.0\% (11/20)} & \textbf{+0.065} & \textbf{+9.4\%} \\
+    \hline
+    \textbf{Contextual Recall} $\uparrow$ & 0.950 & 95.0\% (19/20) & \textbf{1.000} & \textbf{100.0\% (19/19)} & \textbf{+0.050} & \textbf{+5.3\%} \\
+    \hline
+    \textbf{Faithfulness} $\uparrow$ & 0.668 & 50.0\% (8/16) & \textbf{0.699} & \textbf{52.9\% (9/17)} & \textbf{+0.031} & \textbf{+4.7\%} \\
+    \hline
+    \textbf{Citation Grounding} $\uparrow$ & 0.757 & 90.5\% (19/21) & \textbf{0.720} & \textbf{90.0\% (18/20)} & -0.037 & -4.9\% \\
+    \hline
+    \textbf{Contextual Relevancy} & 0.578 & 44.4\% (4/9) & 0.562 & 40.0\% (6/15) & -0.016 & Đánh đổi \\
+    \hline
+  \end{tabularx}
+\ReportNote{Nguồn: \path{docs/benchmarks/RAG_EVALUATION_REPORT_21_SAMPLES.md}. Mẫu số trong tỷ lệ đạt là số mẫu đánh giá thành công của từng metric, không phải luôn bằng 21.}
+\end{table}

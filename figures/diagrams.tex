@@ -1,0 +1,80 @@
+% ==============================================================================
+% SƠ ĐỒ HỆ THỐNG & KIẾN TRÚC MEDALLION LAKEHOUSE BẰNG TIKZ
+% ==============================================================================
+
+% 1. Sơ đồ Kiến trúc Phân tán Tổng thể (Distributed Architecture)
+
+\newcommand{\DrawSystemArchitecture}{%
+\resizebox{\linewidth}{!}{%
+\begin{tikzpicture}[
+ font=\small,
+ box/.style={rectangle,rounded corners=3pt,draw=UTHBlue,fill=white,thick,text width=2.8cm,minimum height=0.95cm,align=center,inner sep=4pt},
+ arrow/.style={->,>=Latex,thick,draw=UTHBlue},
+ dataarrow/.style={->,>=Latex,thick,dashed,draw=ForestGreen}]
+\node[box] (t1) at (0,0) {\textbf{Tier 1: arXiv RSS}\\19:00 ICT};
+\node[box] (t2) at (0,-1.6) {\textbf{Tier 2: CVF/arXiv}\\19:10 ICT; theo ngân sách};
+\node[box] (t3) at (0,-3.2) {\textbf{Tier 3: Landmark}\\Thủ công; S2/arXiv};
+\node[box,fill=Orange!10] (q1) at (4,0) {\textbf{Q1: Ingest}\\RabbitMQ + DLQ};
+\node[box,fill=Orange!5] (fetch) at (4,-1.6) {\textbf{Worker Fetch}\\Dedup, lấy nội dung};
+\node[box,fill=Orange!10] (q2) at (4,-3.2) {\textbf{Q2: Embed}\\Bản ghi Silver + DLQ};
+\node[box,fill=Orange!5] (embed) at (4,-4.8) {\textbf{Worker Embed}\\Chunk, Nomic 768-D};
+\node[box,fill=Blue!5] (bronze) at (8,0) {\textbf{Bronze (MinIO)}\\HTML và JSON thô};
+\node[box,fill=Blue!10] (papers) at (8,-1.6) {\textbf{Silver papers}\\Metadata, sections, text};
+\node[box,fill=Blue!10] (chunks) at (8,-3.2) {\textbf{Silver chunks}\\Text, metadata theo ID};
+\node[box,fill=Red!10] (vectors) at (8,-4.8) {\textbf{Qdrant HNSW}\\Vector + payload lọc};
+\node[box,fill=Green!10] (mining) at (12,-0.8) {\textbf{4 Trụ cột Mining}\\JSON artifacts trên S3};
+\node[box,fill=Purple!10] (api) at (12,-3.2) {\textbf{FastAPI :8000}\\Hydrate, RRF, Rerank};
+\node[box,fill=Teal!10] (ui) at (12,-4.8) {\textbf{React :5173}\\Dashboard, hỏi đáp RAG};
+\draw[arrow] (t1) -- (q1);
+\draw[arrow] (t2.east) -- (q1.west);
+\draw[arrow] (t3.east) -- (q1.west);
+\draw[arrow] (q1) -- (fetch);
+\draw[arrow] (fetch) -- (q2);
+\draw[arrow] (q2) -- (embed);
+\draw[arrow] (fetch.east) -- (bronze.west);
+\draw[arrow] (fetch.east) -- (papers.west);
+\draw[arrow] (embed.east) -- (chunks.west);
+\draw[arrow] (embed.east) -- (vectors.west);
+\draw[arrow] (papers.east) -- (mining.west);
+\draw[arrow] (mining) -- (api);
+\draw[dataarrow] (chunks.east) -- node[above,font=\scriptsize]{hydrate} (api.west);
+\draw[arrow] (vectors.east) -- (api.south west);
+\draw[arrow] (api) -- (ui);
+\end{tikzpicture}%
+}%
+}
+
+% 2. Sơ đồ Luồng Truy xuất RAG Kết hợp Data Mining (RAG + 4 Pillars Flow)
+\newcommand{\DrawRagPipelineDiagram}{%
+\begin{tikzpicture}[
+  node distance=0.8cm and 0.8cm,
+  font=\footnotesize,
+  box/.style={
+    rectangle, rounded corners=3pt, draw=UTHBlue, fill=white,
+    thick, minimum width=2.5cm, minimum height=0.8cm, align=center
+  },
+  arrow/.style={->, >=Latex, thick, draw=UTHBlue}
+]
+
+  \node[box, fill=Gray!10] (query) {\textbf{User Query}\\\scriptsize Câu hỏi học thuật};
+  \node[box, right=0.8cm of query] (embed) {\textbf{Nomic Bi-Encoder}\\\scriptsize Vector 768-D};
+  \node[box, right=0.8cm of embed] (qdrant) {\textbf{Qdrant HNSW}\\\scriptsize Pool 25--40 + Silver hydrate};
+  \node[box, below=0.8cm of qdrant] (rrf) {\textbf{Reciprocal Rank Fusion}\\\scriptsize Dense + Lexical heuristic};
+  \node[box, left=0.8cm of rrf, fill=Orange!10, draw=Orange!80!black] (graph) {\textbf{Pillar 3: PageRank}\\\scriptsize Authority Multiplier (+25\%)};
+  \node[box, left=0.8cm of graph, fill=Green!10, draw=ForestGreen] (rules) {\textbf{Pillar 1: FP-Growth}\\\scriptsize Response Annotation};
+  \node[box, below=0.8cm of rrf, fill=Red!10, draw=Red!80!black] (rerank) {\textbf{Cross-Encoder Reranker}\\\scriptsize ms-marco-MiniLM-L-6-v2};
+  \node[box, left=1.2cm of rerank, fill=Purple!10, draw=Purple] (llm) {\textbf{Local Qwen2.5-7B}\\\scriptsize Strict Grounding Guardrails};
+  \node[box, below=0.8cm of llm, fill=Teal!10, draw=Teal] (answer) {\textbf{Grounded Answer}\\\scriptsize Kèm trích dẫn \texttt{[Paper: ID]}};
+
+  \draw[arrow] (query) -- (embed);
+  \draw[arrow] (embed) -- (qdrant);
+  \draw[arrow] (qdrant) -- (rrf);
+  \draw[arrow] (graph) -- (rrf);
+  \draw[arrow] (query.south) |- (rules.west);
+  \draw[arrow, dashed] (rules.south) |- (answer.west);
+  \draw[arrow] (rrf) -- (rerank);
+  \draw[arrow] (rerank) -- (llm);
+  \draw[arrow] (llm) -- (answer);
+
+\end{tikzpicture}
+}

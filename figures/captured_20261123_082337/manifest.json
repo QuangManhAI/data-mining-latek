@@ -1,0 +1,188 @@
+{
+  "captured_at_utc": "2026-11-23T01:21:18.509935+00:00",
+  "source_commit": "e828310",
+  "read_only": true,
+  "live_mining_run": false,
+  "records": [
+    {
+      "file": "01_pipeline_ui.png",
+      "title_vi": "Giao diện sơ đồ luồng hai hàng đợi",
+      "captured_at_utc": "2026-11-23T01:20:56.090599+00:00",
+      "viewport_css": [
+        1920,
+        900
+      ],
+      "device_scale_factor": 2,
+      "sources": [
+        "/api/ingestion/status",
+        "/api/ingestion/stream"
+      ],
+      "note_vi": "Ảnh giao diện kiến trúc hiện tại. Airflow/RabbitMQ không hoạt động trong phiên chụp; Qdrant trả 502. Nhãn hiệu năng cố định trên canvas không phải kết quả benchmark. Không dùng ảnh để khẳng định toàn hệ thống đang vận hành.",
+      "sha256": "a99aed6111a9946859d2a05b9bddb0ff30c5e9cb248c4961047a99da4c449d5d",
+      "text_excerpt": "🔄\nQUÉT MINIO TRỰC TIẾP\n(08:20:40)\nSƠ ĐỒ LUỒNG (CANVAS)\nBENTO & QUẢN TRỊ LƯU TRỮ\nAirflow\nApache · Orchestrator\nOFFLINE\nNghỉ\n0 DAGs\nTier 1 · RSS\nMISSING\nTier 2 · CVF + arXiv\nMISSING\nTier 3 · Landmarks\nMISSING\nThu Thập Nguồn\nBộ Cào Đa Nguồn\nv2.0\n0\nBài Đã Thu Thập\nDOI 0\narXiv 0\nCVF 0\nOpenReview 0\nZenodo 0\n⚡ Điều Khiển Thu Thập\nRabbitMQ · Q1\npaper_ingest\nOFFLINE\nmetadata chờ tải\n0\nfetch worker ×0 · 0 in flight\nHTML5 → ar5iv → abstract, ghi Bronze + Silver\nMinIO S3\nHồ Dữ Liệu Bronze\nS3 API\n8.151 GB\nHồ Lưu Trữ Chính\nHTML5 0.56 GB\nMeta 3.97 GB\nParquet 820 MB\n🔍 Quản Trị Phân Vùng MinIO\nApache Parquet\nSilver Columnar\nSnappy\n819.52 MB\nSilver Parquet\n25 ",
+      "pixel_dimensions": [
+        3724,
+        1688
+      ],
+      "visually_reviewed": true
+    },
+    {
+      "file": "03_eda_silver_overview.png",
+      "title_vi": "EDA Silver: phân bố chuyên ngành và thời gian",
+      "captured_at_utc": "2026-11-23T01:20:59.260355+00:00",
+      "viewport_css": [
+        1920,
+        900
+      ],
+      "device_scale_factor": 2,
+      "sources": [
+        "/api/mining/eda",
+        "gold/mining/eda_summary.json"
+      ],
+      "note_vi": "Dữ liệu artifact EDA lưu ngày 17/10/2026: 13.000 bài, 2.825.871 công thức. Đây là ảnh chụp mới của kết quả đã lưu; không phải lần chạy lại EDA hôm nay.",
+      "sha256": "bc5daa0318eb973cdd6223a024ef7d4e931e23ad721dd493d069d1e4df44caed",
+      "text_excerpt": "KHÔNG GIAN PHÂN TÍCH KHOA HỌC EDA\n● DUCKDB OLAP\nDữ liệu: 13.000 bài · cập nhật 2026-10-17 20:35\nCẬP NHẬT\n⤢\nFOCUS MODE\n(F)\nĐang chọn: 13.000 bài (100.0%)\nBỘ LỌC:\nTẤT CẢ (13.000)\ncs.LG\n(3.093)\ncs.CV\n(3.021)\ncs.CL\n(1.858)\ncs.RO\n(879)\ncs.AI\n(625)\neess.IV\n(390)\ncs.IR\n(310)\nstat.ML\n(279)\nTỔNG SỐ BÀI BÁO (PAPERS)\n13.000\n13.000 bài trong Catalog (100%)\nCÔNG THỨC TOÁN (LATEX)\n2.825.871\nTrung bình 217.4 eq / bài full-text\nFULL-TEXT & RAG EMBEDDED\n13.000\nTỷ lệ phủ toàn văn: 89.4% Lakehouse\nDUNG LƯỢNG TỪ VỰNG (CORPUS)\n62.29M từ\nTrung bình 4791 từ / bài\n1\nTỔNG QUAN & DÒNG THỜI GIAN\n2\nCHẨN ĐOÁN THỐNG KÊ\n3\nCHUYÊN NGÀNH & BẢN ĐỒ NHIỆT\n4\nTÁC GIẢ & PHÂN VỊ\n5\nT",
+      "pixel_dimensions": [
+        3724,
+        1688
+      ],
+      "visually_reviewed": true
+    },
+    {
+      "file": "04_pearson_correlation.png",
+      "title_vi": "Ma trận tương quan Pearson r",
+      "captured_at_utc": "2026-11-23T01:21:00.836841+00:00",
+      "viewport_css": [
+        1920,
+        900
+      ],
+      "device_scale_factor": 2,
+      "sources": [
+        "/api/mining/eda",
+        "gold/mining/eda_summary.json:correlations.pearson"
+      ],
+      "note_vi": "Ma trận và p-value lấy từ artifact EDA đã lưu ngày 17/10/2026. Chỉ chụp panel ma trận; loại panel ANOVA bên cạnh vì các số ANOVA đang được viết cố định trong frontend. Các lời diễn giải vẫn cần đối chiếu hệ số.",
+      "sha256": "d6e4ecea852b82e8ead41677380a7d9cdab98b92b4dc421c57d98f63f74811da",
+      "text_excerpt": "MA TRẬN TƯƠNG QUAN ĐA BIẾN (CORRELATION MATRIX)\n4 Cốt Lõi\n6 Đa Biến\nPearson r\nSpearman ρ\nKiểm định thực nghiệm trên n = 11.659 bài báo có cấu trúc HTML5 & LaTeX đầy đủ trong Lakehouse.\n*** p < 0.001\n** p < 0.01\n* p < 0.05\nns: p ≥ 0.05\nWords: μ=4.1k | Skew +3.2\nMath: μ=180 | Skew +4.1\nSections: μ=5.2 | Skew +1.8\nAuthors: μ=4.4 | Skew +2.1\nDensity: μ=45.2 | Skew +3.8\nCites: μ=28.6 | Skew +8.4\nBiến\tWords\tMath\tSections\tAuthors\tDensity\tCites\nSố từ (Words)\t\n1.000\n*** < 1e-15\n\t\n+0.214\n*** < 1e-15\n\t\n+0.383\n*** < 1e-15\n\t\n+0.028\n** < 0.01\n\t\n+0.012\nns 0.196\n\t\n-0.005\nns 0.604\n\nCông thức (Math)\t\n+0.214\n*** < 1e-15\n\t\n1.000\n*** < 1e-15\n\t\n+0.192\n*** < 1e-15\n",
+      "pixel_dimensions": [
+        1906,
+        1272
+      ],
+      "visually_reviewed": true
+    },
+    {
+      "file": "05_spearman_correlation.png",
+      "title_vi": "Ma trận tương quan Spearman ρ",
+      "captured_at_utc": "2026-11-23T01:21:02.315003+00:00",
+      "viewport_css": [
+        1920,
+        900
+      ],
+      "device_scale_factor": 2,
+      "sources": [
+        "/api/mining/eda",
+        "gold/mining/eda_summary.json:correlations.spearman"
+      ],
+      "note_vi": "Ma trận và p-value lấy từ artifact EDA đã lưu ngày 17/10/2026. Chỉ chụp panel ma trận; loại panel ANOVA bên cạnh vì các số ANOVA đang được viết cố định trong frontend. Các lời diễn giải vẫn cần đối chiếu hệ số.",
+      "sha256": "60ef9446006b6dd6c1587d6039a006857a41da1c576a0e5276aaee007abc154d",
+      "text_excerpt": "MA TRẬN TƯƠNG QUAN ĐA BIẾN (CORRELATION MATRIX)\n4 Cốt Lõi\n6 Đa Biến\nPearson r\nSpearman ρ\nKiểm định thực nghiệm trên n = 11.659 bài báo có cấu trúc HTML5 & LaTeX đầy đủ trong Lakehouse.\n*** p < 0.001\n** p < 0.01\n* p < 0.05\nns: p ≥ 0.05\nWords: μ=4.1k | Skew +3.2\nMath: μ=180 | Skew +4.1\nSections: μ=5.2 | Skew +1.8\nAuthors: μ=4.4 | Skew +2.1\nDensity: μ=45.2 | Skew +3.8\nCites: μ=28.6 | Skew +8.4\nBiến\tWords\tMath\tSections\tAuthors\tDensity\tCites\nSố từ (Words)\t\n1.000\n*** < 1e-15\n\t\n+0.439\n*** < 1e-15\n\t\n+0.411\n*** < 1e-15\n\t\n+0.018\n* < 0.05\n\t\n+0.143\n*** < 1e-15\n\t\n-0.019\n* < 0.05\n\nCông thức (Math)\t\n+0.439\n*** < 1e-15\n\t\n1.000\n*** < 1e-15\n\t\n+0.156\n*** < 1e-1",
+      "pixel_dimensions": [
+        1906,
+        1272
+      ],
+      "visually_reviewed": true
+    },
+    {
+      "file": "06_gmm_clusters.png",
+      "title_vi": "GMM: không gian cụm từ artifact đã lưu",
+      "captured_at_utc": "2026-11-23T01:21:04.983425+00:00",
+      "viewport_css": [
+        1920,
+        900
+      ],
+      "device_scale_factor": 2,
+      "sources": [
+        "/api/mining/pillars/clusters",
+        "gold/mining/clusters.json"
+      ],
+      "note_vi": "Artifact GMM lưu ngày 20/10/2026, 800 mẫu, K=6. UI vẫn ghi SVD và có các nhãn chủ đề cố định; ảnh không xác minh pipeline PCA hiện tại hoặc tính đúng của tên chủ đề.",
+      "sha256": "90fa7cfcc4f79dc14562adcf93fdaf0f12c2ddc08d763fb0fd19a02214d3cc96",
+      "text_excerpt": "TRỤ CỘT 01 [Phím 1]\nFP-GROWTH\nLUẬT KẾT HỢP (RULES)\n30 Quy tắc • Max Lift 34.9x\nTRỤ CỘT 02 [Phím 2]\nGMM 2D (EM)\nPHÂN CỤM NGỮ NGHĨA\n6 Phân phối Gaussian • SVD 2D Manifold\nTRỤ CỘT 03 [Phím 3]\nLOUVAIN & PR\nĐỒ THỊ KHOA HỌC (GRAPH)\n120 Nodes • 58 Edges • Ego-net\nTRỤ CỘT 04 [Phím 4]\nISOLATION FOREST\nXU HƯỚNG & DỊ BIỆT\n+199% Surge • 30 Dị biệt\n⤢\nFocus (F)\nRạp Hát\nSILHOUETTE SCORE\n0.3528\nĐộ tách biệt cụm (Normalized)\nDAVIES-BOULDIN INDEX\n0.8771\nChỉ số phân tán nội cụm (Càng thấp càng tốt)\nBIC / AIC (TIÊU CHUẨN GMM)\n2.889,41 / 2.725,45\nLog-Likelihood: -1.6597 (Tối ưu hóa EM)\nMÔ HÌNH XÁC SUẤT GMM\nK = 6 GAUSSIANS\n205 bài liên ngành (25.6%) • 0 công trình",
+      "pixel_dimensions": [
+        3724,
+        1688
+      ],
+      "visually_reviewed": true
+    },
+    {
+      "file": "02_bronze_raw_metadata.png",
+      "title_vi": "Ví dụ bản ghi metadata thô Bronze",
+      "captured_at_utc": "2026-11-23T01:21:12.927284+00:00",
+      "viewport_css": [
+        1920,
+        900
+      ],
+      "device_scale_factor": 2,
+      "sources": [
+        "/api/explorer/tree",
+        "/api/explorer/preview",
+        "bronze/tier1/openalex_W2001598892.json"
+      ],
+      "note_vi": "Ví dụ một bản ghi thực đọc từ kho; đây là minh chứng cấu trúc raw metadata, không phải thống kê EDA Bronze. Không suy ra số bài từ số object trong Explorer.",
+      "sha256": "d572945329a397e5a8211d51f84b6715a9e697cf5c154486668ce6ed9d8e78ce",
+      "text_excerpt": "uth-scientific-lakehouse\nCLASS: STANDARD\nTRUY CẬP CÔNG KHAI: PRIVATE\nKHU VỰC: TỰ ĐỘNG (APAC)\nCACHED LISTING // MANUAL SCAN\nClass A: n/a / 1M Free\nClass B: n/a / 10M Free\n• 10.452 đối tượng đã lập chỉ mục\nDUNG LƯỢNG LƯU TRỮ (NGÂN SÁCH 20 GB)\n8.15 GB (40.8%)\nTRONG ĐỊNH MỨC\n0 GB\n20 GB (ngân sách)\n13 GB\nQUÉT BUCKET\nĐồng bộ gần nhất: 2026-11-23 08:16:43\nTỆP DỮ LIỆU LAKEHOUSE\n4 PHÂN VÙNG HOẠT ĐỘNG\n✕\nBẢNG CỘT SILVER\nHồ Parquet đã chuẩn hoá\n819.52 MB\nNo matching files in zone\nTẦNG PHÂN TÍCH GOLD\nParquet suy diễn & Sản phẩm Mining\n4.94 GB\nNo matching files in zone\nKHO LƯU TRỮ THÔ BRONZE\nJSON thu thập & Tiền ấn phẩm HTML5\n2.41 GB\nJSON\nopenalex_W2001598",
+      "pixel_dimensions": [
+        3724,
+        1688
+      ],
+      "visually_reviewed": true
+    },
+    {
+      "file": "07_gold_mining_manifest.png",
+      "title_vi": "Manifest sản phẩm khai phá Gold",
+      "captured_at_utc": "2026-11-23T01:21:17.747030+00:00",
+      "viewport_css": [
+        1920,
+        900
+      ],
+      "device_scale_factor": 2,
+      "sources": [
+        "/api/explorer/preview",
+        "gold/mining/mining_manifest.json"
+      ],
+      "note_vi": "Manifest lịch sử trên kho Gold. Trường lancedb_source phản ánh kiến trúc tại lần chạy cũ; không phải xác nhận trạng thái Qdrant hiện tại.",
+      "sha256": "9e71ea592a80734c3f23d1f9e8ccaa1c579c40cf806e8ce853bd2463d9dae35b",
+      "text_excerpt": "uth-scientific-lakehouse\nCLASS: STANDARD\nTRUY CẬP CÔNG KHAI: PRIVATE\nKHU VỰC: TỰ ĐỘNG (APAC)\nCACHED LISTING // MANUAL SCAN\nClass A: n/a / 1M Free\nClass B: n/a / 10M Free\n• 10.452 đối tượng đã lập chỉ mục\nDUNG LƯỢNG LƯU TRỮ (NGÂN SÁCH 20 GB)\n8.15 GB (40.8%)\nTRONG ĐỊNH MỨC\n0 GB\n20 GB (ngân sách)\n13 GB\nQUÉT BUCKET\nĐồng bộ gần nhất: 2026-11-23 08:16:43\nTỆP DỮ LIỆU LAKEHOUSE\n4 PHÂN VÙNG HOẠT ĐỘNG\n✕\nBẢNG CỘT SILVER\nHồ Parquet đã chuẩn hoá\n819.52 MB\nNo matching files in zone\nTẦNG PHÂN TÍCH GOLD\nParquet suy diễn & Sản phẩm Mining\n4.94 GB\nJSON\nmining_manifest.json\n994 B\nKHO LƯU TRỮ THÔ BRONZE\nJSON thu thập & Tiền ấn phẩm HTML5\n2.41 GB\nNo matching file",
+      "pixel_dimensions": [
+        3724,
+        1688
+      ],
+      "visually_reviewed": true
+    }
+  ],
+  "missing": [
+    {
+      "screen": "Gold vector audit / Qdrant live",
+      "reason": "Collection endpoint trả HTTP 502. Artifact EDA hiện chứa IVF-PQ cũ, total_vectors=9 và tổng chunk theo section không khớp; không dùng màn audit làm bằng chứng Qdrant hiện tại."
+    },
+    {
+      "screen": "Câu trả lời RAG có dẫn nguồn",
+      "reason": "Dịch vụ LLM localhost:9001 không hoạt động; embedding thiếu dependency einops và Qdrant trả HTTP 502. Không tạo câu trả lời giả."
+    }
+  ],
+  "frontend_errors": [],
+  "artifact_notes": {
+    "eda_last_modified_utc": "2026-10-17T13:36:32+00:00",
+    "clusters_last_modified_utc": "2026-10-20T12:41:55+00:00",
+    "inventory_objects": 10452
+  },
+  "reviewed_at_utc": "2026-11-23T01:22:40.861572+00:00",
+  "not_inserted_into_latex": true,
+  "cautions_vi": [
+    "EDA trên kho có 13.000 bài; khác snapshot local 10.000 bài trong báo cáo. Cần ghi rõ lần đo nếu sử dụng ảnh mới.",
+    "Tổng quan EDA ghi 13.000 full-text nhưng enrichment 89,38%; nhãn UI FULL-TEXT & RAG EMBEDDED không chứng minh 13.000 bài đã có vector.",
+    "Ảnh GMM lấy artifact 800 mẫu ngày 20/10/2026; UI ghi SVD, khác mô tả PCA trong code mới. Không gán metric này cho lần chạy PCA hiện tại.",
+    "Các nhãn ANOVA có số cố định đã được loại khỏi ảnh tương quan. Các annotation/nhãn chủ đề khác vẫn cần được xem như lời diễn giải giao diện.",
+    "Qdrant HTTP 502 và LLM không hoạt động: không có ảnh vector audit live hoặc câu trả lời RAG."
+  ]
+}

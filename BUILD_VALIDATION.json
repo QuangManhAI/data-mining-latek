@@ -1,0 +1,84 @@
+{
+  "pdf_pages": 64,
+  "screenshot_pages": [
+    {
+      "page": 20,
+      "screenshots": 1,
+      "sizes": [
+        [
+          3724,
+          1688
+        ]
+      ]
+    },
+    {
+      "page": 24,
+      "screenshots": 1,
+      "sizes": [
+        [
+          1906,
+          1272
+        ]
+      ]
+    },
+    {
+      "page": 25,
+      "screenshots": 1,
+      "sizes": [
+        [
+          1906,
+          1272
+        ]
+      ]
+    },
+    {
+      "page": 30,
+      "screenshots": 1,
+      "sizes": [
+        [
+          3724,
+          1688
+        ]
+      ]
+    },
+    {
+      "page": 38,
+      "screenshots": 1,
+      "sizes": [
+        [
+          3724,
+          1688
+        ]
+      ]
+    },
+    {
+      "page": 51,
+      "screenshots": 1,
+      "sizes": [
+        [
+          3724,
+          1688
+        ]
+      ]
+    },
+    {
+      "page": 60,
+      "screenshots": 1,
+      "sizes": [
+        [
+          3724,
+          1688
+        ]
+      ]
+    }
+  ],
+  "screenshot_occurrences": 7,
+  "empty_pages": [],
+  "unresolved_reference_pages": [],
+  "text_outside_page_margins": [],
+  "log_warnings": [],
+  "compiler": "Tectonic 0.17.0",
+  "body_font_size_pdf_points": 13.0,
+  "review": "Contact sheets of all pages and individual screenshot pages inspected",
+  "pdf_sha256": "32995b2abddfbb27bbae4460411e47ccaca7470dd8f65360fe1398b9eff264f5"
+}

@@ -1,0 +1,110 @@
+% ==============================================================================
+% CHƯƠNG 6: TRIỂN KHAI VÀ VẬN HÀNH HỆ THỐNG (DEPLOYMENT)
+% ==============================================================================
+
+\chapter{Triển Khai và Vận Hành Hệ Thống (Deployment)}
+\label{chap:deployment}
+
+\section{Kiến Trúc Vận Hành Phân Tán (Distributed Infrastructure)}
+
+Hệ thống được thiết kế theo mô hình vi dịch vụ phân tán (\textit{Distributed Microservices Architecture}), sử dụng các dịch vụ hạ tầng độc lập; backend, frontend và worker có thể chạy ngoài container theo môi trường triển khai. Repository này không kèm toàn bộ Docker Compose của hạ tầng:
+
+\begin{figure}[htbp]
+  \centering
+  \DrawSystemArchitecture
+  \caption[Kiến trúc thu thập, lưu trữ và phục vụ RAG]{Kiến trúc thu thập, lưu trữ và phục vụ RAG}
+  \ReportNote{Nguồn: sơ đồ tổng hợp từ source tại commit \texttt{e828310}. Q1: \path{scientific_paper_ingest}; Q2: \path{scientific_chunk_embed}. Fetch chuyển bản ghi sau khi ghi Silver papers; embed ghi Silver chunks trước khi upsert Qdrant. Compaction cả hai bảng chạy mỗi 3 giờ.}
+  \label{fig:system_architecture}
+\end{figure}
+
+Các thành phần hạ tầng cốt lõi bao gồm:
+
+\begin{enumerate}[label=\textbf{\arabic*.}]
+  \item \textbf{Tầng Điều phối Tự động (Orchestration - Apache Airflow 2.10)}:
+    Được cấu hình vận hành theo múi giờ chuẩn Việt Nam (\path{Asia/Ho_Chi_Minh - ICT}). Các DAG liên quan gồm:
+    \begin{itemize}
+      \item \texttt{dag\_tier1\_realtime\_stream}: Kích hoạt lúc 19:00 ICT hàng ngày quét RSS mới nhất.
+      \item \texttt{dag\_tier2\_near\_past\_harvest}: Kích hoạt lúc 19:10 ICT hàng ngày, luân phiên CVF/arXiv theo ngân sách.
+      \item \texttt{dag\_recompute\_mining}: Dùng cron 0 0 * * 0; giờ thực tế theo timezone Airflow vì DAG này chưa đặt timezone tường minh, gọi endpoint nội bộ \path{/api/mining/trigger} để tính toán lại toàn bộ EDA và 4 Trụ cột Khai phá trên dữ liệu mới tích lũy.
+      \item \texttt{dag\_compact\_silver}: Chạy mỗi 3 giờ, gộp part của cả Silver papers và Silver chunks.
+    \end{itemize}
+  \item \textbf{Tầng Hàng đợi Thông điệp (Message Broker - RabbitMQ)}:
+    Sử dụng giao thức chuẩn AMQP 0-9-1. Hàng đợi \texttt{scientific\_paper\_ingest} được cấu hình chế độ bền vững (\textit{Durable Queue}) kết hợp cơ chế lấy theo lô nhỏ (\textit{Prefetch micro-batch}). Hệ thống tích hợp hàng đợi thư chết (\textit{Dead Letter Queue - DLQ}) với giới hạn tối đa 3 lần thử lại (\textit{max 3 retries}), ghi nhận lỗi vượt giới hạn vào DLQ để xử lý lại. Worker fetch và embed dùng hai hàng đợi \texttt{scientific\_paper\_ingest} và \texttt{scientific\_chunk\_embed}, mỗi hàng đợi có DLQ riêng; ACK khi đầu ra stage đã bền vững.
+  \item \textbf{Tầng Lưu trữ Đối tượng (Object Storage - MinIO S3)}:
+    Đóng vai trò là trung tâm của hồ dữ liệu (Lakehouse) với bucket chuẩn \texttt{uth-scientific-lakehouse}. Toàn bộ các tầng Medallion (Bronze, Silver Parquet, Gold Mining Artifacts) đều được lưu trữ tại đây, cung cấp giao diện tương thích chuẩn AWS S3 API cho DuckDB và PyArrow.
+  \item \textbf{Tầng Quản trị Vector (Vector Database - Qdrant)}:
+    Hệ thống vector engine hiệu năng cao viết bằng ngôn ngữ Rust, lưu trữ bộ sưu tập \texttt{scientific\_papers\_gold} chứa vector 768 chiều; số điểm live chưa được đo trong bản cập nhật này. Qdrant sử dụng cấu trúc đồ thị HNSW và chỉ mục tải trọng (Payload Indexing) cho phép lọc dữ liệu thời gian thực theo chuyên ngành và năm xuất bản và hydrate nội dung từ Silver chunks. Độ trễ benchmark lịch sử được trình bày ở Chương~\ref{chap:evaluation}, không phải ngưỡng bảo đảm.
+  \item \textbf{Tầng Dịch vụ API Backend (FastAPI)}:
+    Lắng nghe tại cổng \texttt{:8000}, cung cấp các RESTful API cho phép tìm kiếm lai (RRF Hybrid Search), phân tích khai phá dữ liệu (\path{/api/mining/*}), và truyền tải câu trả lời sinh tự hồi quy qua giao thức Server-Sent Events (SSE) mượt mà.
+  \item \textbf{Tầng Giao diện Người dùng (Frontend Dashboard - React 19)}:
+    Lắng nghe tại cổng \texttt{:5173}, xây dựng trên nền tảng React 19, Vite, TailwindCSS và kiến trúc Bento Grid hiện đại. Dashboard tích hợp sơ đồ hình học đường ống dữ liệu 3D, thanh giám sát trạng thái pipeline thời gian thực, bảng phân tích 4 Trụ cột Khai phá tương tác, và giao diện hỏi đáp RAG chuyên nghiệp hỗ trợ hiển thị công thức toán học KaTeX.
+  \item \textbf{Tầng Mô hình Cục bộ (Local LLM Microservice)}:
+    Khởi chạy mô hình \texttt{Qwen2.5-7B-Instruct} (GGUF Q4\_K\_M) thông qua \texttt{node-llama-cpp} hoặc \texttt{llama-server} tại cổng \texttt{:9001}, cung cấp giao diện tương thích chuẩn OpenAI API (\path{/v1/chat/completions}), tận dụng tối đa nhân gia tốc phần cứng CUDA của GPU máy trạm.
+\end{enumerate}
+
+\section{Bảo Mật và Phân Quyền Truy Cập (Zero Trust \& Role-Based Access)}
+
+Để phục vụ chia sẻ tài nguyên cho sinh viên và đồng môn trong lớp học nghiên cứu và giới hạn quyền ghi, tài liệu triển khai mô tả cơ chế \textbf{Zero Trust Access} thông qua Cloudflare Tunnel:
+
+Các chính sách sau là cấu hình hạ tầng được tài liệu hóa, chưa được kiểm thử live trong lần đối chiếu. Cloudflare Tunnel không tự xác nhận đã bật đầy đủ chính sách Zero Trust Access.
+\subsection{Phân quyền MinIO Object Storage}
+\begin{itemize}
+  \item \textbf{Tài khoản Quản trị (Admin)}: Toàn quyền ghi dữ liệu hồ, cập nhật Parquet và cấu hình bucket.
+  \item \textbf{Tài khoản Sinh viên / Khách (\texttt{guest\_student})}: Được gán chính sách phân quyền nghiêm ngặt \lstinline{student_readonly} (chỉ cho phép các hành động \texttt{s3:ListBucket} và \texttt{s3:GetObject}). Sinh viên có thể duyệt cây thư mục và tải dữ liệu Parquet về phân tích nghiên cứu, nhưng mọi hành động tải lên, ghi đè hoặc xóa tài liệu đều bị máy chủ S3 chặn đứng với mã lỗi \texttt{AccessDenied}.
+\end{itemize}
+
+\subsection{Phân quyền Qdrant Vector Database}
+\begin{itemize}
+  \item \textbf{Admin Master Key}: Dành riêng cho Backend và Ingestion Consumer để tạo collection và nạp (upsert) vector.
+  \item \textbf{Read-Only API Key (\texttt{uth\_guest\_readonly\_key\_...})}: Cung cấp cho sinh viên thực hiện các truy vấn tìm kiếm ngữ nghĩa (\texttt{search}, \texttt{scroll}, \texttt{get points}). Mọi yêu cầu ghi/xóa (\path{POST /points/delete}, \path{DELETE /collections}) đều bị Qdrant chặn với mã lỗi \textbf{\texttt{403 Forbidden}}.
+\end{itemize}
+
+\section{Quy Trình Khởi Chạy và Kiểm Thử Hệ Thống (Deployment SOP)}
+
+Hệ thống cung cấp quy trình khởi chạy chuẩn hóa thông qua kịch bản tự động hoặc từng phân hệ độc lập:
+
+\begin{enumerate}[label=\textbf{Bước \arabic*.}]
+  \item \textbf{Khởi động Hạ tầng Docker}:
+  \begin{lstlisting}[language=bash]
+# Run in the external infrastructure Compose directory
+docker compose up -d minio qdrant rabbitmq
+cd airflow && docker compose up -d
+  \end{lstlisting}
+  \item \textbf{Cấu hình Biến Môi trường}:
+  Sao chép tệp cấu hình mẫu và điền các thông số kết nối:
+  \begin{lstlisting}[language=bash]
+Copy-Item .env_example .env
+  \end{lstlisting}
+  \item \textbf{Khởi chạy Workers Xử lý Hàng đợi (RabbitMQ Consumers)}:
+  Mở 2 tiến trình worker nền độc lập:
+  \begin{lstlisting}[language=bash]
+# Worker 1: Fetch -> Bronze + Silver papers -> embed queue
+python -m src.ingestion.queue_consumer --stage fetch
+
+# Worker 2: Embed -> Silver chunks -> Qdrant
+python -m src.ingestion.queue_consumer --stage embed
+  \end{lstlisting}
+  \item \textbf{Khởi chạy Mô hình Ngôn ngữ LLM Cục bộ}:
+  \begin{lstlisting}[language=bash]
+# Chạy Qwen2.5-7B Instruct qua llama-server với CUDA
+.\llama-server.exe -m models\qwen2.5-7b-instruct-q4_k_m\qwen2.5-7b-instruct-q4_k_m.gguf --port 9001 --ctx-size 4096 -ngl -1
+  \end{lstlisting}
+  \item \textbf{Khởi chạy Backend FastAPI và Frontend React}:
+  \begin{lstlisting}[language=bash]
+# Backend
+python -m uvicorn backend.app.main:app --host 0.0.0.0 --port 8000 --reload
+
+# Frontend
+cd frontend && npm run dev
+  \end{lstlisting}
+\end{enumerate}
+
+\section{Kế Hoạch Giám Sát và Khắc Phục Sự Cố (Monitoring \& Operations)}
+
+\begin{itemize}
+\item \textbf{Health}: \path{/api/health} trả readiness từ retrieval và kiểm tra tồn tại Silver primary key, kèm version/timestamp. Endpoint này không kiểm tra toàn diện RabbitMQ/LLM và không tự lập lịch mỗi 30 giây. Telemetry và trạng thái các phân hệ được cung cấp riêng.
+\item \textbf{Ngân sách}: \texttt{LAKEHOUSE\_BUDGET\_GB} mặc định 20 GB. DAG ước lượng MinIO, Qdrant và dữ liệu đang chờ, tính số bài còn chỗ; dừng khi hết ngân sách ước lượng. Code không có quy tắc dừng tại 90\% như mô tả cũ.
+\item \textbf{Backpressure}: Fetch chờ khi embed queue đạt ngưỡng 500 mặc định; Tier 2 phát lô và chờ ingest queue giảm, đồng thời cập nhật ngân sách.
+\item \textbf{Khôi phục}: ACK thủ công sau ghi bền vững, thử lại riêng từng stage và DLQ khi quá giới hạn. Cơ chế upsert theo ID và dedup giảm tác động redelivery; vẫn cần theo dõi DLQ và bài đã có Silver nhưng thiếu vector.
+\item \textbf{Bảo trì}: \path{scripts/migrate_chunks_to_silver.py} hỗ trợ di chuyển payload cũ; \path{scripts/backfill_missing_papers.py} hỗ trợ bổ sung bài thiếu Qdrant, có dry-run. Cần xác định chế độ chunking và backup trước khi chạy migration thực tế.
+\end{itemize}

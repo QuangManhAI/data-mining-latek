@@ -1,0 +1,16 @@
+\begin{table}[htbp]
+\centering
+\small
+\caption[Chất lượng phân cụm của snapshot 5,000 mẫu]{Chất lượng phân cụm của snapshot 5,000 mẫu}
+\label{tab:clustering_metrics}
+\begin{tabularx}{\textwidth}{|L|p{1.2cm}|L|L|L|}
+\hline
+\textbf{Cấu hình} & \textbf{Số cụm} & \textbf{Silhouette} & \textbf{Davies--Bouldin} & \textbf{Calinski--Harabasz} \\
+\hline
+KMeans $K=6$ & 6 & 0.0210 & 5.3739 & 88.0 \\
+\hline
+DBSCAN & 1 & \multicolumn{3}{l|}{Noise ratio = 0.0 (0\%)} \\
+\hline
+\end{tabularx}
+\ReportNote{Nguồn: \path{data/gold/mining/clusters.json}. Các metric thuộc snapshot cũ; chưa có kết quả GMM được đo lại ở phiên bản hiện tại.}
+\end{table}

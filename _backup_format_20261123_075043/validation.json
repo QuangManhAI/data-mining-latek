@@ -1,0 +1,12 @@
+{
+  "tex_files_checked": 24,
+  "structural_errors": [],
+  "python_excerpts_parse": true,
+  "excerpt_source_lines_verified": true,
+  "fixed_table_widths_within_160mm": true,
+  "original_images_unchanged": true,
+  "input_pdf_pages": 41,
+  "pdf_rebuilt": false,
+  "compiler": "XeLaTeX/BibTeX unavailable",
+  "layout_after_rebuild_verified": false
+}

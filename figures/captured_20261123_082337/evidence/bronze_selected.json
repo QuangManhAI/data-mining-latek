@@ -1,0 +1,49 @@
+{
+  "key": "bronze/tier1/openalex_W2001598892.json",
+  "name": "openalex_W2001598892.json",
+  "extension": "json",
+  "size_bytes": 1187,
+  "size_formatted": "1.2 KB",
+  "total_rows": 1,
+  "column_count": null,
+  "schema_columns": null,
+  "sample_rows": null,
+  "json_data": {
+    "paper_id": "openalex:W2001598892",
+    "openalex_id": "W2001598892",
+    "arxiv_id": null,
+    "title": "Theory of Modeling and Simulation",
+    "abstract": "",
+    "authors": [],
+    "publication_date": "2018-08-17",
+    "published_date": "2018-08-17",
+    "year": 2018,
+    "doi": "https://doi.org/10.1016/c2016-0-03987-6",
+    "cite_count": 2991,
+    "source": "openalex",
+    "venue": "Elsevier eBooks",
+    "primary_category": "cs.AI",
+    "categories": [
+      "cs.AI"
+    ],
+    "concepts": [
+      "Computer science"
+    ],
+    "pdf_urls": [],
+    "html_url": "https://openalex.org/W2001598892",
+    "abstract_hash": "00dd027474eca900ed2b35ec3713b1836c5450469de6bf468510ae02b4dc05ed",
+    "is_duplicate": false,
+    "source_file": "openalex_daterange.2017-06-12_2026-10-10.000005.json",
+    "markdown_content": "# Theory of Modeling and Simulation\n\n## Abstract\n\n\n",
+    "clean_full_text": "# Theory of Modeling and Simulation\n\n## Abstract\n\n\n",
+    "total_math_count": 0,
+    "total_sections": 1,
+    "total_words": 0,
+    "sections_json": "[{\"section_title\": \"Abstract\", \"content\": \"\"}]",
+    "content_origin": "abstract_fallback",
+    "crawled_at": "2026-10-11T14:15:27.243950+00:00"
+  },
+  "raw_text": null,
+  "preview_type": "json",
+  "last_modified": "2026-10-12 11:48:29"
+}
