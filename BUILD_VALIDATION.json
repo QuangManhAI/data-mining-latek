@@ -1,84 +1,8 @@
 {
-  "pdf_pages": 64,
-  "screenshot_pages": [
-    {
-      "page": 20,
-      "screenshots": 1,
-      "sizes": [
-        [
-          3724,
-          1688
-        ]
-      ]
-    },
-    {
-      "page": 24,
-      "screenshots": 1,
-      "sizes": [
-        [
-          1906,
-          1272
-        ]
-      ]
-    },
-    {
-      "page": 25,
-      "screenshots": 1,
-      "sizes": [
-        [
-          1906,
-          1272
-        ]
-      ]
-    },
-    {
-      "page": 30,
-      "screenshots": 1,
-      "sizes": [
-        [
-          3724,
-          1688
-        ]
-      ]
-    },
-    {
-      "page": 38,
-      "screenshots": 1,
-      "sizes": [
-        [
-          3724,
-          1688
-        ]
-      ]
-    },
-    {
-      "page": 51,
-      "screenshots": 1,
-      "sizes": [
-        [
-          3724,
-          1688
-        ]
-      ]
-    },
-    {
-      "page": 60,
-      "screenshots": 1,
-      "sizes": [
-        [
-          3724,
-          1688
-        ]
-      ]
-    }
-  ],
-  "screenshot_occurrences": 7,
-  "empty_pages": [],
-  "unresolved_reference_pages": [],
-  "text_outside_page_margins": [],
-  "log_warnings": [],
+  "pdf_pages": 66,
   "compiler": "Tectonic 0.17.0",
-  "body_font_size_pdf_points": 13.0,
-  "review": "Contact sheets of all pages and individual screenshot pages inspected",
-  "pdf_sha256": "32995b2abddfbb27bbae4460411e47ccaca7470dd8f65360fe1398b9eff264f5"
+  "pdf_sha256": "7d4a208145cbf811a2ffee154b3fbf3c8dc5bb43dbea3610e21ae838f87808d5",
+  "format_revision": "2026-11-23",
+  "status": "PASSED_ALL_CHECKS",
+  "summary": "Hoàn thành sửa lỗi số trang La Mã vii/viii ở đầu trang, sửa context_text ở Mục 3.6 và dọn dẹp thư mục sạch sẽ."
 }

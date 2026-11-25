@@ -1,53 +1,66 @@
 \chapter{Đánh Giá Thực Nghiệm Hệ Thống (Evaluation)}
 \label{chap:evaluation}
 \section{Phạm Vi Chứng Cứ và Khác Biệt Phiên Bản}
-Phạm vi mô tả hệ thống được xác định tại commit \texttt{e828310} (05/11/2026). Các số liệu thực nghiệm trong chương được tổng hợp từ chứng cứ lưu trữ, không phải phép đo lại trên hệ thống hiện tại. Ảnh mới ngày 23/11/2026 ở các chương khác sử dụng các artifact trên kho có phạm vi riêng (Bảng~\ref{tab:snapshot_sources}); không gộp với các kết quả dưới đây. Ba nhóm chứng cứ được tách riêng:
+Đánh giá cần trả lời hai vấn đề khác nhau: các đầu ra mining mô tả được điều gì về corpus và pipeline RAG đạt chất lượng/độ trễ ra sao. Source xác nhận chức năng tại commit \texttt{e828310} (05/11/2026), còn các kết quả dưới đây được tổng hợp từ chứng cứ lưu trữ. Ba nhóm nguồn chính gồm:
 \begin{itemize}
-\item Artifact local trong \path{data/gold/mining/}, được manifest 04/10/2026 tham chiếu. Manifest còn ghi nguồn LanceDB/local; đây không phải manifest chạy code hiện tại trên MinIO/Qdrant.
-\item Báo cáo DeepEval ngày 05/10/2026, commit được báo cáo là \texttt{6cb1c52}, dùng LanceDB và hơn 143 nghìn chunk trên Cloudflare R2.
-\item Báo cáo phần cứng ngày 19/10/2026, gồm phép đo Qdrant và phép đo LLM RTX 4060/CUDA.
+\item Artifact local trong \path{data/gold/mining/}, được manifest 04/10/2026 tham chiếu, còn ghi nguồn LanceDB/local. Đây là nguồn thống kê mô tả và kết quả mining lịch sử.
+\item Báo cáo DeepEval 05/10/2026, ghi commit \texttt{6cb1c52}, dùng LanceDB và hơn 143 nghìn chunk trên Cloudflare R2. Đây là nguồn so sánh chất lượng RAG lịch sử.
+\item Báo cáo phần cứng 19/10/2026 gồm benchmark Qdrant độc lập và benchmark end-to-end với LLM trên RTX 4060/CUDA. Hai kịch bản có phạm vi và cách đo khác nhau.
 \end{itemize}
-Các con số được giữ theo chứng cứ đã lưu, chưa được tái lập độc lập. Không gộp chúng thành một lần chạy end-to-end của phiên bản mới.
+
+Hai giai đoạn được liên hệ ở mức ý tưởng thiết kế, không mặc nhiên tương đương về hiệu quả. Benchmark LanceDB là chứng cứ thăm dò cho cấu hình và tập câu hỏi đã đo; một số metric tăng và một số giảm, chưa xác nhận ưu thế tổng quát hoặc tính đúng đắn của toàn pipeline. Qdrant và Silver chunks thay đổi cách lập chỉ mục, lấy nội dung và quản lý dữ liệu. Khả năng mở rộng, thông lượng đồng thời và độ trễ hydrate của kiến trúc mới cần phép đo tải cùng cấu hình được kiểm soát; chưa có kết quả để khẳng định đạt quy mô công nghiệp hoặc giữ nguyên hiệu quả truy xuất sau chuyển đổi.
+
+Quy ước chung là giữ kết quả theo nguồn, phân biệt điều quan sát được với hiệu quả chưa được xác nhận. Không nối các nguồn thành một lần chạy của phiên bản mới. Các ảnh phục vụ minh họa có phạm vi riêng ở Bảng~\ref{tab:snapshot_sources}; chi tiết truy vết nằm ở phụ lục.
 
 \section{Đánh Giá Định Lượng Các Artifact Mining Lịch Sử}
 \begin{enumerate}
-\item \textbf{EDA}: 10,000 bài, 9,015 bài làm giàu HTML, 2,220,938 công thức, 47,782,707 từ.
-\item \textbf{FP-Growth}: 282 giao dịch, 38 itemset, 22 luật; manifest ghi 0.49 giây. Artifact còn luật đối xứng và có giá trị lift dưới threshold khai báo; số luật này không đại diện cho kết quả đã khử đối xứng của code mới.
-\item \textbf{Clustering}: summary ghi 5,000 mẫu, 768 chiều, $K=6$; validity metrics là 0.0210 (Silhouette), 5.3739 (Davies--Bouldin), 88.0 (Calinski--Harabasz). DBSCAN có một cụm, noise ratio 0.0. Manifest ghi 0.48 giây cho module cũ; không dùng thời gian này để ước lượng toàn bộ PCA/GMM hiện tại.
-\item \textbf{Graph}: snapshot đồng tác giả có 35,117 tác giả, 130,082 cạnh, 3,740 cộng đồng và 3,516 thành phần liên thông. Manifest ghi 72.2 giây. Artifact này không chứng minh số cạnh citation hoặc PageRank của landmark.
-\item \textbf{Isolation Forest}: summary ghi 200 điểm dị biệt trên 10,000 bài (2\%), danh sách xuất chỉ có 30 bản ghi. Manifest ghi 30 vì đếm danh sách và ghi 0.14 giây; cần phân biệt số phát hiện với số xuất. Artifact trend cũ có 20 ngành nhưng còn nhãn ACCELERATING, không phải đầu ra chuẩn hóa thị phần của code hiện tại.
+\item \textbf{EDA}: 10,000 bài, 9,015 bài mang nhãn làm giàu, 2,220,938 công thức và 47,782,707 từ. Các số này xác nhận quy mô được ghi trong artifact. Để đánh giá chất lượng cần kiểm tra thêm metadata thiếu, lỗi parser và độ đúng của công thức trên mẫu tài liệu.
+\item \textbf{FP-Growth}: 282 giao dịch, 38 itemset, 22 luật; manifest ghi 0.49 giây. Các ví dụ có số giao dịch hỗ trợ nhỏ như phân tích ở Chương~\ref{chap:modeling}. Artifact còn luật đối xứng và có lift dưới threshold khai báo, nên chưa dùng để xác nhận hiệu quả khử đối xứng của code mới hoặc lợi ích query expansion.
+\item \textbf{Clustering}: snapshot 5,000 mẫu, 768 chiều, $K=6$, có Silhouette 0.0210, Davies--Bouldin 5.3739 và Calinski--Harabasz 88.0. Silhouette cho thấy mức tách biệt thấp theo metric đã dùng. DBSCAN cho một cụm, noise ratio 0.0; chưa có cơ sở gán nhãn chủ đề chính xác hoặc kết luận đã phát hiện các trường phái. Runtime 0.48 giây thuộc module cũ, không bao gồm toàn bộ pipeline PCA/GMM hiện tại.
+\item \textbf{Graph}: mạng đồng tác giả ghi 35,117 tác giả, 130,082 cạnh, 3,740 cộng đồng và 3,516 thành phần liên thông; runtime 72.2 giây. Số thành phần liên thông cùng số cộng đồng cho thấy cần khảo sát kích thước và mức phân mảnh trước khi diễn giải từng cộng đồng. Thứ hạng ở đây là của tác giả trong mạng hợp tác, không phải đánh giá landmark bằng citation.
+\item \textbf{Dị biệt và xu hướng}: summary ghi 200 điểm được gắn nhãn, danh sách xuất có 30 bản ghi, còn manifest đếm 30 và ghi 0.14 giây. Tỷ lệ 2\% gắn với contamination đặt trước; cần chuyên gia hoặc tập nhãn để đánh giá khả năng phát hiện dị biệt có ý nghĩa. Trend cũ dùng nhãn ACCELERATING và số lượng thô, chưa đánh giá công thức thị phần mới.
 \end{enumerate}
-Tổng runtime 73.33 giây thuộc manifest cũ, không phải SLA của hệ thống mới. Các điểm dị biệt chưa có nhãn ground truth để tính precision/recall phát hiện bất thường.
+
+Tổng runtime manifest là 73.33 giây; riêng graph chiếm phần lớn với 72.2 giây. Đây là gợi ý ưu tiên đo lại graph khi khảo sát chi phí mining, không phải kết luận về nút thắt của phiên bản mới. Toàn bộ kết quả trên hỗ trợ mô tả corpus và chỉ ra vấn đề dữ liệu; số artifact hoặc tốc độ xuất artifact không tự xác nhận giá trị học thuật hay tác động tới RAG.
 
 \section{Benchmark DeepEval 2.x trên Kiến Trúc LanceDB Lịch Sử}
-Nguồn là \path{docs/benchmarks/RAG_EVALUATION_REPORT_21_SAMPLES.md}. Báo cáo so sánh dense baseline với pipeline nâng cao trên 21 câu hỏi curated (gold-001 đến gold-021), dùng Qwen2.5-7B-Instruct làm LLM judge. Cấu hình lịch sử dùng Top-5 baseline, pool nâng cao 15, cross-encoder, fusion và guardrail; không đồng nhất với pool mặc định 8 của backend hiện tại. Tài liệu cũ gọi lexical matching là BM25; implementation hiện tại dùng heuristic lexical scoring.
+Nguồn \path{docs/benchmarks/RAG_EVALUATION_REPORT_21_SAMPLES.md} so sánh dense baseline với pipeline nâng cao trên 21 câu hỏi được tuyển chọn (gold-001 đến gold-021), dùng Qwen2.5-7B-Instruct làm LLM judge. Baseline dùng Top-5; pipeline nâng cao dùng pool 15 cùng reranker, fusion và guardrail. Đây là so sánh nhiều thay đổi đồng thời; cấu hình khác với backend hiện tại lấy mặc định 8 ứng viên trước reranking.
 
+Các metric đánh giá những khía cạnh khác nhau: Contextual Precision xem thứ hạng ngữ cảnh hữu ích, Contextual Recall xem độ phủ so với câu trả lời kỳ vọng, Answer Relevancy xem mức liên quan tới câu hỏi, còn Faithfulness xem mức được ngữ cảnh hỗ trợ. Score trung bình và tỷ lệ vượt ngưỡng cần được đọc riêng; metric dùng LLM judge chưa thay thế đánh giá chuyên gia.
 \input{tables/table_rag_benchmark.tex}
 
 \subsection{Diễn Giải và Giới Hạn Đánh Giá}
 \begin{itemize}
-\item Contextual Precision tăng 0.637 lên 0.860 (+35.0\% tương đối), pass 16/20 mẫu hợp lệ. Đây là kết quả aggregate đã ghi trong báo cáo cũ, không phải kiểm định ý nghĩa thống kê.
-\item Contextual Recall 1.000 và pass 19/19 chỉ áp dụng cho các mẫu tính được metric. Không đồng nghĩa 21/21 câu hỏi đều đầy đủ, hay mọi câu trả lời mới có độ phủ 100\%.
-\item Answer Relevancy tăng 0.687 lên 0.752, pass 11/20. Baseline và upgraded có số mẫu hợp lệ khác nhau cho một số metric; không xem đây là đối chứng cặp hoàn chỉnh.
-\item Faithfulness 0.699, pass 9/17 (52.9\%), cho thấy hạn chế grounding còn tồn tại. Guardrail và dẫn nguồn không chứng minh đã loại bỏ hoàn toàn ảo giác.
-\item Citation Grounding GEval có score trung bình 0.720, pass 18/20; score giảm từ 0.757. Tỷ lệ pass không chỉ là phép đếm định dạng trích dẫn. Contextual Relevancy cũng giảm 0.578 xuống 0.562; cải thiện không đồng đều trên mọi metric.
+\item Contextual Precision tăng từ 0.637 lên 0.860 (+35.0\% tương đối), với 16/20 mẫu hợp lệ vượt ngưỡng ở pipeline nâng cao. Kết quả gợi ý cải thiện thứ hạng ngữ cảnh trong cấu hình đã đo; chưa có ablation để quy cho reranker, authority hoặc fusion riêng lẻ.
+\item Contextual Recall 1.000 và pass 19/19 áp dụng cho mẫu tính được metric. Không dùng 19 mẫu này làm kết luận độ phủ cho toàn bộ 21 câu hoặc các câu hỏi ngoài tập tuyển chọn.
+\item Answer Relevancy tăng từ 0.687 lên 0.752 (pass 11/20); Faithfulness đạt 0.699 và pass 9/17 (52.9\%). Kết quả cho thấy mức được ngữ cảnh hỗ trợ còn hạn chế trong cấu hình đã đo. Điểm aggregate chưa xác định nguyên nhân là retrieval thiếu đoạn, giới hạn context, lỗi trích xuất hay cách mô hình sinh sử dụng chứng cứ. Độ khó của công thức và suy luận nhiều bước chỉ là giả thuyết cần kiểm tra bằng phân tích từng câu hỏi và raw trace, không phải nguyên nhân đã được chứng minh.
+\item Citation Grounding có score 0.720 và pass 18/20, nhưng score giảm từ 0.757. Contextual Relevancy cũng giảm 0.578 xuống 0.562. Vì vậy không thể mô tả kết quả là cải thiện đồng đều mọi mặt hoặc đã giải quyết ảo giác.
 \end{itemize}
 
-\section{Đo Lường Phần Cứng Ngày 19/10/2026}
-Nguồn \path{docs/benchmarks/PERFORMANCE_BENCHMARK_REPORT.md} ghi Windows 11, Python 3.12, RTX 4060 Laptop 8 GB, CUDA 12.4 và 20 lần đo mỗi scenario truy vấn Qdrant. Top-5 không lọc có mean 269.46 ms và median 268.10 ms. LLM đạt TTFT 609.77 ms, sinh 46.33 tokens/s; end-to-end 3,392.50 ms thuộc kịch bản benchmark cụ thể, không phải cam kết độ trễ cho mọi câu hỏi.
+Số mẫu hợp lệ khác nhau theo metric và giữa hai pipeline làm phép so sánh chưa phải đối chứng cặp hoàn chỉnh. Báo cáo nguồn chưa cung cấp đủ raw traces để tái kiểm tra các trường hợp lỗi trong lần biên tập này; không có kiểm định ý nghĩa thống kê hoặc khoảng tin cậy được bổ sung. Kết quả được xem là chứng cứ thăm dò cho cấu hình lịch sử, chưa xác nhận hiệu quả tổng quát của hệ thống hiện tại.
 
+\section{Đo Lường Phần Cứng Ngày 19/10/2026}
+Nguồn \path{docs/benchmarks/PERFORMANCE_BENCHMARK_REPORT.md} ghi Windows 11, Python 3.12, RTX 4060 Laptop 8 GB và CUDA 12.4 cho benchmark LLM. Cần phân biệt hai phép đo:
+\begin{enumerate}
+\item \textbf{Truy vấn Qdrant độc lập}: Có 3 lượt warmup và 20 lượt đo cho mỗi scenario. Top-5 không lọc đạt mean 269.46 ms, median 268.10 ms; nguồn so sánh kết nối lạnh trên 1,000 ms với kết nối dùng pool. Đây chủ yếu là thay đổi cách kết nối và bối cảnh đo, không phải tác động riêng của CUDA lên máy chủ Qdrant.
+\item \textbf{Pipeline RAG end-to-end}: Dùng retrieval Top-3 và LLM Qwen2.5-7B; nguồn ghi khoảng 1,660 ms cho phần retrieval trong phân rã này, TTFT 609.77 ms, sinh 50 token trong 1,079.43 ms và tổng 3,392.50 ms. Retrieval này không được thay bằng 269.46 ms từ phép đo độc lập để cộng thành tổng pipeline.
+\end{enumerate}
 \input{tables/table_latency_profile.tex}
 
-Code Qdrant dùng \texttt{requests.Session()} và \texttt{HTTPAdapter} (\path{pool_connections=10}, \path{pool_maxsize=20}) để tái sử dụng kết nối. Báo cáo lịch sử ghi cấu hình context 4096, sequences 1 và mức VRAM 5.7 GB/8 GB; đây là cấu hình của phép đo. Backend hiện có mặc định \path{LLM_CONTEXT_WINDOW}=16384, có thể ghi đè qua môi trường; không suy ra cấu hình runtime hiện tại từ benchmark cũ.
+Bảng~\ref{tab:latency_profile} tổng hợp số nguồn ghi cho các kịch bản, không phải một bảng phân rã có thể cộng mọi dòng. Với retrieval khoảng 1,660 ms, tổng các phần CUDA được nêu xấp xỉ 3,388.57 ms, gần tổng 3,392.50 ms; chênh lệch có thể gồm độ làm tròn hoặc phần chưa tách riêng, chưa được xác nhận bằng trace. Nếu dùng 269.46 ms của benchmark độc lập thì tổng chỉ 1,998.03 ms và không mô tả phép đo end-to-end.
+
+Baseline còn một bất nhất: 50 token trong 17.74 giây tương ứng khoảng 2.82 tokens/s, khác 3.64 tokens/s được nguồn ghi. Bảng giữ nguyên hai giá trị theo nguồn, đánh dấu cần xác minh và không dùng chúng để khẳng định mức tăng tốc sinh token. Các tỷ số còn lại là so sánh mô tả giữa cấu hình lịch sử, không tách được tác động riêng của backend, context hoặc cách kết nối.
+
+Code dùng \texttt{requests.Session()} và \texttt{HTTPAdapter} để tái sử dụng kết nối. Cấu hình phần cứng của nguồn là context 4096, sequences 1 và VRAM 5.7 GB/8 GB; backend hiện có mặc định \texttt{LLM\_CONTEXT\_WINDOW}=16384. Hai cấu hình phải được ghi riêng khi đo lại độ trễ và độ ổn định.
 
 \section{Các Nghiên Cứu Điển Hình và Giới Hạn Nguồn}
 \subsection{DPO (gold-003)}
-Báo cáo lịch sử ghi Contextual Precision tăng từ 0.000 lên 1.000 sau nâng cấp pipeline. Vì thay đổi đồng thời reranker, lexical/fusion và prompt, chưa thể quy mức tăng cho riêng một thành phần nếu không có ablation.
+Nguồn ghi Contextual Precision tăng từ 0.000 lên 1.000 sau nâng cấp. Đây là ví dụ về thay đổi thứ hạng ngữ cảnh, phù hợp với xu hướng aggregate; chưa đủ để chứng minh một thành phần cụ thể gây ra cải thiện hoặc mọi câu trả lời về DPO đều đúng.
 
 \subsection{SVGD (gold-020)}
-Case study ghi mô hình từ chối vì thiếu tài liệu hỗ trợ về Stein Variational Gradient Descent. Tuy nhiên bảng diagnostic trong cùng báo cáo ghi Faithfulness của gold-020 từ 0.86 xuống 0.00. Do mâu thuẫn nội bộ của nguồn, trường hợp này chưa đủ chứng cứ để kết luận từ chối luôn đúng hoặc đạt Faithfulness tối đa. Cần kiểm tra raw trace và đánh giá lại.
+Case study ghi mô hình từ chối vì thiếu tài liệu về Stein Variational Gradient Descent, nhưng bảng diagnostic cùng nguồn ghi Faithfulness của gold-020 giảm từ 0.86 xuống 0.00. Do mâu thuẫn nội bộ, trường hợp này được giữ như điểm cần kiểm tra trace, không dùng làm minh chứng guardrail từ chối đúng.
 
-\section{Cấu Hình Hiện Tại và Yêu Cầu Tái Lập}
-Backend mặc định bật reranker ms-marco-MiniLM-L-6-v2 (fallback bge-reranker-base), lấy 8 ứng viên từ retrieval rồi Top-5 theo request/cấu hình. Pool thô Qdrant dùng công thức $\min(\max(2k,25),40)$; hybrid RRF dùng hằng số 60, authority tối đa 25\%, ChatRequest temperature 0.1. Khi tắt reranker, chat yêu cầu ít nhất 15 ứng viên từ retrieval.
+\section{Kết Quả Đối Chiếu và Yêu Cầu Tái Lập}
+Với câu hỏi về tổ chức dữ liệu, source xác nhận các bước fetch/embed, lưu Silver chunks và hydrate; cần kiểm tra vận hành để xác nhận tính đầy đủ cùng đồng bộ. Với câu hỏi về mining, artifact cho kết quả mô tả nhưng còn hạn chế về cỡ mẫu, nhãn và tính diễn giải. Với câu hỏi về RAG, benchmark lịch sử cho thấy một số metric tốt lên, đồng thời grounding còn hạn chế và chưa đo lại kiến trúc mới.
 
-Để xác nhận bản mới cần lưu commit, cấu hình thực tế, snapshot dữ liệu, model, số mẫu lỗi và raw traces rồi chạy lại trên Qdrant với hydrate Silver chunks. Các kết quả lịch sử được giữ với phạm vi và thời điểm đo tường minh.
+Phép đánh giá tiếp theo cần cố định commit, corpus, model và cấu hình; lưu raw traces, số mẫu lỗi và cặp câu hỏi chung. Ablation phải tách dense, lexical/RRF, authority và reranker; query expansion chỉ được đánh giá sau khi thực sự đưa vào retrieval. Kiểm tra công thức, nhãn dị biệt và cụm cần thêm đánh giá nội dung. Từ các giới hạn này, chương triển khai tập trung vào khả năng theo dõi trạng thái, đồng bộ Silver/Qdrant và xử lý lỗi thay vì suy ra độ sẵn sàng từ ảnh giao diện.

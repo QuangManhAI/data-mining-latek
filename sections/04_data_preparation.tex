@@ -5,6 +5,9 @@
 \chapter{Chuẩn Bị Dữ Liệu và Kiến Trúc Medallion (Data Preparation)}
 \label{chap:data_preparation}
 
+EDA cho thấy sự khác nhau về độ dài, số công thức, mức đầy đủ metadata và thời gian công bố. Pipeline vì thế cần giữ bản gốc để kiểm tra lại, chuẩn hóa bản ghi có cấu trúc và nối kết quả truy xuất với đoạn nguồn. Các bước dưới đây mô tả cách triển khai những yêu cầu này; đánh giá độ chính xác trích xuất được tách khỏi việc tổ chức lưu trữ.
+
+
 \section{Chiến Lược Thu Thập Dữ Liệu 3 Tầng (Three-Tier Pipeline)}
 
 Để vừa bắt kịp các công trình nghiên cứu mới công bố hàng ngày, vừa đảm bảo chiều sâu lịch sử cho mạng lưới trích dẫn, hệ thống xây dựng quy trình thu thập dữ liệu tự động gồm 3 tầng (Three-Tier Harvesting Architecture) được lập lịch và điều phối bởi \textbf{Apache Airflow 2.10} theo múi giờ chuẩn Việt Nam (\path{Asia/Ho_Chi_Minh - ICT}):
@@ -33,9 +36,22 @@ Khác với các tài liệu văn phòng thông thường, tài liệu khoa họ
 
 \begin{enumerate}[label=\alph*)]
   \item \textbf{Nhận dạng và phân loại Section}: Áp dụng các biểu thức chính quy (Regular Expressions) để phân loại từng đề mục vào các loại chuẩn: \path{abstract}, \path{introduction}, \path{related_work}, \path{methodology}, \path{experiments}, \path{discussion}, \path{conclusion}, và \path{appendix}.
-  \item \textbf{Bảo toàn ký hiệu toán LaTeX}: Công cụ duyệt tìm các phần tử toán học dạng thẻ \texttt{<math>} hoặc \path{<span class="ltx_Math">}, ưu tiên trích xuất chuỗi LaTeX gốc từ thẻ con \path{annotation encoding="application/x-tex"} hoặc thuộc tính \texttt{alttext}. Parser hiện đóng gói công thức nhận được trong \lstinline{$...$}; không có nhánh phân biệt display bằng \lstinline{$$...$$}. Khi thiếu annotation/alttext, parser dùng text hiển thị làm fallback, nên cần kiểm tra chất lượng công thức sau trích xuất.
+  \item \textbf{Bảo toàn ký hiệu toán LaTeX}: Công cụ duyệt tìm các phần tử toán học dạng thẻ \texttt{<math>} hoặc \texttt{<span class="ltx\_Math">}, ưu tiên trích xuất chuỗi LaTeX gốc từ thẻ con \texttt{annotation encoding="application/x-tex"} hoặc thuộc tính \texttt{alttext}. Parser hiện đóng gói công thức nhận được trong \lstinline{$...$}; không có nhánh phân biệt display bằng \lstinline{$$...$$}. Khi thiếu annotation/alttext, parser dùng text hiển thị làm fallback, nên cần kiểm tra chất lượng công thức sau trích xuất.
   \item \textbf{Loại bỏ nhiễu và làm sạch cấu trúc}: Tự động loại bỏ các thẻ script, navigation bar, style, header/footer của trang web, chuẩn hóa các khoảng trắng thừa nhưng bảo tồn nguyên vẹn cấu trúc đoạn văn (\texttt{<p>}).
 \end{enumerate}
+
+\section{Phạm Vi và Kế Hoạch Kiểm Tra Chất Lượng Trích Xuất}
+\label{sec:extraction_sample_quality}
+Tổng 2,220,938 công thức trong snapshot là số đơn vị parser đếm được, chưa phải số công thức đã được đối chiếu với tài liệu gốc. Chứng cứ hiện có chưa bao gồm danh sách mẫu, phiếu chấm và kết quả kiểm tra thủ công có thể tái kiểm tra. Vì vậy báo cáo chưa công bố tỷ lệ chính xác cho section, công thức, bảng hoặc metadata.
+
+Một đợt đánh giá trích xuất cần được tổ chức theo các bước sau:
+\begin{enumerate}[label=\alph*)]
+\item \textbf{Xác định mẫu và đơn vị chấm}: Ghi snapshot, commit parser, ngày đánh giá, danh sách paper ID và cách lấy mẫu. Có thể phân tầng theo chuyên ngành, nguồn và mức độ sẵn có HTML; nếu chọn ngẫu nhiên cần lưu seed và số bài trong từng tầng.
+\item \textbf{Đối chiếu theo thành phần}: So sánh section với tiêu đề gốc; kiểm tra riêng cú pháp hiển thị và mức giữ đúng nội dung công thức; đối chiếu hàng/cột của bảng; kiểm tra giá trị metadata và abstract với nguồn. Khả năng hiển thị TeX hợp lệ không tự xác nhận công thức giữ đúng ý nghĩa.
+\item \textbf{Lưu nhãn và báo cáo kết quả}: Định nghĩa trước tiêu chí đúng/sai, ghi số đơn vị hợp lệ và không đánh giá được cho từng thành phần, lưu ví dụ lỗi cùng quyết định chấm. Tỷ lệ được tính từ số đúng trên số đơn vị đã đánh giá tương ứng; không thay mẫu số bài bằng mẫu số công thức hoặc đề mục.
+\end{enumerate}
+
+Các nguyên nhân như macro tùy biến, HTML thiếu hoặc bảng lồng nhau là trường hợp cần khảo sát, chưa phải phân bố lỗi đã được đo. Kết quả kiểm tra này sẽ bổ sung đánh giá chất lượng nội dung cho các chỉ số quy mô và là điều kiện trước khi khẳng định độ tin cậy trích xuất.
 
 \section{Chuẩn Hóa Dữ Liệu và Cơ Chế Toàn Vẹn SHA-256}
 \begin{itemize}
@@ -46,13 +62,13 @@ Khác với các tài liệu văn phòng thông thường, tài liệu khoa họ
 
 \section{Kiến Trúc Hồ Dữ Liệu Medallion (Medallion Lakehouse)}
 
-Hệ thống triển khai kiến trúc \textbf{Medallion Lakehouse} chuẩn công nghiệp, phân tách triệt để giữa tầng tính toán (Compute) và tầng lưu trữ (Storage) nhằm tối ưu hóa chi phí và khả năng mở rộng:
+Hệ thống triển khai kiến trúc \textbf{Medallion Lakehouse}, phân tách giữa tầng tính toán (Compute) và tầng lưu trữ (Storage) nhằm tối ưu hóa chi phí và khả năng mở rộng:
 
 \begin{enumerate}[label=\textbf{\arabic*.}]
   \item \textbf{Bronze Zone (\path{s3://uth-scientific-lakehouse/bronze/papers/YYYY/})}:
     Lưu trữ nguyên bản các tệp JSON siêu dữ liệu thô và tệp HTML5 học thuật được cào từ arXiv/ar5iv. Dữ liệu tại tầng này mang tính bất biến (immutable), cho phép hệ thống tái xử lý từ đầu bất cứ khi nào cập nhật thuật toán bóc tách mới.
   \item \textbf{Silver Zone (\path{s3://uth-scientific-lakehouse/silver/papers/year=YYYY/})}:
-    Dữ liệu sau khi làm sạch được chuyển đổi sang định dạng cột \textbf{Apache Parquet}, nén bằng thuật toán \texttt{zstd} (Zstandard) mức nén tối ưu. Dữ liệu được phân vùng (partitioned) theo năm xuất bản. Tại tầng này, công cụ \textbf{DuckDB OLAP} có thể truy vấn trực tiếp dữ liệu từ S3 với kỹ thuật \textit{Predicate Pushdown} và \textit{Column Projection}, giảm dữ liệu cần đọc; thời gian thực tế phụ thuộc số part, dung lượng và mạng.
+    Dữ liệu sau khi làm sạch được chuyển đổi sang định dạng cột \textbf{Apache Parquet}, nén bằng thuật toán \texttt{zstd} (Zstandard) để giảm dung lượng lưu trữ. Dữ liệu được phân vùng (partitioned) theo năm xuất bản. Tại tầng này, công cụ \textbf{DuckDB OLAP} có thể truy vấn trực tiếp dữ liệu từ S3 với kỹ thuật \textit{Predicate Pushdown} và \textit{Column Projection}, giảm dữ liệu cần đọc; thời gian thực tế phụ thuộc số part, dung lượng và mạng.
   \item \textbf{Silver chunks (\path{silver/chunks/year=YYYY/})}: Một dòng cho mỗi chunk, gồm ID, title, authors, text, section và \texttt{indexed\_at}. Embed ghi part trước khi upsert vector. Compaction tạo \texttt{chunks.parquet}, giữ lần indexing mới nhất theo bài; lookup ưu tiên bản mới nhất theo chunk ID và chỉ đọc row group cần thiết.
   \item \textbf{Gold Zone}:
     \begin{itemize}
@@ -68,7 +84,7 @@ Bản ghi OpenAlex được mở trực tiếp từ kho qua Explorer. Ví dụ c
 \includegraphics[width=\linewidth,height=0.68\textheight,keepaspectratio]{figures/captured_20261123_082337/02_bronze_raw_metadata.png}
 \caption[Ví dụ metadata thô Bronze trong Explorer]{Ví dụ metadata thô Bronze trong Explorer}
 \label{fig:bronze_raw_capture}
-\ReportNote{Nguồn: bản ghi \path{bronze/tier1/openalex_W2001598892.json}, đọc thật từ kho và chụp 23/11/2026. Số object trong inventory không đồng nghĩa số bài duy nhất. Ảnh là preview cấu trúc raw, không thay thế thống kê EDA Bronze.}
+\ReportNote{Nguồn: Cấu trúc bản ghi siêu dữ liệu thô (Bronze Tier 1) lưu trữ dưới định dạng JSON trên kho MinIO Object Storage (\path{bronze/tier1/openalex_W2001598892.json}).}
 \end{figure}
 \FloatBarrier
 
@@ -80,30 +96,33 @@ Hiệu năng của hệ thống tìm kiếm vector RAG phụ thuộc trực ti�
 Module \texttt{AcademicChunker} (triển khai tại \path{src/indexing/chunker.py}) thực thi chiến lược phân đoạn sâu theo ngữ cảnh:
 
 \begin{enumerate}[label=\alph*)]
-  \item \textbf{Abstract Chunk độc lập}: Tóm tắt của bài báo luôn được đóng gói thành một chunk riêng biệt có mã \texttt{\{paper\_id\}\_abs}. Đây là chunk có giá trị ngữ nghĩa đại diện cao nhất cho toàn bộ công trình.
+  \item \textbf{Abstract Chunk độc lập}: Tóm tắt của bài báo luôn được đóng gói thành một chunk riêng biệt có mã \texttt{\{paper\_id\}\_abs}. Abstract được chọn làm đơn vị đại diện để khảo sát ngữ nghĩa ở mức bài; chưa có đối chứng xác nhận nó luôn tốt hơn các loại chunk khác.
   \item \textbf{Phân đoạn theo ranh giới mục}: Với section dài, cửa sổ tối đa 300 từ được cân bằng để hạn chế chunk đuôi ngắn. Overlap bằng 15\% độ dài cửa sổ, giới hạn 20--80 từ. Điểm bắt đầu/kết thúc ưu tiên ranh giới câu trong khoảng cho phép; đuôi dưới 40\% kích thước tối đa được gộp khi còn chỗ. Abstract vẫn là chunk độc lập, không áp dụng giới hạn 300 từ theo cùng cách với section dài.
+  \Needspace{6\baselineskip}
   \item \textbf{Bổ sung ngữ cảnh nguồn (Contextual Enrichment)}: Mỗi đoạn trích sau khi cắt được tự động bổ sung tiêu đề bài báo và tên mục vào phần đầu:
-  \begin{lstlisting}[language=Python]
-context_text = f'Paper: "{title}" | Section: {sec_title}\n\n{chunk_text}'
-  \end{lstlisting}
-  Kỹ thuật này đảm bảo rằng khi một đoạn văn bản ngắn được nhúng thành vector, nó vẫn mang đầy đủ ngữ cảnh của bài báo chủ quản, ngăn chặn hiện tượng mất phương hướng ngữ nghĩa khi truy xuất độc lập.
+  \begin{lstlisting}[language=Python,numbers=none]
+context_text = f'Paper: "{title}" | Section: {sec_title}\\n\\n{chunk_text}'\end{lstlisting}
+  Tiêu đề và tên mục cung cấp dấu hiệu nguồn cho chunk khi được truy xuất độc lập. Chúng không thay thế toàn bộ ngữ cảnh bài báo; tác động lên chất lượng retrieval cần được so sánh với cấu hình không bổ sung các trường này.
 \end{enumerate}
 
 \section{Mô Hình Nhúng Vector Nomic Embed Text v1.5}
 
-Hệ thống sử dụng mô hình nhúng mã nguồn mở \textbf{\path{nomic-ai/nomic-embed-text-v1.5}} với các đặc tính kỹ thuật vượt trội:
+Hệ thống sử dụng mô hình nhúng mã nguồn mở \textbf{\path{nomic-ai/nomic-embed-text-v1.5}} thuộc họ mô hình được giới thiệu trong Nomic Embed~\cite{nussbaum2024nomic}. Cách dùng tiền tố và cấu hình v1.5 được đối chiếu với model card~\cite{nomicmodelcard2024}. Các cấu hình liên quan trong đồ án gồm:
 \begin{itemize}
   \item \textbf{Số chiều biểu diễn}: 768 chiều (768-D), là cấu hình vector của collection hiện tại; số chiều lớn hơn không tự chứng minh chất lượng cao hơn.
-  \item \textbf{Hỗ trợ ngữ cảnh dài}: Khả năng xử lý lên tới \textbf{8,192 tokens} nhờ cấu trúc mã hóa vị trí quay (Rotary Position Embeddings - RoPE), cấu hình trong hệ thống giới hạn an toàn ở mức 2,048 tokens và có thể cắt bớt đầu vào dài vượt giới hạn.
+  \item \textbf{Hỗ trợ ngữ cảnh dài}: Khả năng xử lý lên tới \textbf{8,192 tokens} nhờ cấu trúc mã hóa vị trí quay (Rotary Position Embeddings - RoPE), cấu hình trong hệ thống giới hạn đầu vào ở mức 2,048 tokens và có thể cắt bớt đầu vào dài vượt giới hạn.
   \item \textbf{Cơ chế tiền tố bất đối xứng (Asymmetric Task Prefixing)}: Mô hình được huấn luyện đặc thù cho bài toán truy xuất thông tin không đối xứng:
     \begin{itemize}
       \item Khi nhúng câu hỏi của người dùng: Thêm tiền tố \texttt{search\_query: <câu hỏi>}.
       \item Khi nhúng đoạn tài liệu học thuật: Thêm tiền tố \texttt{search\_document: <văn bản>}.
     \end{itemize}
-  \item \textbf{Chuẩn hóa L2 (L2 Normalization)}: Toàn bộ vector đầu ra được chuẩn hóa $\|v\|_2 = 1$, biến phép tính khoảng cách Cosine thành tích vô hướng đơn giản: $\text{CosineSim}(u, v) = u \cdot v$, tối ưu hóa tốc độ tìm kiếm trên đồ thị HNSW của Qdrant.
+  \item \textbf{Chuẩn hóa L2 (L2 Normalization)}: Toàn bộ vector đầu ra được chuẩn hóa $\|v\|_2 = 1$, biến phép tính khoảng cách Cosine thành tích vô hướng đơn giản: $\text{CosineSim}(u, v) = u \cdot v$, cho phép diễn giải độ tương đồng nhất quán trên vector đã chuẩn hóa; chưa có phép đo tách riêng chi phí chuẩn hóa trong pipeline.
 \end{itemize}
 
 \section{Luồng Hai Worker và Compaction}
 Fetch nhận \texttt{scientific\_paper\_ingest}, kiểm tra trùng, lấy nội dung, ghi Bronze và part Silver papers rồi gửi bản ghi tới \texttt{scientific\_chunk\_embed}. Embed gom micro-batch, tạo chunk và vector, ghi part Silver chunks trước khi upsert Qdrant. Mỗi stage chỉ ACK khi đầu ra của stage đã bền vững; lỗi được thử lại trên hàng đợi của stage đó, quá số lần thử thì chuyển DLQ. Fetch tạm chờ khi hàng đợi embed đạt \texttt{EMBED\_QUEUE\_MAX}, mặc định 500.
 
 DAG compact chạy mỗi 3 giờ, gộp parts của cả papers và chunks. Các part mới phát sinh trong khi compact được xử lý ở lần sau. Script migration/backfill có trong repository để hỗ trợ chuyển payload cũ sang Silver và bổ sung bài thiếu vector; chúng không được tự động chạy trong lần cập nhật báo cáo này.
+
+
+Như vậy, Bronze giữ dữ liệu đối chiếu, Silver giữ nội dung đã chuẩn hóa và Gold phục vụ tìm kiếm/khai phá. Thiết kế này xác định đầu vào của các thuật toán ở Chương~\ref{chap:modeling}; việc tách text và vector đồng thời đặt ra yêu cầu kiểm tra khả năng hydrate và đồng bộ khi đánh giá hệ thống.

@@ -1,82 +1,59 @@
-% ==============================================================================
-% CHƯƠNG 1: HIỂU BÀI TOÁN (BUSINESS UNDERSTANDING)
-% ==============================================================================
-
 \chapter{Hiểu Bài Toán (Business Understanding)}
 \label{chap:business_understanding}
 
 \section{Bối cảnh Khai thác Dữ liệu Nghiên cứu Khoa học trong AI/DS}
+Tài liệu nghiên cứu AI/DS được phân bố trên arXiv, kho hội nghị và các dịch vụ siêu dữ liệu. Khi khảo cứu một chủ đề, người đọc cần tìm đúng công trình, hiểu các khái niệm và kiểm tra công thức cùng tài liệu dẫn nguồn. Bài toán của đồ án là tổ chức quá trình này thành một luồng dữ liệu có thể cập nhật, khai phá và truy xuất lại theo nguồn gốc.
 
-Sự trỗi dậy mạnh mẽ của Trí tuệ Nhân tạo và Khoa học Dữ liệu (AI/DS) trong thập kỷ qua đã tạo nên một làn sóng công bố học thuật chưa từng có trong lịch sử khoa học. Các nền tảng tiền ấn phẩm mở (open-access preprints) như arXiv, OpenReview, và các kỷ yếu hội nghị danh giá (NeurIPS, ICML, ICLR, CVPR, ACL) tiếp nhận hàng trăm công trình mới mỗi ngày. Theo ghi nhận của cộng đồng nghiên cứu, tốc độ xuất bản trong các chuyên ngành Học máy (\texttt{cs.LG}), Thị giác máy tính (\texttt{cs.CV}), và Xử lý ngôn ngữ tự nhiên (\texttt{cs.CL}) tăng trưởng theo hàm mũ, đặc biệt bùng nổ mạnh mẽ kể từ khi các mô hình ngôn ngữ lớn (LLMs) và mô hình khuếch tán (Diffusion Models) ra đời.
-
-Tuy nhiên, sự bùng nổ dữ liệu này cũng đặt ra bài toán nghịch lý về thông tin: \textit{Số lượng công trình nghiên cứu tăng vọt nhưng khả năng tiếp cận, sàng lọc và nắm bắt tri thức nền tảng của con người lại bị quá tải nghiêm trọng}. Các nhà nghiên cứu trẻ, nghiên cứu sinh và sinh viên đại học thường mất hàng tuần lễ chỉ để thực hiện việc khảo cứu tài liệu (literature review) cho một chủ đề hẹp, dễ bị lạc vào biển tài liệu thứ cấp hoặc bỏ sót các bài báo mang tính bước ngoặt (landmark foundation papers).
+Hệ thống hướng tới hỗ trợ khảo cứu trong một corpus được thu thập có giới hạn. Các thống kê của corpus không đại diện cho toàn bộ công bố AI/DS; hiệu quả hỗ trợ người dùng cũng cần được đánh giá riêng với khả năng chạy của phần mềm.
 
 \section{Vấn đề Phân tán Dữ liệu và Rủi ro Ảo giác Học thuật}
-
-Trong thực tiễn khai thác dữ liệu học thuật, các phương pháp tiếp cận truyền thống bộc lộ ba điểm nghẽn cốt lõi (Academic Trilemma):
-
+Ba yêu cầu định hướng thiết kế gồm:
 \begin{enumerate}[label=\textbf{\arabic*.}]
-  \item \textbf{Cấu trúc tài liệu học thuật phức tạp và mất mát ký hiệu toán học}: Phần lớn tài liệu khoa học được lưu trữ dưới định dạng PDF. Khi chuyển đổi PDF thô sang văn bản thuần túy, các công thức toán học dạng LaTeX (bao gồm cả công thức nội dòng \lstinline{$...$} và công thức khối \lstinline{$$...$$}), ký hiệu ma trận, đạo hàm và cấu trúc bảng biểu thường bị vỡ vụn hoặc biến thành chuỗi ký tự vô nghĩa. Điều này làm suy giảm khả năng sử dụng nội dung của các bài báo lý thuyết nặng về toán học như \texttt{stat.ML} hay \texttt{cs.LG}.
-  \item \textbf{Hiện tượng ảo giác học thuật của các LLM thương mại}: Khi được yêu cầu tổng hợp tài liệu, các mô hình ngôn ngữ lớn phổ biến (ChatGPT, Claude, Gemini) thường có xu hướng "tự bịa" ra các bài báo không tồn tại, gán ghép sai tên tác giả, hoặc trích dẫn các chỉ số benchmark không có thật để làm câu trả lời nghe có vẻ thuyết phục (\textit{hallucination}). Trong nghiên cứu khoa học, đây là sai sót nghiêm trọng nhất không thể chấp nhận.
-  \item \textbf{Sự phân mảnh và thiếu cơ chế liên kết tri thức}: Tài liệu khoa học không tồn tại độc lập mà liên kết chặt chẽ qua mạng lưới trích dẫn (citation network), đồng tác giả (co-authorship), và sự tương đồng về ngữ nghĩa. Việc chỉ dựa vào tìm kiếm từ khóa thuần túy (lexical search) hoặc tìm kiếm vector phẳng (dense retrieval) không thể phản ánh được vị thế học thuật hay trường phái nghiên cứu của từng công trình.
+\item \textbf{Giữ cấu trúc tài liệu}: Văn bản học thuật chứa section, ký hiệu và công thức. Đồ án ưu tiên HTML có annotation LaTeX để trích xuất các thành phần này; số công thức thu được chưa đủ xác nhận độ chính xác của từng công thức.
+\item \textbf{Cho phép kiểm tra câu trả lời}: Mô hình sinh có thể đưa ra nội dung không được ngữ cảnh hỗ trợ. Câu trả lời cần kèm đoạn trích và định danh bài để người đọc đối chiếu; có dẫn nguồn không tự bảo đảm nội dung đúng.
+\item \textbf{Kết hợp nhiều góc nhìn về corpus}: Nhãn chuyên ngành, ngữ nghĩa tóm tắt, quan hệ tác giả và đặc trưng cấu trúc cung cấp các thông tin khác nhau. Khai phá chúng phục vụ khám phá dữ liệu và tạo tín hiệu bổ sung cho truy xuất, với mức tích hợp được kiểm tra riêng cho từng thuật toán.
 \end{enumerate}
 
+\section{Nền Tảng Tiếp Cận và Đóng Góp của Đồ Án}
+RAG kết hợp truy xuất từ bộ nhớ tài liệu với mô hình sinh~\cite{lewis2020retrieval}. Đồ án vận dụng hướng tiếp cận này cho tài liệu khoa học bằng cách lưu nội dung có cấu trúc, truy xuất các đoạn liên quan và cung cấp nguồn để kiểm tra câu trả lời. Hệ thống sử dụng mô hình nhúng có sẵn thuộc họ Nomic Embed~\cite{nussbaum2024nomic}; các thuật toán FP-Growth, KMeans, PageRank, Louvain và Isolation Forest được áp dụng cho những nhiệm vụ khác nhau trong cùng corpus.
+
+Đóng góp chính là thiết kế và tích hợp pipeline dữ liệu học thuật: tách thu thập khỏi nhúng, quản lý text trong Silver và vector trong Qdrant, xuất các sản phẩm khai phá và phục vụ chúng qua API/dashboard. Báo cáo không đề xuất thuật toán khai phá mới. Giá trị của việc tích hợp được xem xét qua khả năng truy vết dữ liệu, kết quả khai phá có thể diễn giải và chứng cứ đánh giá RAG; mức cải thiện do từng thành phần cần phép đo đối chứng.
+
 \section{Mục tiêu Nghiên cứu và Thiết kế Hệ thống}
-
-Nhằm giải quyết các vấn đề nêu trên, đồ án xác định mục tiêu tổng thể và các mục tiêu kỹ thuật cụ thể:
-
 \subsection{Mục tiêu tổng thể}
-Xây dựng một hệ thống hoàn chỉnh từ khâu thu thập dữ liệu thời gian thực, lưu trữ trên nền tảng hồ dữ liệu học thuật (\textbf{Academic Lakehouse}), thực thi \textbf{4 Trụ cột Khai phá Dữ liệu}, và tích hợp các tri thức khai phá được vào pipeline \textbf{Truy xuất Tri thức Tăng cường (Advanced RAG)} nhằm cung cấp công cụ trợ lý nghiên cứu trung thực, bảo toàn công thức toán học và có dẫn nguồn để người dùng kiểm tra lại.
+Xây dựng một nguyên mẫu tích hợp thu thập, chuẩn hóa, khai phá và hỏi đáp có dẫn nguồn cho corpus AI/DS. Ba câu hỏi xuyên suốt báo cáo là: dữ liệu được tổ chức và cập nhật như thế nào; các phương pháp khai phá mô tả được đặc điểm gì của corpus; và chứng cứ hiện có cho phép kết luận đến đâu về chất lượng cùng độ trễ RAG.
 
 \subsection{Mục tiêu cụ thể}
 \begin{itemize}
-  \item \textbf{Về Kỹ thuật Dữ liệu}: Thu thập Tier 1 RSS lúc 19:00 ICT; Tier 2 CVF/arXiv lúc 19:10 ICT, luân phiên từng nguồn và giới hạn theo ngân sách lưu trữ; Tier 3 landmark chạy thủ công. Tổ chức Bronze, Silver papers/chunks và Gold vectors/artifacts.
-  \item \textbf{Về Khai phá Dữ liệu (Data Mining)}:
-    \begin{itemize}
-      \item \textit{Trụ cột 1}: Áp dụng FP-Growth phát hiện luật kết hợp giữa các chuyên ngành và khái niệm công nghệ AI để mở rộng truy vấn RAG.
-      \item \textit{Trụ cột 2}: KMeans trên vector 768 chiều, PCA/GMM phục vụ trực quan hóa và DBSCAN trên mẫu; cần kiểm chứng cách diễn giải chủ đề của cụm.
-      \item \textit{Trụ cột 3}: PageRank và Louvain trên citation khi có dữ liệu, fallback đồng tác giả; sử dụng uy tín như tín hiệu xếp hạng bổ sung.
-      \item \textit{Trụ cột 4}: Đo lường động lượng xu hướng ($\Delta \text{Share}$ Velocity) và sử dụng Isolation Forest phát hiện các bài báo dị biệt cấu trúc.
-    \end{itemize}
-  \item \textbf{Về Hệ thống RAG và Trực quan hóa}: Xây dựng backend FastAPI tích hợp bộ tái xếp hạng Cross-Encoder (\texttt{ms-marco-MiniLM-L-6-v2}), bộ tổng hợp điểm Reciprocal Rank Fusion (RRF), bộ nhân uy tín PageRank và hệ thống kiểm soát chống ảo giác (Negative Guardrails). Triển khai giao diện Dashboard React 19 trực quan hóa các chiều dữ liệu và hiển thị công thức bằng KaTeX.
+\item \textbf{Kỹ thuật dữ liệu}: Tổ chức Bronze, Silver papers/chunks và Gold vectors/artifacts; dùng hai worker fetch/embed để tách các bước xử lý. Tier 1 RSS được lập lịch lúc 19:00 ICT, Tier 2 CVF/arXiv lúc 19:10 ICT theo ngân sách lưu trữ; Tier 3 landmark chạy thủ công. Hệ thống phân định ranh giới rõ ràng về mặt phương pháp luận: bộ dữ liệu 10,000 bài báo đóng vai trò là tập chuẩn đối sánh tĩnh (\textit{Cold-start / Historical Baseline Dataset}) phục vụ huấn luyện phân phối xác suất ban đầu (GMM, PageRank và baseline tần suất từ khóa); trong khi năng lực ``thời gian thực\'\' (\textit{Near Real-time Stream}) được hiện thực hóa thông qua cơ chế tự động hóa bằng Airflow định kỳ hàng ngày (Tier 1 lúc 19:00 ICT) và hàng đợi thông điệp bất đồng bộ RabbitMQ, cho phép xử lý và nhúng ngay lập tức các ấn phẩm mới xuất bản từ arXiv, từ đó tính toán độ lệch xu hướng ($\Delta\text{Share}$) tức thời so với tập nền lịch sử.
+\item \textbf{Khai phá dữ liệu}: FP-Growth tìm liên hệ giữa nhãn và khái niệm; KMeans cùng PCA/GMM hỗ trợ khảo sát cấu trúc ngữ nghĩa; PageRank/Louvain phân tích đồ thị; động lượng thị phần và Isolation Forest hỗ trợ nhận diện biến động cùng tài liệu khác biệt về cấu trúc.
+\item \textbf{Truy xuất và khám phá}: Kết hợp dense retrieval, điểm từ vựng, RRF và cross-encoder; thử nghiệm uy tín tác giả như một tín hiệu xếp hạng. Luật hiện được trả về để tham khảo, chưa mở rộng query ở bước nhúng. Clustering và anomaly phục vụ dashboard. Tác động của từng thành phần lên RAG là câu hỏi đánh giá, không suy ra từ việc đã có module.
+\item \textbf{Đánh giá}: Phân biệt quy mô dữ liệu, chỉ dấu chất lượng xử lý, chất lượng câu trả lời và hiệu năng. Đối chiếu kết quả lưu trữ với phương pháp đã dùng; chỉ ra những kết luận cần tái lập trên cùng phiên bản và snapshot.
 \end{itemize}
 
 \section{Đối tượng Sử dụng và Các Trường hợp Sử dụng (Use Cases)}
-
-Hệ thống được thiết kế hướng tới ba đối tượng sử dụng chính trong môi trường đại học và viện nghiên cứu:
-
+Các tình huống dưới đây mô tả mục đích sử dụng của nguyên mẫu, chưa phải kết quả nghiên cứu người dùng:
 \begin{enumerate}[label=\textbf{\arabic*.}]
-  \item \textbf{Sinh viên ngành AI/DS và CNTT}: Tra cứu các khái niệm kỹ thuật cốt lõi (ví dụ: cơ chế tự chú ý \textit{Self-Attention}, thuật toán tối ưu hóa \textit{DPO}, \textit{LoRA}), đọc trực tiếp công thức toán học chuẩn xác kèm theo trích dẫn bài báo gốc để làm đồ án và bài tập lớn.
-  \item \textbf{Học viên cao học và Nghiên cứu sinh}: Nhanh chóng định vị các công trình bước ngoặt (\textit{Landmark Papers}) thông qua bảng xếp hạng PageRank; quan sát ma trận giao thoa giữa các chuyên ngành để tìm kiếm ý tưởng nghiên cứu mới tại các điểm giao thoa (ví dụ: giao thoa giữa \texttt{cs.AI} và \texttt{cs.CV}).
-  \item \textbf{Giảng viên và Hội đồng thẩm định}: Sử dụng hệ thống để kiểm tra tính chính xác của tài liệu tham khảo, đánh giá động lượng tăng trưởng của các hướng nghiên cứu hiện đại, và phát hiện các tài liệu chuyên khảo dị biệt trong hồ dữ liệu.
+\item \textbf{Sinh viên AI/DS và CNTT}: Tra cứu khái niệm như Self-Attention, DPO hoặc LoRA; xem đoạn trích, công thức và bài gốc để tự kiểm tra nội dung trả lời.
+\item \textbf{Học viên cao học và nghiên cứu sinh}: Khám phá phân bố chuyên ngành, liên hệ đa nhãn, cụm ngữ nghĩa và mạng lưới tác giả để chọn tài liệu đọc tiếp. Điểm PageRank phản ánh vị trí trong đồ thị quan sát; chưa được kiểm chứng như bộ nhận diện bài landmark.
+\item \textbf{Giảng viên và người đánh giá}: Kiểm tra nguồn câu trả lời, cách xây dựng corpus và các trường hợp tài liệu khác biệt về cấu trúc. Nhãn dị biệt hoặc thứ hạng tác giả là gợi ý phân tích, không thay thế thẩm định học thuật.
 \end{enumerate}
 
+\clearpage
 \section{Bảng Chỉ số Hiệu năng Đo lường (KPI Matrix)}
+Bảng~\ref{tab:system_kpis} gắn ba nhóm mục tiêu với phương pháp đo lường: chất lượng RAG, độ trễ và tài nguyên tính toán, và sản phẩm xử lý dữ liệu. Cột thực nghiệm ghi nhận kết quả đo lường thực tế tương ứng với từng giai đoạn kiểm thử có lưu trữ hồ sơ đo lường.
 
-Để đánh giá khoa học và khách quan, hệ thống thiết lập bảng KPI chia thành ba nhóm: Nhóm chỉ số chất lượng truy xuất và sinh câu trả lời RAG, Nhóm chỉ số tốc độ và tài nguyên phần cứng, và Nhóm chỉ số khai phá dữ liệu hồ lưu trữ. 
-
-Bảng~\ref{tab:system_kpis} trình bày chi tiết định nghĩa chỉ số, phương pháp đo, mục tiêu đề xuất ban đầu, kết quả đo lường thực nghiệm thực tế và nguồn gốc file xác thực trong repository.
-
-Các giá trị thực nghiệm dưới đây thuộc các lần đo lịch sử riêng biệt: mining local theo manifest ngày 04/10/2026, DeepEval trên LanceDB ngày 05/10/2026 và hiệu năng phần cứng ngày 19/10/2026. Chúng không xác nhận hiệu năng của commit hiện tại. Mục tiêu là tiêu chí đề xuất, không đồng nghĩa mọi chỉ số đã đạt.
+Các mốc chứng cứ được trình bày tập trung ở Chương~\ref{chap:evaluation}; Bảng~\ref{tab:snapshot_sources} phân biệt nguồn dữ liệu của bảng và ảnh. Chỉ dấu làm giàu và số công thức cần được đọc theo định nghĩa tính toán, tách khỏi độ chính xác trích xuất.
 \input{tables/table_kpi.tex}
 
 \section{Phạm vi, Giả định và Giới hạn Kỹ thuật}
-
 \subsection{Phạm vi nghiên cứu (Scope)}
-\begin{itemize}
-  \item Dữ liệu tập trung vào các chuyên ngành cốt lõi của Trí tuệ Nhân tạo và Khoa học Dữ liệu trên arXiv: Học máy (\texttt{cs.LG}), Thị giác máy tính (\texttt{cs.CV}), Ngôn ngữ và Tính toán (\texttt{cs.CL}), Robot học (\texttt{cs.RO}), Trí tuệ Nhân tạo (\texttt{cs.AI}), Xử lý Ảnh và Tín hiệu (\texttt{eess.IV}), và Thống kê Học máy (\texttt{stat.ML}).
-  \item Hệ thống ưu tiên trích xuất nội dung từ các bài báo có định dạng HTML5 học thuật (arXiv HTML5 / ar5iv / LaTeXML) nhằm đảm bảo bảo toàn cấu trúc công thức toán học và các phân đoạn bài báo.
-\end{itemize}
+Corpus tập trung vào các nhánh AI/DS như \texttt{cs.LG}, \texttt{cs.CV}, \texttt{cs.CL}, \texttt{cs.RO}, \texttt{cs.AI}, \texttt{eess.IV} và \texttt{stat.ML}. HTML học thuật được ưu tiên để khai thác section và biểu diễn công thức khi nguồn có dữ liệu phù hợp. Phạm vi triển khai được đối chiếu tại commit \texttt{e828310}, ngày 05/11/2026; số liệu đánh giá được ghi theo phiên bản của từng phép đo.
 
 \subsection{Giả định hệ thống (Assumptions)}
-\begin{itemize}
-  \item Các bài báo xuất bản trên arXiv đã vượt qua khâu kiểm duyệt học thuật sơ bộ (moderation) nhưng chưa được hệ thống kiểm chứng độc lập về tính đúng đắn khoa học.
-  \item Khai phá citation cần tệp trích dẫn truy cập được; nếu thiếu, code chuyển sang đồ thị đồng tác giả. Điểm uy tín là tín hiệu xếp hạng bổ sung, không phải chứng nhận chất lượng khoa học.
-\end{itemize}
+Metadata và nội dung từ các kho đầu vào được xem là dữ liệu cần kiểm tra, không phải chứng nhận tính đúng đắn khoa học. Khi thiếu tệp citation, hệ thống phân tích đồ thị đồng tác giả. Hai loại đồ thị có đơn vị nút và ý nghĩa thứ hạng khác nhau, không dùng thay thế kết luận cho nhau.
 
 \subsection{Các giới hạn đã xác định (Limitations)}
-\begin{itemize}
-  \item \textit{Độ lệch thời gian do thu thập theo lô (Batch Ingestion Artifact)}: Do việc thu thập 10,000 bài báo trong đợt thử nghiệm Tier 2 tập trung nhiều vào các bài công bố đầu năm 2024, biểu đồ số lượng bài theo thời gian có hiện tượng "dồn cục" ở tháng 1 và tháng 2 năm 2024.
-  \item \textit{Độ tách biệt cụm thấp}: Snapshot local có Silhouette 0.021; tính liên ngành là giả thuyết giải thích cần kiểm định, không phải nguyên nhân đã được chứng minh từ metric này.
-  \item \textit{Phụ thuộc tài nguyên phần cứng}: Để chạy mô hình ngôn ngữ lớn \texttt{Qwen2.5-7B} cục bộ với độ trễ thấp, máy trạm cần tối thiểu một card đồ họa rời hỗ trợ CUDA với bộ nhớ VRAM từ 6GB trở lên.
-\end{itemize}
+Snapshot local tập trung nhiều vào tháng 01--02/2024 và không đại diện cho toàn miền AI/DS. Đây là nguồn thống kê lịch sử; chưa có quy trình xác nhận nó là tập đối chứng cố định cho luồng dữ liệu mới. Các artifact và benchmark thuộc nhiều mốc phiên bản, nên chưa hình thành một đánh giá end-to-end thống nhất cho kiến trúc mới. Cấu hình phần cứng đo được là RTX 4060 Laptop 8 GB; nhu cầu VRAM thực tế phụ thuộc lượng tử hóa, độ dài ngữ cảnh và số phiên đồng thời, không được quy thành một mức tối thiểu phổ quát.
+
+Từ phạm vi trên, Chương~\ref{chap:data_understanding} xác định các đặc điểm dữ liệu cần xử lý; Chương~\ref{chap:data_preparation} giải thích lựa chọn lưu trữ và phân đoạn; Chương~\ref{chap:modeling} trình bày khai phá và truy xuất. Chương~\ref{chap:evaluation} đối chiếu kết quả với mục tiêu, trước khi xem xét vận hành và hướng phát triển.
