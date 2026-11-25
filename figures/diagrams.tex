@@ -77,7 +77,7 @@
 \node[box] (rrf) at (10.4,-2) {\textbf{RRF + authority}\\Dense + lexical\\Cùng tập ứng viên};
 
 \node[box,fill=Purple!10,draw=Purple] (llm) at (5.2,-4) {\textbf{Qwen2.5-7B}\\Prompt + guardrails\\Sinh câu trả lời};
-\node[box,fill=Red!10,draw=Red!80!black] (rerank) at (10.4,-4) {\textbf{Cross-Encoder}\\Chọn Top-5\\MiniLM-L-6-v2};
+\node[box,fill=Red!10,draw=Red!80!black] (rerank) at (10.4,-4) {\textbf{Cross-Encoder / Laya}\\Top-5 + Evidence Gate};
 \node[box,fill=Teal!10,draw=Teal] (answer) at (5.2,-6) {\textbf{Kết quả API}\\Câu trả lời + nguồn\\\texttt{rule\_expansions}};
 
 \draw[arrow] (query.east) -- (embed.west);
@@ -89,6 +89,172 @@
 \draw[arrow] (llm.south) -- (answer.north);
 \draw[auxiliary] (query.south) -- (rules.north);
 \draw[auxiliary] (rules.south) |- node[pos=0.74,above,font=\fontsize{9}{11}\selectfont]{annotation} (answer.west);
+\end{tikzpicture}%
+}%
+}
+
+\newcommand{\DrawTierOrchestration}{%
+\resizebox{\linewidth}{!}{%
+\begin{tikzpicture}[
+ font=\fontsize{9.5}{11.5}\selectfont,
+ box/.style={rectangle,rounded corners=3pt,draw=UTHBlue,fill=white,
+   thick,text width=3.9cm,minimum height=2.7cm,align=center,inner sep=5pt},
+ arrow/.style={->,>=Latex,thick,draw=UTHBlue},
+ darrow/.style={->,>=Latex,thick,dashed,draw=ForestGreen}]
+% Row 0: precondition
+\node[box,fill=Gray!10,text width=13.2cm,minimum height=1.4cm] (pre) at (4.9,0)
+  {\textbf{Kiểm tra Tiền điều kiện Hạ tầng (\texttt{ping\_infrastructure})}\\
+   MinIO \texttt{/minio/health/live} \& RabbitMQ \texttt{/api/overview}};
+% Row 1: tiers
+\node[box,fill=Blue!5]   (t1) at (0,-3.2)
+  {\textbf{Tier 1: arXiv RSS}\\19:00 ICT hàng ngày\\5 nhóm AI/DS chính\\Fallback Search API (36h)};
+\node[box,fill=Blue!10]  (t2) at (4.9,-3.2)
+  {\textbf{Tier 2: CVF \& OAI-PMH}\\19:10 ICT (Slice 1 giờ)\\Water-Filling 7 nhóm\\Credit Pacing \& Budget 20 GB};
+\node[box,fill=Purple!5] (t3) at (9.8,-3.2)
+  {\textbf{Tier 3: Landmark \& PDF}\\Kích hoạt thủ công\\S2 Bulk ($\ge 500$ trích dẫn)\\Backfill (\texttt{refresh=True})};
+% Row 2: throttle spans Tier 2 + Tier 3
+\node[box,fill=Orange!10,text width=7.2cm,minimum height=2.0cm] (bp) at (7.35,-6.6)
+  {\textbf{Tiết lưu Lô \& Backpressure}\\Lô phát \texttt{HARVEST\_BATCH=1000};\\tạm dừng khi \texttt{Q1} $>$ \texttt{LOW\_WATER=200}};
+% Row 3: dedup spans everything
+\node[box,fill=Green!10,text width=13.2cm,minimum height=2.0cm] (dedup) at (4.9,-9.6)
+  {\textbf{Lọc Khử trùng lặp Trước khi Đẩy}\\
+   Tra cứu \texttt{normalized paper\_id} \& \texttt{abstract\_hash} $\rightarrow$ \texttt{scientific\_paper\_ingest}};
+
+% Straight vertical edges only -> nothing crosses a box
+\draw[arrow] (t1.north |- pre.south) -- (t1.north);
+\draw[arrow] (t2.north |- pre.south) -- (t2.north);
+\draw[arrow] (t3.north |- pre.south) -- (t3.north);
+\draw[arrow]  (t2.south) -- (t2.south |- bp.north);
+\draw[darrow] (t3.south) -- (t3.south |- bp.north);
+\draw[arrow] (bp.south) -- (bp.south |- dedup.north);
+\draw[arrow] (t1.south) -- (t1.south |- dedup.north);
+\end{tikzpicture}%
+}%
+}
+
+\newcommand{\DrawTwoStageBroker}{%
+\resizebox{\linewidth}{!}{%
+\begin{tikzpicture}[
+ font=\fontsize{9.5}{11.5}\selectfont,
+ box/.style={rectangle,rounded corners=3pt,draw=UTHBlue,fill=white,
+   thick,text width=3.3cm,minimum height=2.1cm,align=center,inner sep=5pt},
+ arrow/.style={->,>=Latex,thick,draw=UTHBlue},
+ darrow/.style={->,>=Latex,thick,dashed,draw=Red!80!black},
+ lbl/.style={font=\fontsize{8.5}{10}\selectfont}]
+% Row A: ingest path (left -> right)
+\node[box,fill=Gray!10]   (dag) at (0,0)
+  {\textbf{Airflow DAGs}\\Tier 1/2/3\\\texttt{delivery\_mode=2}};
+\node[box,fill=Orange!10] (q1)  at (4.9,0)
+  {\textbf{Q1: Ingest}\\RabbitMQ Durable\\DLQ: \texttt{*.dead}};
+\node[box,fill=Blue!5]    (wf)  at (9.8,0)
+  {\textbf{Worker \texttt{-{}-stage fetch}}\\Batch=16, Dedup $O(1)$\\Single Silver Writer};
+\node[box,fill=Orange!10] (q2)  at (14.7,0)
+  {\textbf{Q2: Embed}\\Giới hạn max=500\\Backpressure 5s};
+% Dead-letter queue sits above, between Q1 and Q2
+\node[box,fill=Red!5,draw=Red!80!black,minimum height=1.6cm] (dlq) at (9.8,3.2)
+  {\textbf{Dead Letter Queues}\\\texttt{x-retries} $>$ 3\\\texttt{*.dead} hậu kiểm};
+% Row B
+\node[box,fill=Green!5]  (s3p) at (9.8,-3.2)
+  {\textbf{Bronze \& Silver Papers}\\MinIO \texttt{silver/papers/}\\Ghi trước khi ACK Q1};
+\node[box,fill=Blue!10]  (we)  at (14.7,-3.2)
+  {\textbf{Worker \texttt{-{}-stage embed}}\\Batch=32, Heartbeat 600s\\Chunker + Nomic 768-D};
+% Row C (snake: right -> left)
+\node[box,fill=Green!10] (s3c) at (14.7,-6.4)
+  {\textbf{Silver Chunks (D-058)}\\Ghi part ZSTD trước\\khi nạp Vector};
+\node[box,fill=Red!10]   (qd)  at (9.8,-6.4)
+  {\textbf{Qdrant HNSW Gold}\\Upsert UUIDv5 + 5 trường\\Rồi mới \texttt{basic\_ack} Q2};
+
+\draw[arrow] (dag) -- (q1);
+\draw[arrow] (q1) -- (wf);
+\draw[arrow] (wf) -- node[above,lbl]{confirm} (q2);
+\draw[arrow] (wf) -- (s3p);
+\draw[arrow] (q2) -- (we);
+\draw[arrow] (we) -- (s3c);
+\draw[arrow] (s3c) -- node[above,lbl]{tuần tự} (qd);
+% DLQ edges go over the top: no crossings
+\draw[darrow] (q1.north) |- (dlq.west);
+\draw[darrow] (q2.north) |- (dlq.east);
+\end{tikzpicture}%
+}%
+}
+
+\newcommand{\DrawContentResolverWaterfall}{%
+\resizebox{\linewidth}{!}{%
+\begin{tikzpicture}[
+ font=\fontsize{9.5}{11.5}\selectfont,
+ box/.style={rectangle,rounded corners=3pt,draw=UTHBlue,fill=white,
+   thick,text width=3.5cm,minimum height=2.3cm,align=center,inner sep=5pt},
+ arrow/.style={->,>=Latex,thick,draw=UTHBlue},
+ fallback/.style={->,>=Latex,thick,dashed,draw=Orange!80!black},
+ lbl/.style={font=\fontsize{8}{10}\selectfont}]
+% Row 1: happy path
+\node[box,fill=Blue!5]   (t0) at (0,0)
+  {\textbf{Tầng 0: Cache Bronze}\\Đọc \texttt{.html.gz} ($> 1000\text{ B}$)\\Đạt Quality Gate};
+\node[box,fill=Blue!10]  (t1) at (4.9,0)
+  {\textbf{Tầng 1: HTML5 / ar5iv}\\\texttt{arxiv.org/html} (8s)\\Fallback \texttt{ar5iv} + Gzip L6};
+\node[box,fill=Green!10] (parser) at (9.8,0)
+  {\textbf{AcademicHTMLParser}\\Nhân bản DOM (\texttt{p\_copy})\\Bảo toàn LaTeX \texttt{\$...\$} \& 9 mục};
+\node[box,fill=Purple!10] (gate) at (14.7,0)
+  {\textbf{Diệt Surrogate \& Gate}\\\texttt{\_strip\_surrogates} (\texttt{BUG-01})\\$\ge 300$ từ \& $\ge 2$ section};
+% Row 2: fallbacks
+\node[box,fill=Orange!10] (t2) at (4.9,-3.6)
+  {\textbf{Tầng 2: PyMuPDF Tier 3}\\Ngoài arXiv ($\le 40\text{ MB}$)\\Tiêu đề $\ge 1.15 \times s_{\text{body}}$};
+\node[box,fill=Gray!10]   (t3) at (9.8,-3.6)
+  {\textbf{Tầng 3: Abstract Fallback}\\Thiếu HTML \& PDF\\Đánh dấu \texttt{IsFullText=0}};
+\node[box,fill=Teal!10]   (silver) at (14.7,-3.6)
+  {\textbf{Bản ghi Silver Sạch}\\23 cột Parquet ZSTD\\Sẵn sàng chuyển \texttt{Q2}};
+
+\draw[fallback] (t0) -- node[above,lbl]{miss/stub} (t1);
+\draw[arrow] (t1) -- (parser);
+\draw[arrow] (parser) -- (gate);
+\draw[arrow] (gate) -- (silver);
+\draw[fallback] (t1) -- node[left,lbl]{lỗi/ngoài arXiv} (t2);
+\draw[fallback] (t2) -- node[above,lbl]{$< 300$ từ} (t3);
+\draw[arrow] (t3) -- (silver);
+% PDF -> Gate: through the empty channel between the rows (no box crossed)
+\draw[arrow] ([xshift=1cm]t2.north) -- ++(0,0.55) -| ([xshift=-1cm]gate.south);
+\end{tikzpicture}%
+}%
+}
+
+\newcommand{\DrawChunkStoreArchitecture}{%
+\resizebox{\linewidth}{!}{%
+\begin{tikzpicture}[
+ font=\fontsize{9.5}{11.5}\selectfont,
+ box/.style={rectangle,rounded corners=3pt,draw=UTHBlue,fill=white,
+   thick,text width=3.2cm,minimum height=2.1cm,align=center,inner sep=5pt},
+ arrow/.style={->,>=Latex,thick,draw=UTHBlue},
+ darrow/.style={->,>=Latex,thick,dashed,draw=ForestGreen},
+ lbl/.style={font=\fontsize{8}{10}\selectfont}]
+% Top row: write path + LSM compaction
+\node[box,fill=Blue!5]   (embed) at (0,0)
+  {\textbf{Worker \texttt{-{}-stage embed}}\\Ghi part ZSTD 14 cột\\(\texttt{ROW\_GROUP\_SIZE=512})};
+\node[box,fill=Blue!10]  (parts) at (4.6,0)
+  {\textbf{Silver Chunk Parts}\\\texttt{silver/chunks/}\\\texttt{year=YYYY/} (Lock 409)};
+\node[box,fill=Green!10] (compact) at (9.2,0)
+  {\textbf{Compaction LSM (3 giờ)}\\\texttt{dag\_compact\_silver}\\Sắp xếp \texttt{chunk\_id}, giữ mới nhất};
+\node[box,fill=Green!5]  (parq) at (13.8,0)
+  {\textbf{Master \texttt{chunks.parquet}}\\Min/Max Row-Group Index\\Nén cột ZSTD trên S3};
+% Bottom row: RAG hydration
+\node[box,fill=Red!10]    (qd)  at (0,-3.6)
+  {\textbf{Qdrant 5-Field HNSW}\\Trả Top-$K$ \texttt{chunk\_id}\\(Không lưu full text)};
+\node[box,fill=Orange!10] (lru) at (4.6,-3.6)
+  {\textbf{OrderedDict LRU}\\Dung lượng \texttt{20,000} đoạn\\Hit trả trực tiếp RAM ($<1\text{ ms}$)};
+\node[box,fill=Purple!10] (s3r) at (9.2,-3.6)
+  {\textbf{S3 Byte-Range Song song}\\Lọc Min/Max Row-Group\\16 luồng + \texttt{pre\_buffer=True}};
+\node[box,fill=Teal!10]   (hyd) at (13.8,-3.6)
+  {\textbf{Hydrated Chunks}\\Đầy đủ \texttt{title, authors, text}\\Trao Reranker \& LLM};
+
+\draw[arrow] (embed) -- (parts);
+\draw[arrow] (parts) -- (compact);
+\draw[arrow] (compact) -- (parq);
+\draw[arrow] (qd) -- (lru);
+\draw[arrow] (lru) -- node[above,lbl]{Cache Miss} (s3r);
+\draw[arrow] (s3r) -- (hyd);
+% Range read: down into the channel, left, down into S3 box
+\draw[darrow] (parq.south) -- ++(0,-0.6) -| node[near start,above,lbl]{Range Read} (s3r.north);
+% Cache hit: loops under the S3 box instead of along its top edge
+\draw[darrow] (lru.south) -- ++(0,-0.7) -| node[near start,below,lbl]{Cache Hit} (hyd.south);
 \end{tikzpicture}%
 }%
 }

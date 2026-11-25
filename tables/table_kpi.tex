@@ -3,53 +3,59 @@
 \setlength{\tabcolsep}{3.5pt}
 \setlength{\LTpre}{0pt}
 \setlength{\LTpost}{4pt}
-\begin{longtable}{|>{\raggedright\arraybackslash}p{30mm}|>{\raggedright\arraybackslash}p{38mm}|>{\raggedright\arraybackslash}p{22mm}|>{\centering\arraybackslash}p{16mm}|>{\centering\arraybackslash}p{24mm}|>{\raggedright\arraybackslash}p{22mm}|}
-\caption[Chỉ số kỹ thuật và kết quả đo lịch sử]{Chỉ số kỹ thuật và kết quả đo lịch sử}
+\begin{longtable}{|>{\raggedright\arraybackslash}p{38mm}|>{\centering\arraybackslash}p{23mm}|>{\raggedright\arraybackslash}p{51mm}|>{\raggedright\arraybackslash}p{32mm}|}
+\caption[Ma trận chỉ số hiệu năng kỹ thuật toàn hệ thống (KPI)]{Ma trận chỉ số hiệu năng kỹ thuật toàn hệ thống cập nhật giai đoạn tháng 10--11/2026}
 \label{tab:system_kpis}\\
 \hline
-\textbf{Tên chỉ số (KPI)} & \textbf{Ý nghĩa \& Đơn vị} & \textbf{Phương pháp đo} & \textbf{Mục tiêu} & \textbf{Thực nghiệm} & \textbf{Nguồn xác minh} \\
+\textbf{Tên chỉ số (KPI)} & \textbf{Mục tiêu thiết kế} & \textbf{Kết quả đo thực nghiệm} & \textbf{Mốc / Nguồn xác minh} \\
 \hline
 \endfirsthead
-\multicolumn{6}{l}{\small Bảng \thetable{} (tiếp theo)}\\
+\multicolumn{4}{l}{\small Bảng \thetable{} (tiếp theo)}\\
 \hline
-\textbf{Tên chỉ số (KPI)} & \textbf{Ý nghĩa \& Đơn vị} & \textbf{Phương pháp đo} & \textbf{Mục tiêu} & \textbf{Thực nghiệm} & \textbf{Nguồn xác minh} \\
+\textbf{Tên chỉ số (KPI)} & \textbf{Mục tiêu thiết kế} & \textbf{Kết quả đo thực nghiệm} & \textbf{Mốc / Nguồn xác minh} \\
 \hline
 \endhead
+\hline
+\multicolumn{4}{r}{\small (Còn tiếp ở trang sau)}\\
 \endfoot
+\hline
 \endlastfoot
-\multicolumn{6}{|l|}{\cellcolor{LightGray}\textbf{1. Nhóm KPI Hiệu năng Truy xuất \& Chất lượng RAG (DeepEval 2.x)}} \\
-    \hline
-    \textbf{Contextual Precision} & Tỷ lệ đoạn trích chứa câu trả lời xếp thứ hạng cao & DeepEval LLM Judge & $\ge 0.70$ & \textbf{0.860} (80\% pass) & \texttt{RAG\_EVAL} \\
-    \hline
-    \textbf{Contextual Recall} & Mức độ bao phủ toàn diện các luận điểm khoa học & DeepEval LLM Judge & $\ge 0.85$ & \textbf{1.000} (19/19 hợp lệ) & \texttt{RAG\_EVAL} \\
-    \hline
-    \textbf{Answer Relevancy} & Độ bám sát trọng tâm câu hỏi, loại bỏ filler & DeepEval LLM Judge & $\ge 0.70$ & \textbf{0.752} (55\% pass) & \texttt{RAG\_EVAL} \\
-    \hline
-    \textbf{Faithfulness} & Mức độ trung thực với tài liệu dẫn chứng, chống ảo giác & DeepEval LLM Judge & $\ge 0.70$ & \textbf{0.699} (53\% pass) & \texttt{RAG\_EVAL} \\
-    \hline
-    \textbf{Citation Grounding} & Tỷ lệ mẫu vượt ngưỡng GEval grounding, kèm định dạng \texttt{[Paper: ID]} & G-Eval (score TB 0.720) & $\ge 80\%$ & \textbf{90.0\%} (18/20) & \texttt{RAG\_EVAL} \\
-    \hline
-    \multicolumn{6}{|l|}{\cellcolor{LightGray}\textbf{2. Nhóm KPI Tốc độ Xử lý \& Phần cứng (NVIDIA RTX 4060 GPU)}} \\
-    \hline
-    \textbf{Vector Search Latency} & Độ trễ truy vấn vector Top-k trên Qdrant Cloud/WAN & $p50$ vòng lặp 20 lần & $< 500\text{ ms}$ & \textbf{268.1 ms} & \texttt{PERF\_LOG} \\
-    \hline
-    \textbf{Time To First Token} & Thời gian phản hồi token đầu tiên (TTFT) & Đo thời gian prefill & $< 1.5\text{ s}$ & \textbf{609.8 ms} & \texttt{PERF\_LOG} \\
-    \hline
-    \textbf{Token Generation Speed} & Tốc độ sinh văn bản tự hồi quy & Tốc độ \texttt{tok/s} (CUDA) & $> 30\text{ tok/s}$ & \textbf{46.33 tok/s} & \texttt{PERF\_LOG} \\
-    \hline
-    \textbf{Peak VRAM Footprint} & Dung lượng bộ nhớ đồ họa tiêu thụ tối đa & NVIDIA-SMI telemetry & $< 7.0\text{ GB}$ & \textbf{5.7 GB / 8.0 GB} & \texttt{PERF\_LOG} \\
-    \hline
-    \multicolumn{6}{|l|}{\cellcolor{LightGray}\textbf{3. Nhóm KPI Khai phá \& Hồ dữ liệu (Lakehouse \& Mining)}} \\
-    \hline
-    \textbf{Enrichment Ratio} & Tỷ lệ bản ghi mang nhãn làm giàu cấu trúc & Chỉ dấu số section & $> 85\%$ & \textbf{90.15\%} & \path{eda_summary} \\
-    \hline
-    \textbf{LaTeX Math Extracted} & Số công thức parser đếm được & Thống kê DuckDB OLAP & $> 1.5\text{M}$ & \textbf{2,220,938} & \path{eda_summary} \\
-    \hline
-    \textbf{Corpus \& Vectors} & Quy mô bài Silver và vector Qdrant & Log vận hành 04/11/2026 & $> 50\text{k}$ bài & \textbf{71,927 bài / 1.04M vec} & \path{backend.log} \\
-    \hline
-    \textbf{Mining Engine Runtime} & Thời gian hoàn thành EDA + 4 trụ cột (71,927 bài) & Đo tổng thời gian chạy & $< 300\text{ s}$ & \textbf{234.57 s} & \path{backend.log} \\
-    \hline
-
+\multicolumn{4}{|>{\raggedright\arraybackslash}p{\dimexpr 144mm + 6\tabcolsep\relax}|}{\cellcolor{LightGray}\textbf{1. Nhóm KPI Hồ dữ liệu \& Khai phá (Lakehouse \& Mining)}} \\
+\hline
+\textbf{Quy mô bài Silver \& Vector Qdrant} & $\ge 50,000$ bài & \textbf{71,927 bài báo phân biệt} / \textbf{1,043,594 vector} & \texttt{SNAP-06A} (\path{logs/run/backend.log}, 04/11/2026) \\
+\hline
+\textbf{Thời gian chạy EDA + 4 Trụ cột} & $< 300\text{ s}$ & \textbf{234.57 s} (EDA 39.09 s, FP 36.26 s, Clust 39.94 s, Graph 116.39 s, Trend 2.89 s) & \texttt{SNAP-06A} (\path{logs/run/backend.log}) \\
+\hline
+\textbf{Độ phủ giao dịch \& Luật kết hợp} & $\ge 80\%$ / $\text{Lift} > 1.2$ & \textbf{61,319 giao dịch (85.3\%)}, \textbf{45 luật}, top lift \textbf{34.940} & \texttt{SNAP-06A} (\path{logs/run/backend.log}) \\
+\hline
+\textbf{Tỷ lệ làm giàu cấu trúc \& Công thức} & $> 85\%$ / $> 1.5\text{M}$ & \textbf{89.38\%} (11,619/13k; 2,825,871 CT) $\mid$ \textbf{90.15\%} (9,015/10k; 2,220,938 CT) & \texttt{SNAP-03} \& \texttt{SNAP-01} (\path{eda_summary.json}) \\
+\hline
+\multicolumn{4}{|>{\raggedright\arraybackslash}p{\dimexpr 144mm + 6\tabcolsep\relax}|}{\cellcolor{LightGray}\textbf{2. Nhóm KPI Phân đoạn, Truy xuất \& Cổng Bằng chứng (Chunking, Retrieval \& Evidence Gate)}} \\
+\hline
+\textbf{Hiệu quả Phân đoạn (Chunking A/B)} & Cải thiện đuôi ngắn \& Recall@5 & \texttt{B\_new\_pct15}: $p_{10}$ tăng \textbf{103 $\rightarrow$ 166 từ}, Recall@5 \textbf{0.7679} (so với 0.7143) & \texttt{SNAP-06B} (\path{chunking_ab/summary.json}) \\
+\hline
+\textbf{Xếp hạng 5 Kịch bản Hydrated ($N=120$)} & Nâng MRR \& Hit@1 so với Vector & \textbf{Full (Vector+Laya RRF+PageRank)}: \textbf{MRR 0.6076} (+6.1\%), \textbf{Hit@1 55.0\%}, Hit@5 \textbf{69.2\%} & \texttt{SNAP-06B} (\path{laya_5_scenarios_comparison_120q.json}) \\
+\hline
+\textbf{Retrieval v1 + Laya FT (\texttt{RAG\_TS}, 100+50)} & $\text{MRR@10} \ge 0.80$, chặn nhiễu & \texttt{laya\_ft1\_hybrid}: \textbf{MRR@10 0.824}, \textbf{nDCG@10 0.850}, \textbf{Hit@5 0.940}, \textbf{Gold@5 0.830} & \texttt{SNAP-06B} (\path{rag_eval/report_retrieval.json}) \\
+\hline
+\textbf{Cổng Kiểm chứng Bằng chứng (Evidence Gate)} & $\text{AUROC} \ge 0.90$ & \texttt{laya\_ft1\_hybrid}: \textbf{AUROC 0.986}, chặn \textbf{50/50} câu không đáp án, giữ \textbf{86/100} câu đúng & \texttt{SNAP-06B} (\path{rag_eval/report_retrieval.json}) \\
+\hline
+\textbf{Đối chuẩn 3 Bên 150 Mẫu (Vector vs Laya)} & Vượt Pure Vector \& Laya Baseline & \textbf{Laya Mới}: \textbf{MRR 0.8939}, \textbf{Hit@1 82.0\%}, \textbf{Hit@5 98.0\%} (Vector: 0.8623 / 79.0\% / 96.0\%) & \texttt{SNAP-06B} (\path{laya_ab_final_benchmark.json}, \path{vector_final_benchmark.json}) \\
+\hline
+\multicolumn{4}{|>{\raggedright\arraybackslash}p{\dimexpr 144mm + 6\tabcolsep\relax}|}{\cellcolor{LightGray}\textbf{3. Nhóm KPI Chất lượng Sinh RAG (DeepEval Hydrated \& LanceDB Lịch sử)}} \\
+\hline
+\textbf{Faithfulness (3-Way 150 Mẫu vs LanceDB)} & $\ge 0.70$ & \textbf{0.7977} (3-Way Laya Mới, 100 pos) $\mid$ \textbf{0.699} (LanceDB 21q) $\mid$ \textbf{0.892} (768-D Reranked) & \texttt{SNAP-06B} \& \texttt{SNAP-02} (\path{vector_final_benchmark.json}) \\
+\hline
+\textbf{Contextual Precision / Recall / Citation} & $\ge 0.70$ / $\ge 0.85$ / $\ge 80\%$ & \textbf{0.860} Prec / \textbf{1.000} Rec (19/19) / \textbf{90.0\%} Cit (18/20) $\mid$ \textbf{0.900} Rec ($N=105$ Hydrated) & \texttt{SNAP-02} \& \texttt{SNAP-06B} (\texttt{RAG\_EVAL}, \path{laya_pagerank_benchmark_report.md}) \\
+\hline
+\multicolumn{4}{|>{\raggedright\arraybackslash}p{\dimexpr 144mm + 6\tabcolsep\relax}|}{\cellcolor{LightGray}\textbf{4. Nhóm KPI Phần cứng \& Độ trễ Thực thi (NVIDIA RTX 4060 CUDA)}} \\
+\hline
+\textbf{Truy vấn Qdrant Độc lập (Top-5, Pool)} & $< 500\text{ ms}$ & \textbf{269.46 $\pm$ 12.44 ms} ($p_{50} = 268.10\text{ ms}$, 3.71 QPS trên 374k vectors) & \texttt{SNAP-04} (\path{PERFORMANCE_BENCHMARK_REPORT.md}) \\
+\hline
+\textbf{Time To First Token (TTFT) \& Sinh CUDA} & $< 1.5\text{ s}$ / $> 30\text{ tok/s}$ & \textbf{TTFT 609.77 ms}, \textbf{46.33 $\pm$ 0.64 tok/s}, tổng E2E \textbf{3,392.50 ms} (RTX 4060) & \texttt{SNAP-04} (\path{PERFORMANCE_BENCHMARK_REPORT.md}) \\
+\hline
+\textbf{Dung lượng VRAM Đỉnh (Peak VRAM)} & $< 7.0\text{ GB}$ & \textbf{5.7 GB / 8.0 GB} (Qwen2.5-7B \texttt{Q4\_K\_M}, \texttt{ctx=4096}, \texttt{seq=1}) & \texttt{SNAP-04} (\path{PERFORMANCE_BENCHMARK_REPORT.md}) \\
+\hline
 \end{longtable}
-\ReportNote{Nguồn: Tổng hợp từ các báo cáo đo lường thực nghiệm: DeepEval trên LanceDB (05/10/2026), benchmark phần cứng GPU (19/10/2026) và thống kê tầng Silver/Gold. Chi tiết xem Chương~\ref{chap:evaluation}.}
+\ReportNote{Nguồn: Tổng hợp 14 chỉ số KPI trên 4 nhóm năng lực kỹ thuật từ các phiên đo độc lập (\texttt{SNAP-01/02} ngày 04--07/10/2026 trên LanceDB/EDA local; \texttt{SNAP-03} ngày 17/10/2026 trên MinIO 13k; \texttt{SNAP-04} ngày 19/10/2026 trên RTX 4060 CUDA; \texttt{SNAP-06A} ngày 04/11/2026 trên 71,927 bài và 1,043,594 vector; \texttt{SNAP-06B} ngày 06--09/11/2026 cho Chunking A/B, 5-Scenario $N=120$, Retrieval v1 và 3-Way 150 mẫu). Mỗi dòng gắn đúng mã mốc để bảo đảm liêm chính số liệu; chi tiết xem Chương~\ref{chap:evaluation} và Bảng~\ref{tab:snapshot_sources}.}
 \endgroup

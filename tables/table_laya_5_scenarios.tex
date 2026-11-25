@@ -1,0 +1,24 @@
+\begin{table}[htbp]
+  \centering
+  \footnotesize
+  \caption[Ablation 5 kịch bản xếp hạng trên 120 truy vấn (EXP-04)]{Kết quả nghiên cứu cắt bỏ 5 kịch bản xếp hạng trên 120 truy vấn chuẩn (\texttt{EXP-04})}
+  \label{tab:laya_5_scenarios}
+  \vspace{4pt}
+  \setlength{\tabcolsep}{2.5pt}
+  \begin{tabularx}{\linewidth}{|>{\raggedright\arraybackslash}p{44mm}|Y|Y|Y|Y|Y|Y|}
+    \hline
+    \textbf{Kịch bản Xếp hạng} & \textbf{MRR} & \textbf{Hit@1} & \textbf{Recall@1} & \textbf{Hit@5} & \textbf{Recall@5} & \makecell{\textbf{Độ trễ}\\\textbf{TB (ms)}} \\
+    \hline
+    1. Vector (Bi-Encoder Baseline) & 0.5725 & \makecell{49.2\%\\(59/120)} & 45.0\% & \makecell{67.5\%\\(81/120)} & 60.8\% & 325.0 \\
+    \hline
+    2. Laya Alone (Cross-Encoder) & 0.5822 & \makecell{51.7\%\\(62/120)} & 46.2\% & \makecell{66.7\%\\(80/120)} & 60.0\% & 641.2 \\
+    \hline
+    3. Vector + Laya (RRF $k=60$) & 0.5810 & \makecell{50.8\%\\(61/120)} & 46.2\% & \makecell{67.5\%\\(81/120)} & 60.4\% & 641.2 \\
+    \hline
+    4. Vector + PageRank & 0.5741 & \makecell{49.2\%\\(59/120)} & 45.0\% & \makecell{68.3\%\\(82/120)} & 61.7\% & 325.2 \\
+    \hline
+    \textbf{5. Full System (Vector + Laya + RRF + PR)} & \textbf{0.6076} & \makecell{\textbf{55.0\%}\\\textbf{(66/120)}} & \textbf{49.6\%} & \makecell{\textbf{69.2\%}\\\textbf{(83/120)}} & \textbf{62.1\%} & 641.4 \\
+    \hline
+  \end{tabularx}
+  \ReportNote{Nguồn: Thực nghiệm tháng 11/2026 trên GPU RTX 4060 CUDA \texttt{bfloat16} (\path{benchmarks/evaluate_120_ranking_5_scenarios.py}, \path{logs/benchmarks/laya_5_scenarios_comparison_120q.json}). Cả 5 kịch bản chấm điểm trên cùng tập ứng viên Top-10 đã hydrate (\texttt{Hit@10 = 75.0\%}); trọng số PageRank tra cứu từ 20,000 bài báo và 29,523 tác giả.}
+\end{table}

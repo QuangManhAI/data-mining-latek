@@ -1,20 +1,22 @@
-\begin{table}[htbp]
+\begin{table}[!htbp]
 \centering
-\small
-\caption[Một số bài báo dị biệt trong snapshot lịch sử]{Một số bài báo dị biệt trong snapshot lịch sử}
+\footnotesize
+\setlength{\tabcolsep}{3pt}
+\caption[Kết quả động lượng thị phần và bất thường Isolation Forest]{Kết quả động lượng thị phần (\texorpdfstring{$\Delta\text{Share}$}{Delta Share}) và các bài báo bất thường cấu trúc tiêu biểu (\texttt{trends\_anomalies.json})}
 \label{tab:anomalies}
-\begin{tabularx}{\textwidth}{|p{2cm}|L|p{1.5cm}|p{1.5cm}|p{1.5cm}|}
+\begin{tabularx}{\linewidth}{|>{\raggedright\arraybackslash}p{24mm}|>{\raggedright\arraybackslash}p{22mm}|>{\centering\arraybackslash}p{24mm}|L|>{\raggedright\arraybackslash}p{34mm}|}
 \hline
-\textbf{Mã bài} & \textbf{Tiêu đề} & \textbf{Điểm} & \textbf{Công thức} & \textbf{Số từ} \\
-\hline
-2401.13216 & On Principled Local Optimization Methods for Federated Learning & -0.7707 & 3,732 & 26,576 \\
-\hline
-2401.12418 & Towards Improved Variational Inference for Deep Bayesian Models & -0.7681 & 3,421 & 40,554 \\
-\hline
-2401.10819 & Optimisation in Neurosymbolic Learning Systems & -0.7681 & 3,972 & 41,271 \\
-\hline
-2308.07520 & Nonlinearity, Feedback and Uniform Consistency in Causal Structural Learning & -0.7603 & 3,101 & 24,276 \\
-\hline
+\textbf{Mã / Ngành} & \textbf{Loại kết quả} & \textbf{Giá trị định lượng} & \textbf{Đặc trưng nổi bật} & \textbf{Trạng thái / Nhãn lý giải} \\ \hline
+\path{cs.CV} & Động lượng & \texttt{growth = +123.43\%} & \path{recent = 722}, \path{prev = 6}, \path{all = 3,021} & \texttt{SURGING} \\ \hline
+\path{cs.AI} & Động lượng & \texttt{growth = +198.94\%} & \path{recent = 161}, \path{prev = 1}, \path{all = 625} & \texttt{SURGING} \\ \hline
+\path{cs.CL} & Động lượng & \texttt{growth = +69.89\%} & \path{recent = 366}, \path{prev = 4}, \path{all = 1,858} & \texttt{SURGING} \\ \hline
+\path{cs.LG} & Động lượng & \texttt{growth = +38.64\%} & \path{recent = 672}, \path{prev = 9}, \path{all = 3,093} & \texttt{SURGING} \\ \hline
+\path{cs.RO} & Động lượng & \texttt{growth = -81.43\%} & \path{recent = 160}, \path{prev = 16}, \path{all = 879} & \texttt{DECLINING} \\ \hline
+\path{cs.IR} & Động lượng & \texttt{growth = -3.45\%} & \path{recent = 52}, \path{prev = 1}, \path{all = 310} & \texttt{STABLE} \\ \hline
+\path{arXiv:2206.08756} & Ngoại lai IF (\#1) & \path{score = -0.7035} & 1,600 công thức, 15,279 từ, 6 nhãn ngành & Math-Heavy + Extreme Multidisciplinary \\ \hline
+\path{arXiv:2501.05498} & Ngoại lai IF (\#2) & \path{score = -0.6906} & 5,470 công thức, 74,303 từ & Extreme Math + Mega-Survey Monograph \\ \hline
+\path{arXiv:2401.13216} & Ngoại lai IF (\#3) & \path{score = -0.6865} & 3,732 công thức, 26,576 từ, 4 nhãn ngành & Math-Heavy + Mega-Survey + 4 Categories \\ \hline
+\path{arXiv:2411.15221} & Ngoại lai đa tác giả & \path{score = -0.6826} & 144 đồng tác giả, 24,057 từ, 20 công thức & Hyper-Authorship Collaboration \\ \hline
 \end{tabularx}
-\ReportNote{Nguồn: Trích xuất các bài báo mang đặc trưng hình thái dị biệt cấu trúc từ \path{data/gold/mining/trends_anomalies.json}.}
+\ReportNote{Nguồn: \path{data/gold/mining/trends_anomalies.json} (lát cắt cục bộ 29,911 bài, 260 ngoại lai, 26 chuyên ngành). Trên lần chạy sản xuất 04/11/2026 (\texttt{SNAP-06A}), \texttt{TrendAnomalyMiner} xử lý toàn bộ 71,927 bài trong 2.89 giây, phát hiện 1,000 ngoại lai hàng đầu (\path{contamination = 0.02}) và theo dõi 48 chuyên ngành đạt ngưỡng \path{all_time >= 40}.}
 \end{table}

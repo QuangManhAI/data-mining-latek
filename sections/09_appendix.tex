@@ -12,54 +12,74 @@
 \counterwithout{lstlisting}{chapter}
 \counterwithin{lstlisting}{section}
 
-\section{Đối Chiếu Nguồn Gốc Báo Cáo và Mã Nguồn Thực Tế (Traceability Overview)}
+\section{Bảng Siêu Tham Số Hợp Nhất Toàn Hệ Thống}
+\label{sec:appendix_hyperparams}
 
-Nhằm bảo đảm tính minh bạch học thuật, bản cập nhật phân biệt implementation hiện tại, artifact local lịch sử và benchmark được tài liệu hóa; các nguồn tương ứng được liệt kê dưới đây:
+Bảng~\ref{tab:hyperparameters} tổng hợp toàn bộ giá trị mặc định và siêu tham số kiểm chứng trực tiếp từ mã nguồn Python và các tệp JSON cấu hình huấn luyện tại mốc ngày 25/11/2026, bảo đảm khả năng tái lập chính xác mọi thực nghiệm từ tầng thu thập Lakehouse, chia đoạn, khai phá bốn trụ cột tới đường ống Hybrid RAG và tinh chỉnh \texttt{Laya}.
 
-\begin{itemize}[leftmargin=1.5cm]
-  \item \textbf{Chương 1 (Hiểu bài toán \& KPI)}: \path{docs/OVERVIEW.md}, \path{SETUP.md}.
-  \item \textbf{Chương 2 (Khám phá EDA \& Thống kê)}: \path{data/gold/mining/eda_summary.json}, \path{src/mining/eda_engine.py}.
-  \item \textbf{Chương 3 (Thu thập 3 tầng \& Lakehouse)}: \path{src/ingestion/arxiv_batch_harvester.py}, \path{src/storage/duckdb_engine.py}, \path{src/transformation/html_parser.py}, \path{src/indexing/qdrant_manager.py}.
-  \item \textbf{Chương 4 (4 Trụ cột Khai phá Dữ liệu \& RAG)}: \path{src/mining/association_rules.py}, \path{src/mining/cluster_analysis.py}, \path{src/mining/graph_mining.py}, \path{src/mining/trend_anomaly_mining.py}, \path{backend/app/services/retrieval_service.py}.
-  \item \textbf{Chương 5 (Đánh giá DeepEval \& Hiệu năng GPU)}: \path{docs/benchmarks/RAG_EVALUATION_REPORT_21_SAMPLES.md}, \path{docs/benchmarks/PERFORMANCE_BENCHMARK_REPORT.md}.
-  \item \textbf{Chương 6 (Triển khai Vận hành)}: \path{README.md}, \path{.env_example}, \path{dags/}, \path{backend/app/main.py}.
-\end{itemize}
+\input{tables/table_hyperparameters.tex}
 
-\subsection{Mốc Đối Chiếu và Tính Tái Lập}
-Quy ước của báo cáo: source xác nhận đường xử lý đã triển khai; artifact ghi đầu ra của một snapshot; benchmark ghi kết quả của một phép đo; ảnh giao diện minh họa cách hiển thị. Chứng cứ thuộc loại này không tự thay thế loại khác. Các phép tính bổ sung như số giao dịch hỗ trợ, tổng thời gian hoặc tỷ số đều được suy từ số đã lưu và ghi rõ giới hạn làm tròn; không có lần chạy mining/benchmark mới.
+\FloatBarrier
+\section{Danh Mục Mã Nguồn, Bằng Chứng và Tài Sản Kiểm Toán}
+\label{sec:appendix_inventory}
 
-Mã nguồn: commit \texttt{f421707}, ngày 09/11/2026; ngày cập nhật báo cáo 25/11/2026. Không chạy lại mining hoặc benchmark; frontend/backend không bị sửa đổi. Các file JSON local được xem là snapshot lịch sử; manifest tham chiếu ngày 04/10/2026 không xác nhận mọi artifact đã được tái lập cùng một lần chạy.
+Để bảo đảm tính minh bạch và liêm chính học thuật, bảng tổng hợp dưới đây lập chỉ mục đầy đủ tám nhóm tài sản mã nguồn thực thi, tệp bằng chứng JSON, nhật ký lỗi và bộ benchmark đối chiếu xuyên suốt từ Chương~\ref{chap:business_understanding} đến Chương~\ref{chap:conclusion}.
 
-DeepEval: report 05/10/2026 ghi commit \texttt{6cb1c52}, LanceDB, hơn 143 nghìn chunk. Hiệu năng phần cứng: report 19/10/2026. Các benchmark bổ sung giai đoạn 06--08/11/2026 nằm tại \path{logs/benchmarks/} (\path{chunking_ab/summary.json}, \path{rag_eval/report_retrieval.json}) và \path{notebooks/} (\path{laya_onnx_20261108-2053_seed0/RUN_INFO.json}, \path{laya_finetune/report_seed0.json}). Các số quy mô citation và landmark chưa có artifact đối chiếu được loại khỏi bảng kết quả.
+\begin{table}[htbp]
+  \centering
+  \footnotesize
+  \caption[Danh mục mã nguồn, bằng chứng và tài sản kiểm toán toàn dự án]{Danh mục mã nguồn thực thi, bằng chứng JSON và tài sản kiểm toán tái lập (Phụ lục B)}
+  \vspace{4pt}
+  \setlength{\tabcolsep}{2.5pt}
+  \begin{tabularx}{\linewidth}{|>{\raggedright\arraybackslash}p{30mm}|>{\raggedright\arraybackslash}p{74mm}|L|}
+    \hline
+    \textbf{Phân nhóm Tài sản} & \textbf{Đường dẫn tương đối xác thực} & \textbf{Vai trò kiểm chứng} \\
+    \hline
+    \textbf{Lõi Khai phá Dữ liệu} & \path{src/mining/eda_engine.py}, \path{association_rules.py}, \path{cluster_analysis.py}, \path{graph_mining.py}, \path{trend_anomaly_mining.py}, \path{lake_access.py}, \path{mining_engine.py} & DuckDB S3 OLAP, 3 Lăng kính và 4 Trụ cột (Ch.~\ref{chap:data_understanding}, Ch.~\ref{chap:modeling}). \\
+    \hline
+    \textbf{Lõi Lưu trữ \& Chỉ mục} & \path{src/storage/chunk_store.py}, \path{minio_client.py}, \path{silver_writer.py}, \path{chunker.py}, \path{embedder.py}, \path{qdrant_manager.py}, \path{hasher.py} & Bất biến SHA-256, chia đoạn cân bằng, Hydration ZSTD và Qdrant 5 trường (Ch.~\ref{chap:data_preparation}, Ch.~\ref{chap:deployment}). \\
+    \hline
+    \textbf{Dịch vụ FastAPI \& RAG} & \path{backend/app/main.py}, \path{config.py}, \path{retrieval_service.py}, \path{reranker_service.py}, \path{rag_service.py}, \path{llm_client.py}, \path{embedder_service.py}, \path{streaming_service.py}, \path{storage_service.py} & Truy hồi lai RRF, PageRank, Rerank, Prompt Grounding và SSE hai nhịp độ (Ch.~\ref{chap:modeling}, Ch.~\ref{chap:deployment}). \\
+    \hline
+    \textbf{Giao diện React 19} & \path{frontend/package.json}, \path{src/screens/eda.screen.tsx}, \path{pillars.screen.tsx}, \path{rag.screen.tsx}, \path{logs.screen.tsx} & Kết xuất KaTeX, 3 Lăng kính, elip GMM $2\sigma$ và giám sát SSE (Ch.~\ref{chap:deployment}). \\
+    \hline
+    \textbf{Airflow \& RabbitMQ} & \path{src/ingestion/queue_consumer.py}, \path{dags/dag_tier1_realtime_stream.py}, \path{dag_tier2_near_past_harvest.py}, \path{dag_compact_silver.py}, \path{dag_recompute_mining.py} & Hàng đợi AMQP 2 tầng \texttt{EMBED\_QUEUE\_MAX=500} và 6 DAG ICT (Ch.~\ref{chap:deployment}). \\
+    \hline
+    \textbf{Bằng chứng Gold JSON} & \path{figures/captured_20261123_082337/evidence/eda_api.json}, \path{clusters_api.json}, \path{data/gold/mining/eda_summary.json}, \path{association_rules.json}, \path{clusters.json}, \path{graph_coauthorship.json}, \path{trends_anomalies.json}, \path{citation_metrics.parquet} & Dữ liệu kiểm toán thống kê 3 Lăng kính, luật kết hợp, GMM và đồ thị (Ch.~\ref{chap:data_understanding}, Ch.~\ref{chap:modeling}). \\
+    \hline
+    \textbf{Benchmark \& Huấn luyện} & \path{benchmarks/chunking_ab.py}, \path{evaluate_120_ranking_5_scenarios.py}, \path{logs/benchmarks/laya_5_scenarios_comparison_120q.json}, \path{cached_eval_master_k5_pagerank_local.json}, \path{laya_ab_final_benchmark.json}, \path{vector_final_benchmark.json}, \path{notebooks/laya_onnx_20261108-2053_seed0/RUN_INFO.json}, \path{notebooks/laya_finetune/report_seed0.json} & Bằng chứng định lượng gốc cho \texttt{EXP-02}, \texttt{EXP-04} và \texttt{EXP-05} (Ch.~\ref{chap:evaluation}). \\
+    \hline
+    \textbf{Báo cáo Lịch sử \& Lỗi} & \path{docs/benchmarks/laya_pagerank_benchmark_report.md}, \path{PERFORMANCE_BENCHMARK_REPORT.md}, \path{RAG_EVALUATION_REPORT_21_SAMPLES.md}, \path{docs/agent_logs/Vuong_DECISION_LOG.md}, \path{docs/bugs/BUG_01_TOKENIZER_SURROGATE_CRASH.md}, \path{BUG_02_RAG_FALSE_METHODOLOGY_FALLBACK_AND_REFUSAL.md}, \path{tests/conftest.py} & Hồ sơ RTX 4060, PoC 21 mẫu, nhật ký quyết định \texttt{D-001}--\texttt{D-058} và rào chắn kiểm thử (Ch.~\ref{chap:modeling}, Ch.~\ref{chap:evaluation}, Ch.~\ref{chap:deployment}). \\
+    \hline
+  \end{tabularx}
+  \ReportNote{Nguồn: Đối chiếu trực tiếp cây thư mục kho mã nguồn tại mốc commit \texttt{f421707} / ngày 25/11/2026. Các ảnh chụp giao diện ngày 23/11/2026 được kiểm kê SHA-256 tại \path{figures/captured_20261123_082337/manifest.json}.}
+\end{table}
 
-\subsection{Nguồn Bổ Sung cho Kiến Trúc Mới}
-\begin{itemize}
-\item \path{src/storage/chunk_store.py}, \path{src/indexing/qdrant_manager.py}: schema chunk, payload tối thiểu, hydrate và compaction.
-\item \path{src/ingestion/queue_consumer.py}, \path{dags/dag_tier1_realtime_stream.py}, \path{dags/dag_tier2_near_past_harvest.py}, \path{dags/dag_compact_silver.py}: hai stage, lịch và backpressure.
-\item \path{src/utils/hasher.py}, \path{src/storage/known_papers.py}, \path{src/transformation/silver_writer.py}: abstract hash và dedup.
-\item \path{backend/app/core/config.py}, \path{backend/app/schemas/chat.py}, \path{backend/app/services/rag_service.py}: mặc định reranker/chat.
-\item \path{benchmarks/rag_eval/}, \path{benchmarks/laya_finetune/}, \path{benchmarks/chunking_ab/}: bộ đánh giá Retrieval v1, fine-tune Laya ONNX và Chunking A/B.
-\end{itemize}
+\subsection{Lưu Ý Về Nhật Ký Ngoại Tuyến và Bộ Ảnh Kiểm Chứng}
+\label{sec:appendix_offline_logs}
 
-\subsection{Bộ Ảnh Chụp Tự Động Ngày 23/11/2026}
-Bộ ảnh gồm Pipeline, metadata Bronze, EDA Silver, hai ma trận tương quan, GMM và manifest Gold. PNG gốc, nguồn API, thời điểm chụp và SHA-256 nằm trong \path{figures/captured_20261123_082337/manifest.json}; các response dùng đối chiếu nằm trong thư mục \path{evidence/} cùng bộ ảnh.
+Các tài nguyên nhật ký ngoại tuyến gồm \path{logs/run/backend.log}, \path{logs/benchmarks/chunking_ab/summary.json}, \path{logs/benchmarks/rag_eval/report_retrieval.json} và tiền tố kho đối tượng \path{s3://uth-scientific-lakehouse/...} được tham chiếu theo đường dẫn kỹ thuật xác thực vì không đóng gói trực tiếp trong kho Git tĩnh, mà được lưu trên môi trường thực thi/MinIO S3 và tổng hợp qua các bảng \path{tables/table_chunking_ab.tex} và \path{tables/table_retrieval_v1.tex}.
 
-Hình~\ref{fig:gold_manifest_capture} hiển thị cấu trúc tệp manifest định danh các sản phẩm khai phá dữ liệu thuộc tầng Gold, lưu trữ các siêu dữ liệu cấu hình và đường dẫn artifact phục vụ việc truy xuất và tái lập kết quả.
+Bộ ảnh chụp giao diện tự động ngày 23/11/2026 lưu đầy đủ mã băm SHA-256 và phản hồi API đối chiếu tại \path{figures/captured_20261123_082337/manifest.json}. Hình~\ref{fig:gold_manifest_capture} minh họa cấu trúc tệp kê khai định danh các sản phẩm khai phá tầng Gold phục vụ truy xuất nguồn gốc.
+
 \begin{figure}[!htbp]
-\centering
-\includegraphics[width=\linewidth,height=0.68\textheight,keepaspectratio]{figures/captured_20261123_082337/07_gold_mining_manifest.png}
-\caption[Manifest của các sản phẩm khai phá Gold]{Manifest của các sản phẩm khai phá Gold}
-\label{fig:gold_manifest_capture}
-\ReportNote{Nguồn: Tệp kê khai định danh và thông số các sản phẩm khai phá dữ liệu tầng Gold (\path{gold/mining/mining_manifest.json}).}
+  \centering
+  \includegraphics[width=\linewidth,height=0.62\textheight,keepaspectratio]{figures/captured_20261123_082337/07_gold_mining_manifest.png}
+  \caption[Manifest của các sản phẩm khai phá tầng Gold]{Cấu trúc tệp manifest kê khai định danh và tham số các sản phẩm khai phá dữ liệu tầng Gold}
+  \ReportNote{Nguồn: Ảnh chụp giao diện manifest tại \path{figures/captured_20261123_082337/07_gold_mining_manifest.png} đọc từ \path{gold/mining/mining_manifest.json} (ngày 23/11/2026). Trường \texttt{lancedb\_source} phản ánh dấu vết lịch sử ở lần chạy cũ (467.49 s).}
+  \label{fig:gold_manifest_capture}
 \end{figure}
 \FloatBarrier
 
 \section{Trích Đoạn Mã Nguồn Tiêu Biểu (Key Code Listings)}
+\label{sec:appendix_listings}
 
-\subsection{Thuật toán Khai phá Luật Kết hợp FP-Growth với Khử Trùng lặp Đối xứng}
-Đoạn mã trích từ \path{src/mining/association_rules.py} thể hiện quá trình một-nóng hóa giao dịch, dựng cây FP-Tree và lọc luật đối xứng theo giá trị Lift và Confidence:
+\subsection{Khử Trùng Lặp Luật Đối Xứng trong AssociationRuleMiner}
+\label{sec:appendix_lst_fpgrowth}
 
-\begin{lstlisting}[language=Python, caption={Khử trùng lặp luật đối xứng trong AssociationRuleMiner}]
+Đoạn mã~\ref{lst:app_fpgrowth} trích từ \path{src/mining/association_rules.py} thể hiện quá trình mã hóa một-nóng giỏ giao dịch, dựng cây FP-Tree và khử trùng lặp hai chiều đối xứng dựa trên khóa \texttt{\_lift\_key} và giá trị Confidence.
+
+\begin{lstlisting}[language=Python, caption={Khu trung lap luat doi xung trong AssociationRuleMiner}, label={lst:app_fpgrowth}]
 # Trich doan tu src/mining/association_rules.py
 te = TransactionEncoder()
 te_ary = te.fit_transform(transactions)
@@ -86,10 +106,12 @@ for _, row in sorted_rules.iterrows():
     deduped_rows.append(row)
 \end{lstlisting}
 
-\subsection{Cơ chế Tăng cường Điểm Uy tín PageRank trong Thuật toán Tìm kiếm Lai (RAG Retrieval)}
-Đoạn mã trích từ \path{backend/app/services/retrieval_service.py} thể hiện việc ánh xạ tác giả bài báo với các nút có điểm PageRank cao trong artifact graph được nạp (citation hoặc đồng tác giả):
+\subsection{Bộ Nhân Uy Tín PageRank trong Truy Hồi RAG}
+\label{sec:appendix_lst_authority}
 
-\begin{lstlisting}[language=Python, caption={Bộ nhân uy tín PageRank Authority Multiplier}]
+Đoạn mã~\ref{lst:app_authority} trích từ \path{backend/app/services/retrieval_service.py} trình bày hàm \texttt{\_match\_authority} dùng để ánh xạ danh sách tác giả của đoạn trích với từ điển tác giả có điểm PageRank cao đã nạp vào RAM.
+
+\begin{lstlisting}[language=Python, caption={Bo nhan uy tin PageRank Authority Multiplier trong RetrievalService}, label={lst:app_authority}]
 # Trich doan tu backend/app/services/retrieval_service.py
 def _match_authority(self, authors: List[str]) -> Tuple[float, Optional[str]]:
     """Anh xa tac gia cua doan trich voi cac nut co PageRank cao trong mang luoi."""
@@ -114,10 +136,12 @@ def _match_authority(self, authors: List[str]) -> Tuple[float, Optional[str]]:
 \end{lstlisting}
 
 \Needspace{9\baselineskip}
-\subsection{Phát hiện Bài báo Dị biệt Cấu trúc Bằng Rừng Cô Lập với Chuẩn hóa $\log(1+x)$}
-Đoạn mã trích từ \path{src/mining/trend_anomaly_mining.py}:
+\subsection{Phát Hiện Dị Biệt Cấu Trúc bằng Isolation Forest}
+\label{sec:appendix_lst_isoforest}
 
-\begin{lstlisting}[language=Python, caption={Isolation Forest tren dac trung log1p}]
+Đoạn mã~\ref{lst:app_isoforest} trích từ \path{src/mining/trend_anomaly_mining.py} minh họa bước chuẩn hóa $\log(1+x)$ nhằm nén độ lệch đuôi dài của năm đặc trưng cấu trúc trước khi huấn luyện mô hình Isolation Forest.
+
+\begin{lstlisting}[language=Python, caption={Isolation Forest tren khong gian dac trung chuan hoa log1p}, label={lst:app_isoforest}]
 # Trich doan tu src/mining/trend_anomaly_mining.py
 feature_cols = [
     "total_math_count",
@@ -140,35 +164,60 @@ anomaly_scores = iso_forest.score_samples(X_log)
 df["is_anomaly"] = preds == -1
 \end{lstlisting}
 
-
 \subsection{Payload Vector Tối Thiểu và Hydrate từ Silver}
-Đoạn mã được trích từ \path{src/storage/chunk_store.py} và \path{src/indexing/qdrant_manager.py}, đối chiếu tới commit \texttt{f421707}. Qdrant giữ trường định danh/lọc; kết quả thiếu text được bổ sung từ bảng chunk Silver. Các dấu ngắt dưới đây phân tách các đoạn trích từ hai module, không biểu diễn một script độc lập.
-\lstinputlisting[language=Python,caption={Trường payload và hydrate nội dung từ Silver},label={lst:payload_hydrate}]{listings/qdrant_payload_hydrate.py}
+\label{sec:appendix_lst_hydrate}
 
-\subsection{Ghi Silver Chunks Trước Khi Upsert Vector}
-Đoạn trích từ \path{src/ingestion/queue_consumer.py}, đối chiếu tới commit \texttt{f421707}, cho thấy thứ tự ghi chunk table và nhánh bỏ qua các bài thuộc phân vùng ghi thất bại. Chỉ các đoạn liên quan được giữ; vị trí lược bớt được đánh dấu bằng chú thích.
-\lstinputlisting[language=Python,caption={Thứ tự ghi Silver chunks và upsert Qdrant},label={lst:silver_before_vector}]{listings/silver_before_vector.py}
+Đoạn mã~\ref{lst:payload_hydrate} được trích trực tiếp từ \path{src/storage/chunk_store.py} và \path{src/indexing/qdrant_manager.py} (mốc commit \texttt{f421707}). Qdrant chỉ lưu năm trường định danh/lọc; phần văn bản và siêu dữ liệu đầy đủ được thủy hóa từ tầng \path{silver/chunks/}.
+
+\lstinputlisting[language=Python,caption={Truong payload toi thieu va co che hydrate noi dung tu Silver ChunkStore},label={lst:payload_hydrate}]{listings/qdrant_payload_hydrate.py}
+
+\subsection{Thứ Tự Ghi Silver Chunks Trước Khi Upsert Qdrant}
+\label{sec:appendix_lst_silver_first}
+
+Đoạn mã~\ref{lst:silver_before_vector} trích từ \path{src/ingestion/queue_consumer.py} bảo đảm bất biến ghi bền vững phân đoạn vào \texttt{ChunkStore} trước khi công bố vector lên Qdrant, đồng thời bỏ qua các bài thuộc phân vùng ghi lỗi.
+
+\lstinputlisting[language=Python,caption={Thu tu ghi Silver chunks truoc khi upsert vector len Qdrant},label={lst:silver_before_vector}]{listings/silver_before_vector.py}
 
 \Needspace{12\baselineskip}
-\section{Hướng Dẫn Cài Đặt và Khởi Chạy Nhanh Dự Án}
+\section{Hướng Dẫn Cài Đặt và Lệnh Kiểm Thử Tái Lập}
+\label{sec:appendix_quickstart}
 
-\subsection{Cài đặt môi trường Python}
-\begin{lstlisting}[language=bash]
-# 1. Tao moi truong ao
+\subsection{Thiết Lập Môi Trường Python Chuẩn}
+\label{sec:appendix_venv}
+
+Đoạn mã~\ref{lst:app_venv_setup} trình bày các lệnh khởi tạo môi trường ảo Python và cài đặt thư viện phụ thuộc của dự án trên Windows PowerShell.
+
+\begin{lstlisting}[language=bash, caption={Khoi tao moi truong ao Python va cai dat goi phu thuoc}, label={lst:app_venv_setup}]
+# 1. Create virtual environment
 python -m venv .venv
 
-# 2. Kich hoat moi truong ao (Windows PowerShell)
+# 2. Activate environment (Windows PowerShell)
 .\.venv\Scripts\Activate.ps1
 
-# 3. Cai dat cac goi thu vien phu thuoc
+# 3. Install project dependencies in editable mode
 pip install --upgrade pip
 pip install -r requirements.txt
 pip install -e .
 \end{lstlisting}
 
-\subsection{Các lệnh kiểm thử tham khảo}
-\begin{lstlisting}[language=bash]
-# Unit tests; integration tests require configured external services
+\subsection{Các Lệnh Kiểm Thử và Tái Lập Thực Nghiệm}
+\label{sec:appendix_repro}
+
+Đoạn mã~\ref{lst:app_repro_cmds} tổng hợp tập lệnh kiểm thử phân tầng \texttt{pytest} và kịch bản chạy lại các thực nghiệm chính (\texttt{EXP-02}, \texttt{EXP-04}, \texttt{EXP-05}).
+
+\begin{lstlisting}[language=bash, caption={Lenh kiem thu pytest va tai lap benchmark EXP-02, EXP-04, EXP-05}, label={lst:app_repro_cmds}]
+# Unit & live integration tests (protected by conftest.py safeguards)
 pytest tests/unit/ -v
-pytest tests/integration/ -v
+pytest tests/integration/ -v --run-live-storage
+
+# EXP-02: Domain-aware chunking A/B benchmark
+python -m benchmarks.chunking_ab
+
+# EXP-04: Hydrated 5-scenario ranking ablation (N=120)
+python -m benchmarks.evaluate_120_ranking_5_scenarios
+
+# EXP-05: Retrieval v1 scoring (100 pos + 50 neg) & 3-way DeepEval judge
+pytest benchmarks/rag_eval/test_metrics.py -v
+python benchmarks/rag_eval/score_retrieval.py
+python benchmarks/run_deepeval_judge.py
 \end{lstlisting}

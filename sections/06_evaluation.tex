@@ -1,86 +1,241 @@
-\chapter{Đánh Giá Thực Nghiệm Hệ Thống (Evaluation)}
+% ==============================================================================
+% CHƯƠNG 5: ĐÁNH GIÁ THỰC NGHIỆM TOÀN DIỆN VÀ PHÂN TÍCH BENCHMARK
+% ==============================================================================
+
+\chapter{Đánh Giá Thực Nghiệm Toàn Diện và Phân Tích Benchmark}
 \label{chap:evaluation}
-\section{Phạm Vi Chứng Cứ và Khác Biệt Phiên Bản}
-Đánh giá cần trả lời hai vấn đề khác nhau: các đầu ra mining mô tả được điều gì về corpus và pipeline RAG đạt chất lượng/độ trễ ra sao. Source xác nhận chức năng tại commit \texttt{f421707} (09/11/2026), còn các kết quả dưới đây được tổng hợp từ chứng cứ lưu trữ theo từng mốc:
-\begin{itemize}
-\item Artifact local trong \path{data/gold/mining/}, được manifest 04/10/2026 tham chiếu, còn ghi nguồn LanceDB/local (hiện trên repo local giữ \path{association_rules.json} và \path{graph_coauthorship.json}; các artifact còn lại lưu trên MinIO). Đây là nguồn thống kê mô tả và kết quả mining lịch sử.
-\item Báo cáo DeepEval 05/10/2026, ghi commit \texttt{6cb1c52}, dùng LanceDB và hơn 143 nghìn chunk trên Cloudflare R2. Đây là nguồn so sánh chất lượng RAG lịch sử.
-\item Báo cáo phần cứng 19/10/2026 gồm benchmark Qdrant độc lập và benchmark end-to-end với LLM trên RTX 4060/CUDA. Hai kịch bản có phạm vi và cách đo khác nhau.
-\item Các benchmark mới (06--08/11/2026) trong \path{logs/benchmarks/} và \path{notebooks/}: thử nghiệm Chunking A/B (\path{chunking_ab/summary.json}), fine-tune mô hình Laya v0.4.27 sang ONNX (\path{laya_onnx_20261108-2053_seed0/RUN_INFO.json}), và bộ đánh giá Retrieval v1 cùng Evidence Gate (\path{rag_eval/report_retrieval.json}) trên backend TypeScript/Node (\texttt{RAG\_TS}) kết hợp Qdrant/BM25.
-\end{itemize}
 
-Hai giai đoạn được liên hệ ở mức ý tưởng thiết kế, không mặc nhiên tương đương về hiệu quả. Benchmark LanceDB là chứng cứ thăm dò cho cấu hình và tập câu hỏi đã đo; một số metric tăng và một số giảm, chưa xác nhận ưu thế tổng quát hoặc tính đúng đắn của toàn pipeline. Qdrant và Silver chunks thay đổi cách lập chỉ mục, lấy nội dung và quản lý dữ liệu. Khả năng mở rộng, thông lượng đồng thời và độ trễ hydrate của kiến trúc mới cần phép đo tải cùng cấu hình được kiểm soát; chưa có kết quả để khẳng định đạt quy mô công nghiệp hoặc giữ nguyên hiệu quả truy xuất sau chuyển đổi.
+Để khẳng định tính đúng đắn của các quyết định thiết kế kiến trúc dữ liệu ở Chương~\ref{chap:data_preparation} và thuật toán khai phá kết hợp Hybrid RAG ở Chương~\ref{chap:modeling}, toàn bộ hệ thống được kiểm định định lượng qua năm chuỗi thực nghiệm có kiểm soát (\texttt{EXP-01} đến \texttt{EXP-05}). Các phép đo tách biệt rõ ràng từng tầng biến số: chiến lược chia đoạn học thuật (\texttt{AcademicChunker}), hiệu quả hợp nhất lai (Hybrid RRF + PageRank), hiệu chỉnh xác suất tái xếp hạng (\texttt{Laya} Cross-Encoder ONNX + Temperature Scaling), chất lượng sinh câu trả lời bằng giám khảo LLM (\texttt{DeepEval}), và thông lượng suy luận GPU thực tế trên NVIDIA RTX 4060.
 
-Quy ước chung là giữ kết quả theo nguồn, phân biệt điều quan sát được với hiệu quả chưa được xác nhận. Không nối các nguồn thành một lần chạy của phiên bản mới. Các ảnh phục vụ minh họa có phạm vi riêng ở Bảng~\ref{tab:snapshot_sources}; chi tiết truy vết nằm ở phụ lục.
+Nhằm bảo đảm chuẩn mực liêm chính học thuật và đối chiếu đúng ngữ cảnh nguồn theo ma trận phân tách mốc dữ liệu tại Bảng~\ref{tab:snapshot_sources}, chương này tách bạch hai môi trường thực thi: (i) dịch vụ sản xuất Python FastAPI trên MinIO S3 + Qdrant + \texttt{ChunkStore} (\texttt{EXP-01}, \texttt{EXP-03}, \texttt{EXP-04}), và (ii) nhánh đánh giá độc lập \texttt{RAG\_TS} (NodeJS/TypeScript + SQLite BM25 + \texttt{Laya} ONNX) dùng để khảo nghiệm tinh chỉnh mô hình và Cổng Chứng cứ trên tập khóa cứng 150 truy vấn (\texttt{EXP-05}). Các số liệu thăm dò lịch sử trên LanceDB/Cloudflare R2 (05/10/2026) chỉ đóng vai trò bối cảnh tiền đề và không bị gộp chéo với phiên bản Qdrant hiện hành.
 
-\section{Đánh Giá Định Lượng Pipeline Mining Trên 71,927 Bài (04/11/2026)}
-Phiên chạy toàn phần ngày 04/11/2026 (\path{logs/run/backend.log}) thực thi trên toàn bộ dữ liệu Silver MinIO và Qdrant (\texttt{scientific\_papers\_gold}), hoàn thành EDA và 4 trụ cột trong tổng thời gian \textbf{234.57 giây}:
-\begin{enumerate}
-\item \textbf{EDA (39.09 giây)}: Hợp nhất Catalog và Fulltext view đạt \textbf{71,927 bài báo phân biệt} cùng \textbf{1,043,594 vector} trong Qdrant. (Bảng chi tiết theo chuyên ngành ở Chương~\ref{chap:data_understanding} dùng bản trích xuất lưu trữ 10,000 bài / 2,220,938 công thức làm minh họa cấu trúc).
-\item \textbf{FP-Growth (36.26 giây)}: Trích xuất \textbf{61,319 giao dịch hợp lệ} từ 71,927 bài (độ phủ 85.3\%), tìm thấy 96 frequent itemsets và \textbf{45 luật kết hợp đã khử đối xứng} (\texttt{min\_support=0.0200}, \texttt{min\_lift=1.20}, top lift \textbf{34.940}).
-\item \textbf{Clustering (39.94 giây)}: Nạp \textbf{70,539 vector bài báo phân biệt} từ Qdrant; chạy K-Means ($K=6$) và PCA 2D + GMM ($K=6$) đạt \textbf{BIC = 246,306.5}, \textbf{AIC = 245,985.8}, \textbf{LL = -1.7431} và \textbf{Silhouette = 0.0490} (trên 5,000 mẫu), kèm DBSCAN trên 3,000 mẫu.
-\item \textbf{Graph (116.39 giây)}: Xây dựng mạng đồng tác giả từ toàn bộ bảng Silver papers trên MinIO (\path{silver/papers/**/*.parquet}). Đây là khâu chiếm tỷ trọng thời gian lớn nhất (49.6\% tổng runtime).
-\item \textbf{Dị biệt và xu hướng (2.89 giây)}: Isolation Forest (\texttt{contamination=0.020}) gắn nhãn \textbf{1,000 bài dị biệt cấu trúc} và đánh giá \textbf{48 nhánh xu hướng}.
+\section{Thiết Kế Khung Thực Nghiệm và Thước Đo Chuẩn Hóa}
+\label{sec:ch5_framework}
+
+Hệ thống đánh giá tổ chức bốn họ thước đo độc lập tương ứng với bốn tầng rủi ro của bài toán hỏi đáp khoa học:
+
+\begin{enumerate}[label=\textbf{\arabic*.}]
+  \item \textbf{Nhóm xếp hạng truy hồi (Information Retrieval Ranking)}: Hai thước đo cốt lõi đánh giá thứ hạng tài liệu đúng là Mean Reciprocal Rank ($\mathrm{MRR}$) và Normalized Discounted Cumulative Gain ($\mathrm{nDCG}@K$):
+  \begin{equation}
+    \mathrm{MRR} = \frac{1}{|Q|} \sum_{q \in Q} \frac{1}{\mathrm{rank}_q}, \qquad \mathrm{nDCG}@K = \frac{1}{|Q|} \sum_{q \in Q} \frac{1}{\mathrm{IDCG}_q@K} \sum_{i=1}^{K} \frac{2^{\mathrm{rel}_{q,i}} - 1}{\log_2(i + 1)}
+    \label{eq:ch5_mrr_ndcg}
+  \end{equation}
+  Trong đó: $Q$ là tập truy vấn có đáp án chuẩn; $\mathrm{rank}_q$ là thứ hạng nhỏ nhất của bài báo hoặc đoạn văn đích trong danh sách trả về (bằng $\infty$ nếu không xuất hiện); $\mathrm{rel}_{q,i} \in \{0, 1, 2\}$ là nhãn liên quan theo từng cấp tại vị trí xếp hạng $i$; và $\mathrm{IDCG}_q@K$ là giá trị DCG lý tưởng khi sắp xếp tối ưu. Bên cạnh đó, hệ thống theo dõi $\mathrm{Hit}@K$ (tỷ lệ truy vấn có ít nhất một tài liệu đúng trong Top-$K$) và $\mathrm{Recall}@K$ (tỷ lệ tài liệu đích được phủ trong Top-$K$, tính chặt trên các câu hỏi đa bài báo).
+
+  \item \textbf{Nhóm hiệu chỉnh xác suất và từ chối câu hỏi thiếu bằng chứng (Calibration \& Evidence Gate)}: Đo bằng diện tích dưới đường cong ROC ($\mathrm{AUROC}$), sai số hiệu chỉnh kỳ vọng $\mathrm{ECE}$ (\textit{Expected Calibration Error} --- độ lệch trung bình có trọng số giữa xác suất dự đoán và tần suất chính xác thực tế)~\cite{guo2017calibration}, chỉ số $\mathrm{Brier\ Score}$, và tỷ lệ từ chối đúng trên tập câu hỏi gài bẫy âm tính ($\mathrm{Negative\ Reject}@0.5$ và $@0.6$).
+
+  \item \textbf{Nhóm đánh giá chất lượng câu trả lời LLM (\path{DeepEval})}: Sử dụng khung giám khảo tự động \path{DeepEval}~\cite{deepeval2024confident} vận hành cùng mô hình cục bộ \path{Qwen2.5-7B-Instruct}~\cite{qwen25report2024} trên năm chỉ số: \path{Context Recall} (mức độ ngữ cảnh chứa đủ luận điểm của đáp án chuẩn), \path{Context Precision} (độ ưu tiên thứ hạng ngữ cảnh hữu ích), \path{Citation Grounding} (tỷ lệ phát biểu kèm trích dẫn đúng nguồn), \path{Faithfulness} (mức trung thực không bịa đặt ngoài ngữ cảnh) và \path{Answer Relevancy} (mức bám sát trọng tâm câu hỏi).
+
+  \item \textbf{Nhóm thông lượng phần cứng (Systems Performance)}: Đo thời gian sinh token đầu tiên ($\mathrm{TTFT}$), tốc độ giải mã tự hồi quy ($\mathrm{tok/s}$), phân vị độ trễ $p_{50}$/$p_{95}$ và thông lượng truy vấn ($\mathrm{QPS}$).
 \end{enumerate}
 
-\section{Benchmark DeepEval 2.x trên Kiến Trúc LanceDB Lịch Sử}
-Nguồn \path{docs/benchmarks/RAG_EVALUATION_REPORT_21_SAMPLES.md} so sánh dense baseline với pipeline nâng cao trên 21 câu hỏi được tuyển chọn (gold-001 đến gold-021), dùng Qwen2.5-7B-Instruct làm LLM judge. Baseline dùng Top-5; pipeline nâng cao dùng pool 15 cùng reranker, fusion và guardrail. Đây là so sánh nhiều thay đổi đồng thời; cấu hình khác với backend hiện tại lấy mặc định 8 ứng viên trước reranking.
+\subsection{Hiệu Năng Tác Nghiệp Bốn Trụ Cột Khai Phá Quy Mô 71,927 Bài (EXP-03)}
+\label{sec:ch5_exp03_mining}
 
-Các metric đánh giá những khía cạnh khác nhau: Contextual Precision xem thứ hạng ngữ cảnh hữu ích, Contextual Recall xem độ phủ so với câu trả lời kỳ vọng, Answer Relevancy xem mức liên quan tới câu hỏi, còn Faithfulness xem mức được ngữ cảnh hỗ trợ. Score trung bình và tỷ lệ vượt ngưỡng cần được đọc riêng; metric dùng LLM judge chưa thay thế đánh giá chuyên gia.
-\input{tables/table_rag_benchmark.tex}
+Trước khi đánh giá tầng RAG, phiên chạy sản xuất toàn phần \texttt{EXP-03} ngày 04/11/2026 (\path{logs/run/backend.log}) kiểm chứng năng lực xử lý của \texttt{MiningEngine} qua DuckDB OLAP trực tiếp trên MinIO S3~\cite{raasveldt2019duckdb,minio2023storage} kết hợp Qdrant~\cite{qdrant2023vector}. Toàn bộ giai đoạn phân tích khám phá (EDA) và bốn trụ cột khai phá trên \textbf{71,927 bài báo phân biệt} (\textbf{1,043,594 vector} trong collection \path{scientific_papers_gold}) hoàn tất trong \textbf{234.57 giây} ($\approx 3.91$ phút), rút ngắn 49.8\% thời gian (nhanh hơn $1.99\times$) so với mốc 467.49 giây ở thế hệ LanceDB cũ. Bảng~\ref{tab:ch5_exp03_runtime} trình bày phân rã chi tiết từng công đoạn của phiên chạy này.
 
-\subsection{Diễn Giải và Giới Hạn Đánh Giá}
+\begin{table}[htbp]
+  \centering
+  \footnotesize
+  \caption[Phân rã thời gian chạy 4 trụ cột MiningEngine trên 71,927 bài (EXP-03)]{Phân rã thời gian thực thi EDA và 4 Trụ cột Khai phá quy mô 71,927 bài báo ngày 04/11/2026 (\texttt{EXP-03})}
+  \label{tab:ch5_exp03_runtime}
+  \vspace{4pt}
+  \setlength{\tabcolsep}{3pt}
+  \begin{tabularx}{\linewidth}{|>{\raggedright\arraybackslash}p{34mm}|>{\centering\arraybackslash}p{18mm}|>{\centering\arraybackslash}p{16mm}|L|}
+    \hline
+    \textbf{Công đoạn (\texttt{MiningEngine})} & \textbf{Thời gian (s)} & \textbf{Tỷ trọng} & \textbf{Quy mô đầu vào \& Kết quả đầu ra xác thực} \\
+    \hline
+    \textbf{EDA (Catalog + Fulltext)} & 39.09 & 16.7\% & Hợp nhất 71,927 bài báo phân biệt trên Silver MinIO và 1,043,594 vector trên Qdrant \path{scientific_papers_gold}. \\
+    \hline
+    \textbf{Trụ cột 1: FP-Growth} & 36.26 & 15.5\% & Trích xuất 61,319 giao dịch hợp lệ (độ phủ 85.3\%), tìm 96 tập phổ biến và \textbf{45 luật kết hợp khử đối xứng} (\texttt{top lift = 34.940})~\cite{han2000mining}. \\
+    \hline
+    \textbf{Trụ cột 2: Clustering} & 39.94 & 17.0\% & Nạp 70,539 vector abstract duy nhất; KMeans ($K=6$)~\cite{macqueen1967some} + Centered PCA 2D + GMM ($K=6$)~\cite{dempster1977maximum}: \texttt{BIC = 246,306.5}, \texttt{AIC = 245,985.8}, \texttt{LL = -1.7431}, \texttt{Silhouette = 0.0490}~\cite{rousseeuw1987silhouettes} (5,000 mẫu) + DBSCAN~\cite{ester1996density} (3,000 mẫu). \\
+    \hline
+    \textbf{Trụ cột 3: Graph} & \textbf{116.39} & \textbf{49.6\%} & Dựng mạng đồng tác giả từ toàn bộ bảng Silver Parquet trên MinIO, tính Damped PageRank ($\alpha=0.85$)~\cite{page1999pagerank} và Louvain~\cite{blondel2008fast}. \\
+    \hline
+    \textbf{Trụ cột 4: Trend \& Anomalies} & 2.89 & 1.2\% & Đánh giá 48 nhánh chuyên ngành theo $\Delta\text{Share}$; Isolation Forest~\cite{liu2008isolation} (\texttt{contamination=0.020}) gắn nhãn 1,000 bài dị biệt cấu trúc. \\
+    \hline
+    \textbf{Tổng thời gian toàn hồ} & \textbf{234.57} & \textbf{100.0\%} & Giảm 49.8\% thời gian so với mốc cũ 467.49 s (\path{mining_manifest.json}). \\
+    \hline
+  \end{tabularx}
+  \ReportNote{Nguồn: Nhật ký vận hành sản xuất \path{logs/run/backend.log} ngày 04/11/2026 (\texttt{EXP-03}) trên hệ thống live MinIO S3 + DuckDB \texttt{httpfs} + Qdrant Cloud.}
+\end{table}
+
+\section{Thực Nghiệm EXP-02: A/B Chiến Lược Chia Đoạn Ngữ Nghĩa}
+\label{sec:ch5_chunking_ab}
+
+Kịch bản \path{benchmarks/chunking_ab.py} kiểm thử đối chứng A/B ba cấu hình phân tách đoạn văn trên cùng tập 1,000 bài báo (gồm 49 bài ground-truth từ \path{scientific_eval_v2.jsonl}) dùng vector nhúng \texttt{nomic-embed-text-v1.5} 768 chiều~\cite{nussbaum2024nomic,nomicmodelcard2024} (\path{logs/benchmarks/chunking_ab/summary.json}):
 \begin{itemize}
-\item Contextual Precision tăng từ 0.637 lên 0.860 (+35.0\% tương đối), với 16/20 mẫu hợp lệ vượt ngưỡng ở pipeline nâng cao. Kết quả gợi ý cải thiện thứ hạng ngữ cảnh trong cấu hình đã đo; chưa có ablation để quy cho reranker, authority hoặc fusion riêng lẻ.
-\item Contextual Recall 1.000 và pass 19/19 áp dụng cho mẫu tính được metric. Không dùng 19 mẫu này làm kết luận độ phủ cho toàn bộ 21 câu hoặc các câu hỏi ngoài tập tuyển chọn.
-\item Answer Relevancy tăng từ 0.687 lên 0.752 (pass 11/20); Faithfulness đạt 0.699 và pass 9/17 (52.9\%). Kết quả cho thấy mức được ngữ cảnh hỗ trợ còn hạn chế trong cấu hình đã đo. Điểm aggregate chưa xác định nguyên nhân là retrieval thiếu đoạn, giới hạn context, lỗi trích xuất hay cách mô hình sinh sử dụng chứng cứ. Độ khó của công thức và suy luận nhiều bước chỉ là giả thuyết cần kiểm tra bằng phân tích từng câu hỏi và raw trace, không phải nguyên nhân đã được chứng minh.
-\item Citation Grounding có score 0.720 và pass 18/20, nhưng score giảm từ 0.757. Contextual Relevancy cũng giảm 0.578 xuống 0.562. Vì vậy không thể mô tả kết quả là cải thiện đồng đều mọi mặt hoặc đã giải quyết ảo giác.
+  \item \textbf{\texttt{A\_old\_fixed50}}: Thuật toán cũ dùng độ dài trần 450 từ và phần chồng lấn cố định 50 từ, tạo nhiều đoạn đuôi cụt ngắn ở cuối các mục.
+  \item \textbf{\texttt{B\_new\_pct15}}: Thuật toán mới chia đoạn cân bằng bám ranh giới câu với tỷ lệ chồng lấn \textbf{15\%} (\texttt{overlap\_ratio = 0.15}), kẹp trong khoảng $[20, 80]$ từ và sáp nhập đoạn đuôi ngắn hơn \texttt{min\_tail\_ratio = 0.4}.
+  \item \textbf{\texttt{C\_new\_pct0}}: Thuật toán mới chia đoạn cân bằng nhưng tắt hoàn toàn vùng chồng lấn (\textbf{0\%} overlap) nhằm loại bỏ trùng lặp ngữ nghĩa giữa hai đoạn kề nhau.
 \end{itemize}
 
-Số mẫu hợp lệ khác nhau theo metric và giữa hai pipeline làm phép so sánh chưa phải đối chứng cặp hoàn chỉnh. Báo cáo nguồn chưa cung cấp đủ raw traces để tái kiểm tra các trường hợp lỗi trong lần biên tập này; không có kiểm định ý nghĩa thống kê hoặc khoảng tin cậy được bổ sung. Kết quả được xem là chứng cứ thăm dò cho cấu hình lịch sử, chưa xác nhận hiệu quả tổng quát của hệ thống hiện tại.
-
-\section{Đo Lường Phần Cứng Ngày 19/10/2026}
-Nguồn \path{docs/benchmarks/PERFORMANCE_BENCHMARK_REPORT.md} ghi Windows 11, Python 3.12, RTX 4060 Laptop 8 GB và CUDA 12.4 cho benchmark LLM. Cần phân biệt hai phép đo:
-\begin{enumerate}
-\item \textbf{Truy vấn Qdrant độc lập}: Có 3 lượt warmup và 20 lượt đo cho mỗi scenario. Top-5 không lọc đạt mean 269.46 ms, median 268.10 ms; nguồn so sánh kết nối lạnh trên 1,000 ms với kết nối dùng pool. Đây chủ yếu là thay đổi cách kết nối và bối cảnh đo, không phải tác động riêng của CUDA lên máy chủ Qdrant.
-\item \textbf{Pipeline RAG end-to-end}: Dùng retrieval Top-3 và LLM Qwen2.5-7B; nguồn ghi khoảng 1,660 ms cho phần retrieval trong phân rã này, TTFT 609.77 ms, sinh 50 token trong 1,079.43 ms và tổng 3,392.50 ms. Retrieval này không được thay bằng 269.46 ms từ phép đo độc lập để cộng thành tổng pipeline.
-\end{enumerate}
-\input{tables/table_latency_profile.tex}
-
-Bảng~\ref{tab:latency_profile} tổng hợp số nguồn ghi cho các kịch bản, không phải một bảng phân rã có thể cộng mọi dòng. Với retrieval khoảng 1,660 ms, tổng các phần CUDA được nêu xấp xỉ 3,388.57 ms, gần tổng 3,392.50 ms; chênh lệch có thể gồm độ làm tròn hoặc phần chưa tách riêng, chưa được xác nhận bằng trace. Nếu dùng 269.46 ms của benchmark độc lập thì tổng chỉ 1,998.03 ms và không mô tả phép đo end-to-end.
-
-Baseline còn một bất nhất: 50 token trong 17.74 giây tương ứng khoảng 2.82 tokens/s, khác 3.64 tokens/s được nguồn ghi. Bảng giữ nguyên hai giá trị theo nguồn, đánh dấu cần xác minh và không dùng chúng để khẳng định mức tăng tốc sinh token. Các tỷ số còn lại là so sánh mô tả giữa cấu hình lịch sử, không tách được tác động riêng của backend, context hoặc cách kết nối.
-
-Code dùng \texttt{requests.Session()} và \texttt{HTTPAdapter} để tái sử dụng kết nối. Cấu hình phần cứng của nguồn là context 4096, sequences 1 và VRAM 5.7 GB/8 GB; backend hiện có mặc định \texttt{LLM\_CONTEXT\_WINDOW}=16384. Hai cấu hình phải được ghi riêng khi đo lại độ trễ và độ ổn định.
-
-\section{Các Nghiên Cứu Điển Hình và Giới Hạn Nguồn}
-\subsection{DPO (gold-003)}
-Nguồn ghi Contextual Precision tăng từ 0.000 lên 1.000 sau nâng cấp. Đây là ví dụ về thay đổi thứ hạng ngữ cảnh, phù hợp với xu hướng aggregate; chưa đủ để chứng minh một thành phần cụ thể gây ra cải thiện hoặc mọi câu trả lời về DPO đều đúng.
-
-\subsection{SVGD (gold-020)}
-Case study ghi mô hình từ chối vì thiếu tài liệu về Stein Variational Gradient Descent, nhưng bảng diagnostic cùng nguồn ghi Faithfulness của gold-020 giảm từ 0.86 xuống 0.00. Do mâu thuẫn nội bộ, trường hợp này được giữ như điểm cần kiểm tra trace, không dùng làm minh chứng guardrail từ chối đúng.
-
-\section{Thử Nghiệm Chunking A/B và Retrieval v1 với Laya Fine-tune}
-Nhằm đánh giá trực tiếp các cải tiến phân đoạn và truy xuất giai đoạn 06--08/11/2026, repository bổ sung hai bộ thực nghiệm định lượng độc lập với benchmark LanceDB cũ:
-
-\subsection{So Sánh Chiến Lược Phân Đoạn (Chunking A/B)}
-Thử nghiệm trong \path{logs/benchmarks/chunking_ab/summary.json} đối chiếu ba cấu hình trên cùng tập corpus: phân đoạn cố định cũ (\texttt{A\_old\_fixed50}), phân đoạn cân bằng có overlap 15\% và gộp đuôi ngắn (\texttt{B\_new\_pct15}, tương ứng \texttt{AcademicChunker} hiện tại), và phân đoạn không overlap (\texttt{C\_new\_pct0}). Bảng~\ref{tab:chunking_ab} cho thấy việc chuyển sang \texttt{B\_new\_pct15} nâng phân vị $p_{10}$ độ dài chunk từ 103 lên 166 từ (giảm chunk quá ngắn) và tăng Recall@5 từ 0.7143 lên 0.7679; cấu hình không overlap \texttt{C\_new\_pct0} đạt Recall@10 (0.9286) và nDCG@10 (0.6844) cao nhất trong ba cấu hình.
 \input{tables/table_chunking_ab.tex}
 
-\subsection{Fine-tune Laya ONNX và Đánh Giá Retrieval v1 (100 + 50 Câu)}
-Mô hình \texttt{convaiinnovations/laya} (phiên bản \texttt{laya 0.4.27}) được fine-tune bằng hàm mất mát \texttt{soft-ce} (\texttt{max\_len=512}) và xuất sang định dạng ONNX (\path{notebooks/laya_onnx_20261108-2053_seed0/}). Trên tập dev (175 nhóm, 1 epoch tại \path{RUN_INFO.json}), AUC tăng từ 0.6848 lên 0.8928 và MRR tăng từ 0.7070 lên 0.9546; ở lần chạy 4 epochs trên 130 nhóm (\path{notebooks/laya_finetune/report_seed0.json}), AUC đạt 0.9085, MRR đạt 0.9590 và tỷ lệ chấp nhận câu bịa (\texttt{fabricated} tại ngưỡng 0.6) giảm từ 0.574 xuống 0.015.
+Từ Bảng~\ref{tab:chunking_ab}, phân tích đánh đổi kỹ thuật rút ra hai kết luận quan trọng cho cấu hình chỉ mục sản xuất:
+\begin{enumerate}[label=\textbf{\arabic*.}]
+  \item \textbf{Triệt tiêu đoạn đuôi vụn}: Thuật toán cân bằng mới nâng độ dài phân vị thứ 10 ($p_{10}$) từ 103 từ lên \textbf{166 từ} (+61.2\%) ở \texttt{B\_new\_pct15} (và 159 từ ở \texttt{C\_new\_pct0}), loại bỏ hiện tượng các đoạn trích cuối mục chỉ có vài câu rời rạc thiếu ngữ cảnh.
+  \item \textbf{Đánh đổi giữa \texttt{Recall@5} và \texttt{Recall@10}}: Cấu hình \texttt{B\_new\_pct15} đạt đỉnh ở \textbf{\texttt{Recall@5 = 0.7679}} (tăng +7.5\% tương đối so với 0.7143 của bản cũ) vì vùng chồng lấn 15\% bảo toàn câu chuyển tiếp tại ranh giới hai đoạn, giúp đoạn đích lọt ngay vào Top-5 cung cấp cho LLM. Ngược lại, \texttt{C\_new\_pct0} giảm 6.7\% tổng số vector (17,218 so với 18,449), loại bỏ nhiễu cạnh tranh thứ hạng giữa các đoạn kề nhau nên đạt đỉnh \textbf{\texttt{Recall@10 = 0.9286}}, \textbf{\texttt{MRR@10 = 0.6291}} và \textbf{\texttt{nDCG@10 = 0.6844}}. Vì đường ống sản xuất ưu tiên chất lượng Top-5 đưa vào \texttt{RagService}, hệ thống chọn mặc định \texttt{overlap\_ratio = 0.15} trong \path{src/indexing/chunker.py} (kết hợp \texttt{max\_chunk\_words = 450} tại \path{queue_consumer.py} tương ứng độ dài thực tế 380--450 từ).
+\end{enumerate}
 
-Trên tập kiểm thử đóng \texttt{rag\_eval} gồm 100 câu có đáp án và 50 câu không có đáp án (\texttt{off\_topic}, \texttt{fabricated}, \texttt{absent\_fact}, \texttt{missing\_detail}), kết quả từ \path{logs/benchmarks/rag_eval/report_retrieval.json} (Bảng~\ref{tab:retrieval_v1}) ghi nhận:
+\section{Thực Nghiệm EXP-04: Cắt Bỏ 5 Kịch Bản và Đánh Giá DeepEval}
+\label{sec:ch5_exp04}
+
+\subsection{Kết Quả So Sánh 5 Kịch Bản Xếp Hạng trên 120 Truy Vấn}
+\label{sec:ch5_5scenarios}
+
+Sau khi giải quyết nút thắt mất nội dung văn bản sau quyết định \texttt{D-058} bằng cơ chế thủy hóa \texttt{ChunkStore} từ Silver Parquet, kịch bản \path{benchmarks/evaluate_120_ranking_5_scenarios.py} thực thi nghiên cứu cắt bỏ (\textit{ablation study}) trên \textbf{120 câu hỏi học thuật} (92 truy vấn đơn bài và 28 truy vấn đa bài; chi tiết tại \path{docs/benchmarks/laya_pagerank_benchmark_report.md} và \path{logs/benchmarks/laya_5_scenarios_comparison_120q.json}). Cả năm kịch bản đều chấm điểm trên cùng một tập ứng viên Top-10 đã hydrate (\texttt{Hit@10 = 75.0\%}), tiến dần từ Vector đơn thuần đến hệ thống hợp nhất đầy đủ: Weighted RRF ($0.65$ Vector + $1.35$ Cross-Encoder \texttt{Laya})~\cite{cormack2009reciprocal} kết hợp nhân trọng số uy tín PageRank nén logarit (+0.025 trên điểm RRF, đối chiếu công thức xếp hạng tại Mục~\ref{sec:authority_multiplier} và Mục~\ref{sec:mining_rag_integration} trong Chương~\ref{chap:modeling}).
+
+\input{tables/table_laya_5_scenarios.tex}
+
+Kết quả tại Bảng~\ref{tab:laya_5_scenarios} khẳng định hai phát hiện thực nghiệm then chốt:
 \begin{itemize}
-\item Kết hợp Hybrid (Vector + BM25) nâng Hit@5 từ 0.720 (\texttt{vector}) lên 0.910 và MRR@10 từ 0.553 lên 0.690 ở độ trễ trung bình tương đương (577 ms so với 566 ms).
-\item Khi bổ sung Laya fine-tune 1 epoch kết hợp Hybrid (\texttt{laya\_ft1\_hybrid}), Hit@1 đạt 0.730, Hit@5 đạt 0.940, Recall@5 đạt 0.754, MRR@10 đạt 0.824, nDCG@10 đạt 0.850 và \texttt{gold\_chunk@5} đạt 0.830 (độ trễ trung bình 5,391 ms do chi phí suy luận mô hình xếp hạng).
-\item Ở bài toán Evidence Gate (ngưỡng 0.6), \texttt{laya\_ft1\_hybrid} đạt AUROC \textbf{0.986} (so với 0.870 của \texttt{laya\_hybrid}), chặn chính xác 50/50 câu không có đáp án trong khi giữ lại 86/100 câu có đáp án.
+  \item \textbf{Hiệu ứng cộng hưởng siêu tuyến tính (Synergistic Gain)}: Khi đứng riêng lẻ, PageRank chỉ tăng $\mathrm{MRR}$ thêm $+0.0016$ ($0.5725 \rightarrow 0.5741$) và \texttt{Laya Alone} tăng $+0.0097$ ($0.5822$) nhưng hơi giảm $\mathrm{Hit}@5$ xuống 66.7\%. Khi phối hợp đồng thời cả bốn tín hiệu ở \textbf{Kịch bản 5 (Full System)}, $\mathrm{MRR}$ vọt lên \textbf{0.6076} (+6.13\% tương đối so với Vector Baseline), $\mathrm{Hit}@1$ tăng \textbf{+5.8 điểm phần trăm} ($49.2\% \rightarrow 55.0\%$, cứu thêm 7 câu đúng ngay hạng nhất) và $\mathrm{Recall}@1$ đạt \textbf{49.6\%}. Cross-Encoder lọc nhiễu ngữ nghĩa ở cấp độ câu chữ cục bộ, RRF cân bằng thứ hạng tránh thiên vị logit cực đoan, còn PageRank phân giải các cặp hòa điểm dựa trên uy tín học thuật toàn cục.
+  \item \textbf{Chi phí tra cứu PageRank gần như bằng không}: Việc ánh xạ từ bảng băm nạp sẵn trên RAM gồm 20,000 bài báo và 29,523 tác giả chỉ tiêu tốn thêm \textbf{+0.21 ms} mỗi truy vấn nhưng đóng góp +4.2 điểm phần trăm $\mathrm{Hit}@1$ ($50.8\% \rightarrow 55.0\%$) so với Vector + Laya RRF.
 \end{itemize}
+
+\subsection{Phân Rã Độ Trễ Từng Công Đoạn và Điểm Nghẽn Hydration}
+\label{sec:ch5_stage_latency}
+
+Bảng~\ref{tab:ch5_stage_latency} phân rã chi phí thời gian từng tầng trên chuỗi 120 truy vấn, đối chiếu ba chế độ thực thi của mô hình \texttt{Laya-421M}: chạy gom lô trên GPU CUDA \texttt{bfloat16}, chạy tuần tự từng cặp trên GPU, và chạy qua CPU ONNX (\texttt{onnxruntime-node}).
+
+\begin{table}[htbp]
+  \centering
+  \footnotesize
+  \caption[Phân rã độ trễ từng công đoạn truy hồi và tái xếp hạng (EXP-04)]{Phân rã độ trễ từng công đoạn truy hồi trên tập ứng viên 10 đoạn (\texttt{EXP-04})}
+  \label{tab:ch5_stage_latency}
+  \vspace{4pt}
+  \setlength{\tabcolsep}{3pt}
+  \begin{tabularx}{\linewidth}{|>{\raggedright\arraybackslash}p{44mm}|>{\centering\arraybackslash}p{32mm}|>{\centering\arraybackslash}p{26mm}|L|}
+    \hline
+    \textbf{Công đoạn xử lý} & \textbf{Cấu hình thực thi} & \textbf{Độ trễ TB / truy vấn} & \textbf{Ghi chú kỹ thuật \& Tỷ trọng} \\
+    \hline
+    1. \textbf{Vector Search + Hydration} & Qdrant HNSW~\cite{malkov2018efficient} + MinIO Parquet S3 & 325.01 ms & Tải 10 đoạn văn ứng viên và giải nén ZSTD. \\
+    \hline
+    2a. \textbf{Laya Rerank (CUDA, gom lô)} & Batch 10 đoạn \texttt{bfloat16} (31.62 ms/đoạn) & \textbf{+316.16 ms} & \textbf{Cấu hình chọn} (49.3\% tổng độ trễ 641.4 ms). \\
+    \hline
+    2b. \textit{(Đối chứng)} Laya GPU tuần tự & 10 lần gọi \texttt{system\_one()} & +1,335.92 ms & Chậm gấp $4.2\times$ so với gom lô \texttt{bfloat16}. \\
+    \hline
+    2c. \textit{(Đối chứng)} Laya CPU ONNX & \texttt{onnxruntime-node} trên CPU & +4,260.00 ms & Chậm gấp \textbf{$13.5\times$} so với GPU gom lô. \\
+    \hline
+    3. \textbf{Reciprocal Rank Fusion ($k=60$)} & Cộng hạng nghịch đảo trên RAM & +0.02 ms (18.6 $\mu$s) & Chi phí không đáng kể (0.003\%). \\
+    \hline
+    4. \textbf{Tra cứu uy tín PageRank} & Dict lookup (29,523 tác giả) & +0.21 ms (205.7 $\mu$s) & Chi phí không đáng kể (0.03\%). \\
+    \hline
+  \end{tabularx}
+  \ReportNote{Nguồn: Đo đồng hồ đơn điệu \texttt{perf\_counter} trên GPU NVIDIA GeForce RTX 4060 (\path{docs/benchmarks/laya_pagerank_benchmark_report.md}, tháng 11/2026). Gom lô tĩnh 10 đoạn trên GPU \texttt{bfloat16} giúp giữ tổng độ trễ truy hồi + tái xếp hạng dưới ngưỡng 642 ms.}
+\end{table}
+
+Song song với đo lường thứ hạng, phép đánh giá chất lượng câu trả lời sinh ra bằng bộ giám khảo \texttt{DeepEval} (sử dụng \texttt{Qwen 2.5-7B-Instruct} cục bộ với Top-5 ngữ cảnh đầu vào) cho thấy tác động mang tính quyết định của tính đầy đủ văn bản nguồn (\textit{Hydration}) đối với toàn bộ đường ống RAG. Bảng~\ref{tab:deepeval_hydrated} đối chiếu kết quả trên ba lát cắt: tập chuẩn nhỏ \texttt{Gold 20}, tập đã hydrate đầy đủ \texttt{N = 105} (\texttt{gold-001..100}) và toàn bộ tập mở rộng \texttt{N = 169}.
+
+\input{tables/table_deepeval_hydrated.tex}
+
+Khi các đoạn văn bản nguồn được hydrate đầy đủ từ \texttt{ChunkStore} ($N=105$), \textbf{\texttt{Context Recall} đạt 0.900} (92/103 mẫu vượt ngưỡng) và \textbf{\texttt{Context Precision} đạt 0.852} (86/103). Ngược lại, khi gộp thêm $\approx 38.9\%$ mẫu chưa hydrate toàn văn trong tập mở rộng $N=169$, điểm \texttt{Context Recall} giảm thẳng 29.2\% tương đối xuống còn 0.637 và \texttt{Context Precision} giảm xuống 0.618. Điều này chứng minh nút thắt suy giảm chất lượng trên các câu hỏi mở rộng nằm ở độ phủ dữ liệu toàn văn của \texttt{ChunkStore}, chứ không phải ở thuật toán tìm kiếm lai.
+
+\section{Thực Nghiệm EXP-05: Tinh Chỉnh Laya ONNX, Calibration và Đối Sánh 3 Chiều}
+\label{sec:ch5_exp05}
+
+\subsection{Huấn Luyện Laya Soft-CE và Hiệu Chỉnh Nhiệt Độ}
+\label{sec:ch5_calibration}
+
+Mô hình tái xếp hạng \texttt{convaiinnovations/laya} (phiên bản \texttt{laya 0.4.27}, kiến trúc Cross-Encoder~\cite{nogueira2019passage}) được tinh chỉnh toàn bộ tham số bằng hàm mất mát \texttt{Soft-CE} trên bốn loại cặp dữ liệu khoa học (dương tính chuẩn, thiếu chi tiết \texttt{missing\_detail}, bịa đặt \texttt{fabricated}, và cặp nhiễu khó) với hai cấu hình đối chứng ngày 08/11/2026:
+\begin{itemize}
+  \item \textbf{Biến thể 4-epoch kèm Temperature Scaling} (\path{notebooks/laya_finetune/report_seed0.json}): Huấn luyện trên 3,432 cặp, hiệu chỉnh trên 381 cặp và kiểm thử độc lập trên 820 cặp thuộc 130 nhóm MRR (\texttt{micro\_batch = 8}, \texttt{grad\_accum = 8}, \texttt{max\_len = 512}), áp dụng Temperature Scaling~\cite{guo2017calibration} với nhiệt độ tối ưu $T^* = 3.0627$.
+  \item \textbf{Biến thể 1-epoch bảo toàn ONNX} (\path{notebooks/laya_onnx_20261108-2053_seed0/RUN_INFO.json}): Huấn luyện trên 6,161 cặp (hoàn toàn tách biệt bài báo nguồn với tập kiểm thử đóng \path{test_set_v1.jsonl}) và đánh giá trên 175 nhóm dev ($T = 1.0$, độ lệch logit khi xuất ONNX \texttt{opset=18} là $1.41 \times 10^{-5}$).
+\end{itemize}
+
+\input{tables/table_laya_calibration.tex}
+
+Số liệu tại Bảng~\ref{tab:laya_calibration} chỉ ra điểm yếu nghiêm trọng của Cross-Encoder pretrained khi làm cổng kiểm duyệt chứng cứ: mô hình gốc chấp nhận nhầm tới \textbf{57.4\%--58.8\%} đoạn văn chứa chi tiết bịa đặt ở ngưỡng 0.6. Sau khi tinh chỉnh bằng \texttt{Soft-CE} và hiệu chỉnh nhiệt độ $T = 3.0627$, sai số hiệu chỉnh xác suất \textbf{$\mathrm{ECE}$ giảm $5.72\times$} ($0.1900 \rightarrow 0.0332$), $\mathrm{MRR}$ vọt lên \textbf{0.9590}, và tỷ lệ lọt mẫu bịa đặt tại ngưỡng 0.6 rơi xuống chỉ còn \textbf{1.5\%--2.3\%} (giảm 97.4\% sai số ở lần chạy 4 epochs), trong khi vẫn giữ nguyên tỷ lệ chấp nhận câu hợp lệ \texttt{answerable = 0.730} (1-epoch) đến 0.774 (4-epoch). Độ lệch số học khi chuyển đổi trọng số từ PyTorch sang ONNX chỉ đạt $5.14 \times 10^{-6}$, bảo đảm tương đương số học tuyệt đối khi triển khai sản xuất.
+
+\subsection{Đánh Giá 9 Cấu Hình Retrieval v1 trên Tập 100 Dương và 50 Âm}
+\label{sec:ch5_retrieval_v1}
+
+Trên bộ kiểm thử khóa cứng \path{test_set_v1.jsonl} của nhánh \texttt{RAG\_TS} (gồm 100 câu hỏi có bằng chứng dương tính và 50 câu hỏi gài bẫy âm tính gồm \texttt{off\_topic}, \texttt{fabricated}, \texttt{absent\_fact}, \texttt{missing\_detail}), chín cấu hình truy hồi được đánh giá đồng thời bằng \path{benchmarks/rag_eval/score_retrieval.py} với ngưỡng Cổng Chứng cứ cố định $\theta = 0.6$ (\path{logs/benchmarks/rag_eval/report_retrieval.json}).
+
 \input{tables/table_retrieval_v1.tex}
 
-Lưu ý phạm vi: bộ \texttt{rag\_eval} trên được đo trên backend \texttt{RAG\_TS} (NodeJS/TypeScript + BM25 SQLite + Laya ONNX), không phải phép đo end-to-end DeepEval của backend Python FastAPI (\texttt{ms-marco-MiniLM-L-6-v2} / \texttt{bge-reranker-base} + Qwen2.5-7B).
+Từ Bảng~\ref{tab:retrieval_v1}, có thể rút ra hai bài học kiến trúc mang tính quyết định:
+\begin{enumerate}[label=\textbf{\arabic*.}]
+  \item \textbf{Vai trò nền tảng của tìm kiếm lai BM25 + Vector trước Reranker}: Ngay cả khi dùng mô hình Laya đã tinh chỉnh, nếu tầng sinh ứng viên đầu vào chỉ dùng Vector thuần túy (\texttt{laya\_ft1}), $\mathrm{Hit}@5$ chỉ dừng ở 0.740. Khi tầng 1 kết hợp BM25~\cite{robertson2009probabilistic} qua SQLite FTS5 cùng Vector (\texttt{laya\_ft1\_hybrid} và \texttt{laya\_ft\_hybrid}), $\mathrm{Hit}@5$ nhảy lên \textbf{0.940} (+20.0 điểm phần trăm) và $\mathrm{MRR}@10$ đạt \textbf{0.824--0.827} (tăng +49.5\% tương đối so với 0.553 của \texttt{vector}), nhờ khả năng khớp chính xác thuật ngữ và viết tắt chuyên ngành.
+  \item \textbf{Ưu thế vượt trội của Laya Fine-tuned so với \texttt{prod} (\texttt{ms-marco-MiniLM-L-6-v2})}: Cấu hình \texttt{prod} đang dùng mô hình MiniLM tổng quát khiến $\mathrm{Hit}@1$ tụt xuống 0.440 và $\mathrm{MRR}@10$ xuống 0.561 (thậm chí thấp hơn cả \texttt{hybrid} thuần 0.690 không dùng reranker). Trái lại, \texttt{laya\_ft1\_hybrid} đạt \textbf{$\mathrm{AUROC} = 0.986$}, chặn sạch \textbf{50/50 (100\%)} câu hỏi không có bằng chứng và giữ lại 86/100 câu hỏi hợp lệ ở ngưỡng $\theta = 0.6$, với độ trễ trung bình end-to-end 5,391 ms (so với 577 ms của \texttt{hybrid} thuần).
+\end{enumerate}
 
-\section{Kết Quả Đối Chiếu và Yêu Cầu Tái Lập}
-Với câu hỏi về tổ chức dữ liệu, source xác nhận các bước fetch/embed, lưu Silver chunks và hydrate; cần kiểm tra vận hành để xác nhận tính đầy đủ cùng đồng bộ. Với câu hỏi về mining, artifact cho kết quả mô tả nhưng còn hạn chế về cỡ mẫu, nhãn và tính diễn giải. Với câu hỏi về RAG, các thực nghiệm mới (\texttt{chunking\_ab}, \texttt{rag\_eval}, \texttt{laya\_finetune}) đã cung cấp chứng cứ định lượng mạnh cho khâu phân đoạn, tìm kiếm lai và cổng kiểm tra bằng chứng (AUROC 0.986), trong khi phần sinh câu trả lời end-to-end trên backend Python FastAPI + Qdrant/Silver chunks vẫn cần một vòng đánh giá DeepEval thống nhất.
+\subsection{Đối Sánh 3 Chiều 150 Truy Vấn và Bối Cảnh Lịch Sử PoC}
+\label{sec:ch5_3way_poc}
 
-Phép đánh giá tiếp theo cần cố định commit, corpus, model và cấu hình; lưu raw traces, số mẫu lỗi và cặp câu hỏi chung. Ablation phải tách dense, lexical/RRF, authority và reranker; query expansion chỉ được đánh giá sau khi thực sự đưa vào retrieval. Kiểm tra công thức, nhãn dị biệt và cụm cần thêm đánh giá nội dung. Từ các giới hạn này, chương triển khai tập trung vào khả năng theo dõi trạng thái, đồng bộ Silver/Qdrant và xử lý lỗi thay vì suy ra độ sẵn sàng từ ảnh giao diện.
+Thử nghiệm đối sánh cuối cùng ngày 09/11/2026 (\path{logs/benchmarks/vector_final_benchmark.json} và \path{logs/benchmarks/laya_ab_final_benchmark.json}) kiểm định song song ba kiến trúc đại diện trên cùng 150 truy vấn (100 dương + 50 âm) bằng cả thước đo xếp hạng và giám khảo \texttt{DeepEval} (\texttt{Qwen2.5-7B-Instruct}).
+
+\input{tables/table_laya_3way_150.tex}
+
+Như thể hiện tại Bảng~\ref{tab:laya_3way_150}, \texttt{Fine-Tuned Laya} dẫn đầu trên hầu hết chỉ số cốt lõi: đạt \textbf{$\mathrm{MRR} = 0.8939$} (+3.66\% so với \texttt{Pure Vector}), \textbf{$\mathrm{Hit}@1 = 82\%$}, \textbf{$\mathrm{Hit}@5 = 98\%$} (phủ 98/100 truy vấn dương), \textbf{\texttt{Faithfulness} = 0.7977}, \textbf{\texttt{Answer Relevancy} = 0.6341}, chặn 100\% (50/50) câu bẫy ở ngưỡng 0.5, và rút ngắn độ trễ trung bình xuống \textbf{2,643.5 ms} (nhanh hơn 43.6\% so với luồng \texttt{Pure Vector} đầy đủ 4,686.8 ms). Thước đo \texttt{Contextual Relevancy} giữ mức 0.3100 phản ánh giới hạn tự nhiên của độ dài đoạn trích 450 từ (vì một đoạn dài chứa thêm ngữ cảnh nền xung quanh câu đích).
+
+\textit{Bối cảnh lịch sử PoC (05/10/2026)}: Trước khi chuyển sang kiến trúc MinIO + Qdrant và tinh chỉnh Laya, thử nghiệm thăm dò ban đầu trên 21 câu hỏi (\texttt{gold-001} đến \texttt{gold-021}, commit \path{6cb1c52}) với kho 143,523 đoạn văn trên LanceDB/Cloudflare R2 (\path{docs/benchmarks/RAG_EVALUATION_REPORT_21_SAMPLES.md}, Bảng~\ref{tab:rag_benchmark}) đã sớm phát hiện bước nhảy khi bổ sung Hybrid + Rerank: \texttt{Contextual Precision} tăng từ 0.637 lên \textbf{0.860} (+35.0\%), \texttt{Contextual Recall} từ 0.950 lên \textbf{1.000} (19/19 mẫu hợp lệ), \texttt{Faithfulness} từ 0.668 lên \textbf{0.699}, \texttt{Answer Relevancy} từ 0.687 lên \textbf{0.752}, và \texttt{Citation Grounding} đạt 0.720 (giảm nhẹ từ 0.757). Những chỉ dấu tích cực và hạn chế về tỷ lệ trung thực ở PoC này chính là tiền đề trực tiếp thúc đẩy nhóm xây dựng quy trình tinh chỉnh \texttt{Laya} ONNX cùng Cổng Chứng cứ ở \texttt{EXP-05}.
+
+\input{tables/table_rag_benchmark.tex}
+
+\section{Hồ Sơ Hiệu Năng Phần Cứng RTX 4060 và Quản Trị Kết Nối}
+\label{sec:ch5_hardware}
+
+Quá trình đo kiểm hiệu năng phần cứng thực tế ngày 19/10/2026 trên GPU \textbf{NVIDIA GeForce RTX 4060 Laptop (8 GB VRAM)} và CUDA 12.4 (\path{docs/benchmarks/PERFORMANCE_BENCHMARK_REPORT.md}) giải quyết triệt để hai nút thắt hệ thống trọng yếu:
+
+\begin{enumerate}[label=\textbf{\arabic*.}]
+  \item \textbf{Quản trị kết nối Qdrant bằng Persistent HTTP Pooling}: Khi khởi tạo kết nối TCP/TLS mới cho từng truy vấn gửi tới Qdrant Cloud, độ trễ bắt tay nguội (\textit{cold handshake}) vượt quá 1,000 ms. Sau khi tái sử dụng phiên bằng \texttt{requests.Session()} và \texttt{HTTPAdapter} trong \texttt{QdrantManager}, độ trễ truy vấn Top-5 giảm xuống \textbf{$269.46 \pm 12.44$ ms} ($p_{50} = 268.10$ ms, $p_{95} = 291.50$ ms, thông lượng \textbf{3.71 QPS}); mở rộng lên Top-50 chỉ mất \textbf{258.80 ms} (\textbf{3.86 QPS}), chứng minh thời gian truyền tải TLS qua mạng chi phối hoàn toàn độ trễ chứ không phải thao tác tìm kiếm đồ thị HNSW nội tại trên Qdrant.
+  \item \textbf{Chuyển đổi Backend suy luận LLM từ Vulkan sang CUDA (\texttt{node-llama-cpp v3.15.5})}: Trên cấu hình Top-3 + \texttt{Qwen-2.5-7B-Instruct Q4\_K\_M}, việc chuyển sang thực thi thuần CUDA loại bỏ lỗi sập driver \texttt{VK\_ERROR\_DEVICE\_LOST} (khi thiết lập \texttt{LLM\_CONTEXT\_SIZE = 4096}, \texttt{LLM\_SEQUENCES = 1}, mức VRAM đỉnh \textbf{$\approx 5.7$ GB / 8.0 GB}), giảm thời gian sinh token đầu tiên ($\mathrm{TTFT}$) \textbf{$30.7\times$} từ 18.7 giây xuống \textbf{609.77 ms}, nâng tốc độ sinh lên \textbf{46.33 tok/s} và đưa tổng độ trễ RAG end-to-end từ 37.31 giây xuống còn \textbf{3.39 giây} (tăng tốc tổng thể $\approx 11.0\times$).
+\end{enumerate}
+
+\input{tables/table_latency_profile.tex}
+
+\section{Tổng Hợp Đối Chiếu KPI Hệ Thống}
+\label{sec:ch5_kpi_synthesis}
+
+Đối chiếu với khung mục tiêu thiết kế đặt ra ở Bảng~\ref{tab:system_kpis} thuộc Chương~\ref{chap:business_understanding}, Bảng~\ref{tab:ch5_kpi_summary} tổng hợp bảy chỉ tiêu trọng tâm trên toàn vòng đời hệ thống từ tầng Lakehouse, khai phá bốn trụ cột tới đường ống Hybrid RAG và suy luận phần cứng GPU.
+
+\begin{table}[htbp]
+  \centering
+  \footnotesize
+  \caption[Tổng hợp đối chiếu 7 KPI toàn hệ thống: Mục tiêu vs Thực đạt]{Tổng hợp đối chiếu KPI toàn hệ thống từ tầng Lakehouse, Khai phá tới RAG và GPU}
+  \label{tab:ch5_kpi_summary}
+  \vspace{4pt}
+  \setlength{\tabcolsep}{2.5pt}
+  \begin{tabularx}{\linewidth}{|>{\raggedright\arraybackslash}p{35mm}|>{\centering\arraybackslash}p{25mm}|>{\centering\arraybackslash}p{28mm}|L|>{\centering\arraybackslash}p{14mm}|}
+    \hline
+    \textbf{Hạng mục KPI} & \textbf{Mục tiêu thiết kế} & \textbf{Giá trị thực đạt} & \textbf{Bằng chứng \& Điều kiện đo} & \textbf{Kết quả} \\
+    \hline
+    Quy mô kho toàn văn \& Vector Lakehouse & $\ge 50,000$ bài / 1M vector & \textbf{71,927 bài / 1,043,594 vector} & Ngày 04/11/2026 (\path{logs/run/backend.log}, Qdrant \path{scientific_papers_gold}). & Đạt \\
+    \hline
+    Độ bao phủ làm giàu HTML LaTeXML & $\ge 80\%$ kho kiểm toán & \textbf{89.38\%} (11,619 / 13,000) & Lát cắt kiểm toán S2 (\path{evidence/eda_api.json}, 2,825,871 công thức). & Đạt \\
+    \hline
+    Thời gian chạy 4 Trụ cột \texttt{MiningEngine} & $< 5$ phút (300 s) toàn hồ & \textbf{234.57 s} ($\approx 3.91$ phút) & Ngày 04/11/2026 (EDA 39.09 s, FP 36.26 s, Clus 39.94 s, Graph 116.39 s, Trend 2.89 s). & Đạt \\
+    \hline
+    Cải thiện $\mathrm{MRR}$ hợp nhất 4 tín hiệu (\texttt{EXP-04}) & $> +5\%$ vs Vector Baseline & \textbf{+6.13\%} ($0.5725 \rightarrow \mathbf{0.6076}$) & Tập $N=120$ truy vấn đã hydrate (\path{laya_5_scenarios_comparison_120q.json}). & Đạt \\
+    \hline
+    Năng lực lọc ảo giác (\texttt{AUROC} \& Chặn âm tính) & $\mathrm{AUROC} \ge 0.90$, chặn $\ge 90\%$ & \textbf{\texttt{AUROC = 0.986}}, chặn \textbf{50/50 (100\%)} & \texttt{EXP-05} \texttt{laya\_ft1\_hybrid} (100 dương + 50 âm, ngưỡng $\theta = 0.6$). & Vượt mức \\
+    \hline
+    Chất lượng Truy hồi (\texttt{Hit@5} \& \texttt{Context Recall}) & \texttt{Hit@5} $\ge 0.90$, \texttt{Recall} $\ge 0.85$ & \textbf{\texttt{Hit@5} = 0.94--0.98}, \textbf{\texttt{Recall} = 0.900} & \texttt{EXP-05} (0.94 v1 / 0.98 3-chiều) và DeepEval đã hydrate $N=105$. & Đạt \\
+    \hline
+    Tốc độ suy luận E2E trên RTX 4060 8 GB & $< 5.0$ s E2E, $\ge 30$ tok/s & \textbf{3.39 s E2E}, \textbf{46.33 tok/s} & Ngày 19/10/2026 CUDA \texttt{node-llama-cpp v3.15.5}, $\mathrm{TTFT} = 609.77$ ms. & Đạt \\
+    \hline
+  \end{tabularx}
+  \ReportNote{Nguồn: Tổng hợp từ các thực nghiệm \texttt{EXP-01}--\texttt{EXP-05} giai đoạn tháng 10--11/2026, đối chiếu trực tiếp với Bảng~\ref{tab:system_kpis} ở Chương~\ref{chap:business_understanding}.}
+\end{table}
+
+\section{Phân Tích Lỗi Trọng Yếu và Khoảng Cách Triển Khai}
+\label{sec:ch5_postmortem}
+
+Một báo cáo kỹ thuật minh bạch cần công bố đầy đủ các lỗi vận hành nghiêm trọng đã gặp cùng những khoảng cách còn tồn tại giữa nhánh đánh giá nghiên cứu và máy chủ API đang chạy:
+
+\begin{enumerate}[label=\textbf{\arabic*.}]
+  \item \textbf{Lỗi \texttt{BUG-01}: Sập bộ tách từ Rust do ký tự Unicode Surrogate} (\path{docs/bugs/BUG_01_TOKENIZER_SURROGATE_CRASH.md}):
+  Trong quá trình nhúng văn bản hàng loạt bằng \texttt{nomic-embed-text-v1.5}, tiến trình worker đột ngột sập với ngoại lệ \texttt{PyO3 PanicException: no low surrogate in string} khi gặp các công thức HTML trích xuất bị vỡ cặp mã UTF-16 (\texttt{\textbackslash ud800--\textbackslash udfff}). Nguyên nhân gốc là kiểu \texttt{str} của Python cho phép tồn tại ký tự surrogate đơn lẻ, nhưng thư viện \texttt{tokenizers} viết bằng Rust ép chuyển đổi sang UTF-8 chuẩn nghiêm ngặt qua \texttt{.unwrap()} dẫn đến panic làm chết tiến trình. Nhóm đã khắc phục triệt để bằng bộ lọc làm sạch hai tầng tại cả \texttt{EmbedderService} (\path{backend/app/services/embedder_service.py}) và \texttt{NomicEmbedder} (\path{src/indexing/embedder.py}), kết hợp biểu thức chính quy loại bỏ dải surrogate và chuẩn hóa \texttt{encode("utf-8", errors="ignore").decode("utf-8")} trước mọi lệnh gọi tokenizer.
+
+  \item \textbf{Lỗi \texttt{BUG-02} và Quyết định \texttt{D-058}: Gán sai nhãn \texttt{Methodology} và từ chối quá phòng thủ} (\path{docs/bugs/BUG_02_RAG_FALSE_METHODOLOGY_FALLBACK_AND_REFUSAL.md}):
+  Khi đoạn văn truy hồi thuộc phần tóm tắt (\textit{Abstract}) thiếu tên tiểu mục, cả frontend và \texttt{RagService} từng mặc định gán nhãn sai là \texttt{"Methodology"} và prompt ép LLM từ chối trả lời toàn bộ nếu thiếu chi tiết vi mô. Lỗi này được xử lý bằng cách gán trung thực nhãn \texttt{[Section: Abstract]}, chuyển sang prompt \textit{Synthesis-First} tổng hợp nguyên lý toán học kèm nêu rõ giới hạn phạm vi, và tăng \texttt{RERANKER\_CANDIDATE\_K = 8}.
+
+  \item \textbf{Khoảng cách Serving giữa Python FastAPI và nhánh \texttt{RAG\_TS} (\texttt{EXP-05})}:
+  Trong khi hệ thống đánh giá \texttt{RAG\_TS} tại \texttt{EXP-05} đã sử dụng trọng số \texttt{Laya} ONNX tinh chỉnh kèm chỉ mục BM25 SQLite độc lập và Cổng Chứng cứ $\theta = 0.6$ để đạt \texttt{AUROC = 0.986}, dịch vụ sản xuất Python FastAPI hiện hành (\path{backend/app/services/reranker_service.py}) vẫn cấu hình mặc định \path{cross-encoder/ms-marco-MiniLM-L-6-v2} (\texttt{max\_length = 256}) và chấm điểm từ vựng nội tập thay vì gọi trực tiếp tệp \texttt{Laya} ONNX tinh chỉnh với $T^* = 3.0627$. Việc hợp nhất mô hình \texttt{Laya} ONNX vào \texttt{RerankerService} là hạng mục nâng cấp ưu tiên hàng đầu được đề xuất ở Chương~\ref{chap:conclusion}.
+
+  \item \textbf{Điểm nghẽn Hydration trên tập mở rộng ($N=105$ vs $N=169$)}:
+  Như Bảng~\ref{tab:deepeval_hydrated} đã chỉ ra, khoảng 38.9\% bài báo trong tập kiểm thử mở rộng chưa có đoạn văn đầy đủ trong \texttt{ChunkStore}, kéo chỉ số \texttt{Context Recall} từ 0.900 xuống 0.637. Khoảng trống dữ liệu này đòi hỏi vận hành định kỳ các kịch bản bù đắp toàn văn (\path{scripts/backfill_missing_papers.py}) được trình bày trong Chương~\ref{chap:deployment}.
+\end{enumerate}

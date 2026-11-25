@@ -1,0 +1,26 @@
+\begin{table}[htbp]
+  \centering
+  \footnotesize
+  \caption[Đối chiếu DeepEval giữa Gold 20, Hydrated N=105 và Toàn bộ N=169]{Đối chiếu chất lượng sinh câu trả lời DeepEval theo mức độ Hydrate toàn văn (\texttt{EXP-04})}
+  \label{tab:deepeval_hydrated}
+  \vspace{4pt}
+  \setlength{\tabcolsep}{3pt}
+  \begin{tabularx}{\linewidth}{|>{\raggedright\arraybackslash}p{38mm}|>{\centering\arraybackslash}p{21mm}|Y|Y|>{\centering\arraybackslash}p{26mm}|}
+    \hline
+    \textbf{Thước đo DeepEval} & \makecell{\textbf{Gold 20}\\(\texttt{001--020})} & \makecell{\textbf{Đã Hydrate}\\(\texttt{N = 105})} & \makecell{\textbf{Toàn bộ tập}\\(\texttt{N = 169})} & \makecell{\textbf{Chênh lệch $\Delta$}\\(\texttt{169 vs 105})} \\
+    \hline
+    \textbf{Context Recall} & \makecell{\textbf{0.947}\\(94.7\%)} & \makecell{\textbf{0.900}\\(92/103, 89.3\%)} & \makecell{0.637\\(105/166, 63.3\%)} & \makecell{-0.263\\(-29.2\%)} \\
+    \hline
+    \textbf{Context Precision} & \makecell{\textbf{0.860}\\(86.0\%)} & \makecell{\textbf{0.852}\\(86/103, 83.5\%)} & \makecell{0.618\\(101/166, 60.8\%)} & \makecell{-0.234\\(-27.5\%)} \\
+    \hline
+    \textbf{Citation Grounding} & \makecell{\textbf{0.747}\\(74.7\%)} & \makecell{\textbf{0.762}\\(94/104, 90.4\%)} & \makecell{\textbf{0.719}\\(144/167, 86.2\%)} & -0.043 \\
+    \hline
+    \textbf{Faithfulness} & \makecell{0.660\\(66.0\%)} & \makecell{\textbf{0.667}\\(55/96, 57.3\%)} & \makecell{0.592\\(73/156, 46.8\%)} & -0.075 \\
+    \hline
+    \textbf{Answer Relevancy} & \makecell{\textbf{0.769}\\(76.9\%)} & \makecell{\textbf{0.667}\\(50/98, 51.0\%)} & \makecell{0.594\\(65/160, 40.6\%)} & -0.073 \\
+    \hline
+    \textbf{Context Relevancy} & \makecell{0.534\\(53.4\%)} & \makecell{\textbf{0.520}\\(42/93, 45.2\%)} & \makecell{0.444\\(45/123, 36.6\%)} & -0.076 \\
+    \hline
+  \end{tabularx}
+  \ReportNote{Nguồn: Giám khảo LLM DeepEval sử dụng \texttt{Qwen 2.5-7B-Instruct} cục bộ (\path{docs/benchmarks/laya_pagerank_benchmark_report.md}, \path{logs/benchmarks/cached_eval_master_k5_pagerank_local.json}, 11/2026). Giá trị trong ngoặc là số mẫu đạt ngưỡng và tỷ lệ vượt ngưỡng trên số mẫu hợp lệ chấm được. Tập \texttt{N=169} chứa $\approx 38.9\%$ mẫu chưa hydrate toàn văn trong \texttt{ChunkStore}.}
+\end{table}

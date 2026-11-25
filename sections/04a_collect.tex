@@ -1,0 +1,187 @@
+% ==============================================================================
+% CHƯƠNG 2 - PHẦN A: THU THẬP DỮ LIỆU ĐA TẦNG (COLLECT)
+% ==============================================================================
+
+\section{Kiến Trúc Điều Phối Ba Tầng Trên Apache Airflow 2.10}
+\label{sec:ch2_airflow}
+
+Toàn bộ hoạt động thu thập (\textit{Collect}) được đóng gói thành các Directed Acyclic Graphs (DAGs) trên \textbf{Apache Airflow 2.10}, vận hành theo múi giờ chuẩn Việt Nam (\path{Asia/Ho_Chi_Minh} --- ICT) thông qua \texttt{CronTriggerTimetable} (bảo đảm kích hoạt đúng thời điểm đặt lịch thay vì chờ cuối chu kỳ \textit{interval}). Một nguyên tắc thiết kế bất biến được thực thi xuyên suốt: \textbf{các DAG thu thập chỉ đóng vai trò Producer} --- kiểm tra trùng lặp nhẹ trên metadata và đẩy JSON thô vào hàng đợi RabbitMQ (\path{scientific_paper_ingest}), tuyệt đối không tự ý tải toàn văn hay ghi trực tiếp vào kho Bronze/Silver/Gold (nhiệm vụ này thuộc về \texttt{QueueConsumer} ở Mục~\ref{sec:ch2_integrate}). Hình~\ref{fig:tier_orchestration} và Bảng~\ref{tab:ch2_airflow_dags} tổng hợp kiến trúc và thông số điều phối của cả 4 DAG thu thập.
+
+\begin{figure}[htbp]
+  \centering
+  \DrawTierOrchestration
+  \caption[Sơ đồ điều phối ba tầng thu thập dữ liệu trên Apache Airflow 2.10]{Sơ đồ điều phối ba tầng thu thập dữ liệu trên Apache Airflow 2.10}
+  \ReportNote{Nguồn: Trích xuất từ luồng điều phối trong \path{dags/_common.py}, \path{dag_tier1_realtime_stream.py}, \path{dag_tier2_near_past_harvest.py}, \path{dag_tier3_landmark_harvest.py} và \path{dag_tier3_pdf_backfill.py}.}
+  \label{fig:tier_orchestration}
+\end{figure}
+
+\begin{table}[htbp]
+  \centering
+  \small
+  \caption[Đặc tả kỹ thuật các DAG thu thập trên Apache Airflow]{Đặc tả kỹ thuật 4 DAG thu thập đa tầng và lịch vận hành trên Apache Airflow}
+  \label{tab:ch2_airflow_dags}
+  \setlength{\tabcolsep}{3.5pt}
+  \begin{tabularx}{\linewidth}{|>{\raggedright\arraybackslash}p{25mm}|>{\raggedright\arraybackslash}p{22mm}|>{\raggedright\arraybackslash}p{28mm}|>{\raggedright\arraybackslash}p{33mm}|L|}
+    \hline
+    \textbf{Tầng \& Mã DAG} & \textbf{Lịch chạy (ICT)} & \textbf{Giao thức / API nguồn} & \textbf{Tham số giới hạn chủ đạo} & \textbf{Cơ chế khử trùng \& Chống nghẽn} \\
+    \hline
+    \textbf{Tier 1}\newline\path{dag_tier1_realtime_stream.py} & Hàng ngày \texttt{19:00}\newline(\texttt{0 19 * * *}) & \path{rss.arxiv.org/rss/{cat}} \& fallback \path{export.arxiv.org/api/query} & \path{PER_CATEGORY = 1000}, \texttt{hours = 36}, \texttt{page = 200}, \texttt{delay = 3.0 s} & Lọc \texttt{new}/\texttt{cross} (bỏ revision), \path{remember(known)} chống lặp cross-listed \\
+    \hline
+    \textbf{Tier 2}\newline\path{dag_tier2_near_past_harvest.py} & Hàng ngày \texttt{19:10}\newline(\texttt{10 19 * * *}, \path{max_active_runs=1}) & CVF HTML (\path{openaccess.thecvf.com}) $\leftrightarrow$ arXiv OAI-PMH (\path{oaipmh.arxiv.org/oai}) & \texttt{SLICE\_SECONDS = 3600}, \texttt{RUN\_HOURS = 23}, \texttt{FLOOR = 2024-01-01}, \texttt{BUDGET = 20 GB} & Water-Filling 7 nhóm + Credit Pacing + \path{HARVEST_BATCH=1000} / \path{LOW_WATER=200} \\
+    \hline
+    \textbf{Tier 3 (Landmarks)}\newline\path{dag_tier3_landmark_harvest.py} & Thủ công (\path{schedule=None}) & Semantic Scholar Bulk API + arXiv Query API (\path{id_list} lô 100) & \texttt{TARGET\_PAPERS = 3000}, \texttt{MIN\_CITATIONS = 500}, \texttt{timeout = 3h} & Lọc \path{ARXIV_CATS} hoặc \path{AI_VENUES}; chờ hàng đợi qua \path{wait_for_queue_room} \\
+    \hline
+    \textbf{Tier 3 (PDF Backfill)}\newline\path{dag_tier3_pdf_backfill.py} & Thủ công (\path{schedule=None}) & Semantic Scholar Batch API (\path{/graph/v1/paper/batch}) & \texttt{BATCH = 500}, lọc \path{s2_*} chưa có \path{content_origin == "open_access_pdf"} & Phát hành với cờ \path{refresh=True} để ghi đè vector tóm tắt cũ bằng toàn văn PDF \\
+    \hline
+  \end{tabularx}
+  \ReportNote{Nguồn: Tổng hợp trực tiếp từ cấu hình \texttt{schedule}, \texttt{params} và bộ đếm luân phiên trong \path{dags/_common.py} và 4 tệp \path{dags/dag_tier*.py} (kiểm chứng ngày 25/11/2026).}
+\end{table}
+
+\subsection{Kiểm Tra Tiền Điều Kiện Hạ Tầng}
+\label{sec:ch2_preflight}
+
+Mọi DAG thu thập đều đặt tác vụ \texttt{ping\_infrastructure()} từ \path{dags/_common.py} làm nút gốc tiên quyết (\textit{fail-fast gate}). Hàm này thực hiện hai lời gọi HTTP với \texttt{timeout=5 s} tới MinIO (\texttt{GET \{MINIO\_ENDPOINT\_URL\}/minio/health/live}) và RabbitMQ Management API (\texttt{GET \{RABBITMQ\_MGMT\_URL\}/api/overview}). Khác với thiết kế cảnh báo im lặng dễ che giấu sự cố mất kết nối kho, bất kỳ mã lỗi HTTP khác \texttt{200} nào đều phát sinh ngoại lệ ngay lập tức, ngắt DAG trước khi tiêu tốn hạn mức API bên ngoài.
+
+\subsection{Tier 1: Luồng Thời Gian Thực Hàng Ngày}
+\label{sec:ch2_tier1}
+
+Tier 1 bảo đảm độ trễ cập nhật trong ngày (\textit{zero-day preprints}) trên 5 chuyên ngành lõi cấu hình tại \texttt{ARXIV\_CATEGORIES} (\path{src/config/settings.py}): \texttt{cs.AI}, \texttt{cs.LG}, \texttt{cs.CV}, \texttt{cs.CL}, và \texttt{stat.ML}.
+\begin{enumerate}[label=\textbf{\arabic*.}]
+  \item \textbf{Quét RSS chuẩn hóa}: Hàm \texttt{fetch\_recent(cat, limit=1000)} đọc luồng \path{https://rss.arxiv.org/rss/{cat}}, chỉ giữ các mục có \texttt{arxiv\_announce\_type} thuộc \texttt{("new", "cross")} và bỏ qua các bản cập nhật chỉnh sửa nhỏ (\texttt{replace}), đồng thời cắt tiền tố \texttt{"Abstract:"} dư thừa. Với mỗi bài hợp lệ, hàm \texttt{remember(known, pid, abstract)} đánh dấu ngay trong bộ nhớ để bài báo liên ngành xuất hiện trên nhiều chuyên mục chỉ bị đẩy vào hàng đợi đúng một lần.
+  \item \textbf{Cơ chế Fallback cuối tuần theo neo bài mới nhất}: Do \path{rss.arxiv.org} trả về danh sách rỗng vào các ngày nghỉ công bố (thứ Bảy, Chủ Nhật và ngày lễ arXiv), \texttt{fetch\_recent} tự động chuyển sang arXiv Search API (\path{export.arxiv.org/api/query}). Điểm tinh tế kỹ thuật là cửa sổ truy vấn \texttt{hours=36} \textbf{không neo theo đồng hồ hệ thống} (\textit{wall clock} --- vốn sẽ trả về 0 bài vào Chủ Nhật), mà thực hiện một truy vấn thăm dò \texttt{max\_results=1\&sortBy=submittedDate\&sortOrder=descending} để lấy mốc thời gian \texttt{anchor} của bài báo mới nhất thực sự trên arXiv, sau đó phân trang (\texttt{page=200}, nghỉ \texttt{3 s} giữa các trang) trong cửa sổ \texttt{[anchor - 36h, anchor + 1m]}.
+  \item \textbf{Đảm bảo gửi hàng đợi (\texttt{ensure\_published})}: Cuối mỗi lượt chạy, DAG phát tín hiệu SSE qua \texttt{emit(...)} tới Backend và gọi \texttt{ensure\_published(harvested, queued)} nhằm thất bại rõ ràng nếu nguồn trả về 0 bài hoặc RabbitMQ từ chối định tuyến (\texttt{routed=false}).
+\end{enumerate}
+
+Lưu ý đối chiếu: mã nguồn vẫn giữ \path{dags/dag_daily_arxiv_harvest.py} như DAG thử nghiệm tối giản lịch \texttt{01:00 UTC} lấy \texttt{PER\_CATEGORY=5} bài, và kịch bản CLI độc lập \path{src/pipelines/run_tier1_realtime_stream.py} hỗ trợ chạy \texttt{--daemon}; trong vận hành chuẩn lịch chính thức, \texttt{dag\_tier1\_realtime\_stream} tại \texttt{19:00 ICT} là luồng chủ lực.
+
+\subsection{Tier 2: Thu Hoạch Cận Quá Khứ Luân Phiên}
+\label{sec:ch2_tier2}
+
+Tier 2 (\path{dags/dag_tier2_near_past_harvest.py}) chạy lúc \texttt{19:10 ICT} (sau Tier 1 đúng 10 phút, \texttt{max\_active\_runs=1}, thời hạn tối đa \texttt{RUN\_HOURS = 23} giờ để kết thúc trước phiên ngày kế tiếp). Tác vụ \texttt{harvest\_rotation} sử dụng mô hình \textbf{Python Generator Coroutine luân phiên theo khung giờ (\texttt{SLICE\_SECONDS = 3600})} giữa hai nguồn \textbf{CVF} và \textbf{arXiv}: mỗi nguồn được cấp 1 giờ thực thi rồi tạm nhường quyền ngay điểm \texttt{yield}, ghi nhớ trạng thái con trỏ chính xác cho lượt quay tiếp theo, giúp nguồn nhanh không làm chết đói nguồn chậm.
+
+\begin{itemize}
+  \item \textbf{Nhánh CVF Open Access (\texttt{\_cvf\_stream})}: Quét trang thực đơn \path{https://openaccess.thecvf.com/menu} để thu thập các hội nghị chính thức \texttt{CVPR}, \texttt{ICCV}, \texttt{WACV} (từ năm \texttt{2024} trở đi, bao gồm \texttt{\_findings}) theo thứ tự mới nhất trước, sau đó chuyển sang các chuỗi hội thảo \texttt{\_workshops}. Parser HTML trích xuất liên kết trang bài báo, tiêu đề, danh sách tác giả (\texttt{input[name="query\_author"]}) và đặc biệt \textbf{bóc tách \texttt{arxiv\_id}} nếu bài CVF có gắn liên kết \path{arxiv.org/abs/...}. Khi có \texttt{arxiv\_id}, \texttt{paper\_id} được chuẩn hóa về mã arXiv giúp \texttt{QueueConsumer} lấy được toàn văn HTML5 LaTeXML đầy đủ; các bài CVF thuần chỉ lấy tóm tắt từ \texttt{<div id="abstract">} theo lô \texttt{60} bài với \texttt{ThreadPoolExecutor(max\_workers=3)} (tuân thủ nguyên tắc Tier 2 \textit{HTML-only}, không tải PDF nặng).
+  \item \textbf{Nhánh arXiv OAI-PMH (\texttt{\_arxiv\_stream})}: Thay vì dùng Search API (vốn trả về \texttt{HTTP 429} khi truy vấn khoảng ngày rộng), hệ thống sử dụng giao thức thu hoạch hàng loạt chuẩn \textbf{OAI-PMH} (\path{https://oaipmh.arxiv.org/oai}, \texttt{metadataPrefix=arXiv}) quét qua 3 tập \texttt{ARXIV\_OAI\_SETS = ("cs", "stat", "eess")} lùi dần từng ngày một từ hiện tại về mốc sàn \texttt{FLOOR = 2024-01-01}. Con trỏ ngày được lưu bền vững trong Airflow Variable \texttt{tier2\_arxiv\_cursor} và \textbf{chỉ cập nhật sau khi toàn bộ bài báo trong ngày đó đã được đẩy hàng đợi}, bảo đảm khả năng khôi phục không mất mát nếu tác vụ bị ngắt giữa chừng.
+  \item \textbf{Xử lý giới hạn tốc độ \& Niên đại chính xác}: Hàm \texttt{\_oai\_page} tuân thủ nghiêm ngặt tiêu đề \texttt{Retry-After} (cộng thêm \texttt{2 s} đệm an toàn) khi gặp mã \texttt{HTTP 503} (arXiv đang dựng trang OAI tiếp theo) hoặc \texttt{429}, tối đa 8 lần thử; khoảng nghỉ giữa các \texttt{resumptionToken} là \texttt{3.0 s}. Đồng thời, do trường \texttt{<created>} trong OAI-PMH có thể phản ánh ngày sửa đổi siêu dữ liệu thay vì ngày công bố \texttt{v1}, bộ lọc sử dụng 4 chữ số đầu của \texttt{paper\_id} (\texttt{YYMM >= 2401}) làm khóa thời gian chuẩn xác, và chỉ giữ trường \texttt{<created>} khi \texttt{created[2:4] + created[5:7] == pid[:4]} (ngược lại chuẩn hóa thành \texttt{20YY-MM}). Các bài bị rút (\texttt{@status="deleted"} hoặc \texttt{\_withdrawn}) bị loại bỏ ngay tại nguồn.
+\end{itemize}
+
+\subsection{Tier 3: Công Trình Kinh Điển và Bồi Hoàn PDF}
+\label{sec:ch2_tier3}
+
+Tier 3 thu thập các công trình kinh điển có ảnh hưởng nền tảng trong AI/DS (ví dụ \textit{Attention Is All You Need}~\cite{vaswani2017attention}, \textit{ResNet}~\cite{he2016deep}, \textit{BERT}~\cite{devlin2019bert}, \textit{DPO}~\cite{rafailov2023direct}) chạy theo lệnh thủ công (\texttt{schedule=None}):
+\begin{enumerate}[label=\textbf{\arabic*.}]
+  \item \textbf{Xếp hạng và Lọc phạm vi (\texttt{dag\_tier3\_landmark\_harvest})}: Gọi endpoint \textbf{Semantic Scholar Bulk Search} (\path{https://api.semanticscholar.org/graph/v1/paper/search/bulk}) với \texttt{fieldsOfStudy=Computer Science}, \texttt{minCitationCount=500}, \texttt{sort=citationCount:desc} và chỉ tiêu \texttt{TARGET\_PAPERS=3000}. Với mỗi trang kết quả, các bài có \texttt{externalIds.ArXiv} được gom theo lô \texttt{100} để truy vấn trực tiếp \path{export.arxiv.org/api/query} lấy danh mục arXiv chính xác. Một bài báo chỉ được tuyển chọn khi thỏa mãn:
+    \begin{itemize}
+      \item Có nhãn arXiv giao với tập \texttt{ARXIV\_CATS = \{"cs.AI", "cs.LG", "stat.ML", "cs.NE", "cs.CV", "cs.CL", "cs.RO"\}}; \textbf{HOẶC}
+      \item Đối với các công trình kinh điển không có trên arXiv (gán định danh \texttt{s2\_\{paperId\}}), tên hội nghị/tạp chí (\texttt{venue}) phải khớp với biểu thức chính quy \texttt{AI\_VENUES} (bao phủ NeurIPS, ICML, ICLR, CVPR, ICCV, ECCV, PAMI, ACL, EMNLP, NAACL, COLING, AAAI, IJCAI, ICRA, IROS, Neural Computation).
+    \end{itemize}
+  \item \textbf{Bồi hoàn PDF Toàn văn (\texttt{dag\_tier3\_pdf\_backfill})}: Đối với các bài kinh điển ngoài arXiv (\texttt{s2\_*}) trước đây chỉ mới lưu tóm tắt trong Silver (\texttt{content\_origin != "open\_access\_pdf"}), DAG quét Silver Parquet, gọi Semantic Scholar Batch API (\texttt{BATCH=500}) để lấy trường \texttt{openAccessPdf.url} và tái phát hành vào RabbitMQ kèm cờ \texttt{"refresh": True}. Cờ này lệnh cho \texttt{QueueConsumer} tải PDF mã nguồn mở bằng \texttt{PyMuPDF}, ghi bản ghi Silver giàu hơn và xóa thay thế các vector tóm tắt cũ trong Qdrant.
+\end{enumerate}
+
+\subsection{Phân Định Nguồn Live và Nguồn Lịch Sử trong Bronze}
+\label{sec:ch2_source_distinction}
+
+Nhằm bảo đảm tính trung thực tuyệt đối giữa mã nguồn triển khai và dữ liệu quan sát, cần phân định rõ hai nhóm nguồn trong kho:
+\begin{itemize}
+  \item \textbf{Các nguồn đang chạy trực tiếp trong Airflow DAGs hiện hành}: arXiv (RSS, Search API, OAI-PMH), CVF Open Access (CVPR, ICCV, WACV), và Semantic Scholar (Bulk + Open-Access PDF cho Tier 3).
+  \item \textbf{Các nguồn đã ngừng thu thập live hoặc thuộc dữ liệu lịch sử}: Khối thu thập trực tiếp \textbf{OpenReview} đã ngừng trong lịch DAG do API và giao diện web của OpenReview yêu cầu đăng nhập tài khoản; tuy nhiên thư mục \path{src/ingestion/} vẫn lưu giữ các module \path{openreview_harvester.py} (từng dùng để nạp bình duyệt ICLR/NeurIPS qua mirror HuggingFace kèm chỉ số \texttt{consensus\_score} và \texttt{controversy\_variance}), \path{zenodo_harvester.py}, \path{cvf_harvester.py}, \path{arxiv_batch_harvester.py} và các bản ghi thô \textbf{OpenAlex} từ các đợt thu thập tháng 10/2026 còn lưu trong tầng Bronze/Silver (phục vụ truy vết và đánh giá tập \texttt{gold-022}--\texttt{gold-026}).
+\end{itemize}
+
+\section{Mô Hình Toán Học Cân Bằng Tải và Quản Trị Ngân Sách Lưu Trữ}
+\label{sec:ch2_waterfilling}
+
+Nếu thu thập tự do theo thứ tự thời gian, lượng bài khổng lồ của các chuyên ngành thịnh hành như \texttt{cs.CV} hay \texttt{cs.LG} sẽ nhanh chóng tiêu thụ hết hạn mức lưu trữ trước khi các ngành \texttt{cs.RO}, \texttt{cs.IR}, hay \texttt{stat.ML} đạt đủ độ sâu đại diện. Tệp \path{dags/dag_tier2_near_past_harvest.py} giải quyết triệt để vấn đề này bằng hệ thống 3 cơ chế toán học đồng bộ, với các nhóm chủ đề và tham số mặc định tổng hợp tại Bảng~\ref{tab:ch2_tier2_params}.
+
+\begin{table}[htbp]
+  \centering
+  \small
+  \caption[Ánh xạ 7 nhóm chủ đề và tham số điều tiết tải Tier 2]{Ánh xạ 7 nhóm chủ đề và các tham số điều tiết tải của Tier 2}
+  \label{tab:ch2_tier2_params}
+  \setlength{\tabcolsep}{3.5pt}
+  \begin{tabularx}{\linewidth}{|>{\raggedright\arraybackslash}p{19mm}|L|>{\raggedright\arraybackslash}p{27mm}|>{\raggedright\arraybackslash}p{38mm}|>{\centering\arraybackslash}p{22mm}|}
+    \hline
+    \textbf{Nhóm (\texttt{GROUPS})} & \textbf{Mã chuyên ngành thành viên} & \textbf{Nguồn cung cấp chính} & \textbf{Tham số điều tiết \& Ngân sách} & \textbf{Giá trị mặc định} \\
+    \hline
+    \textbf{CV} & \path{cs.CV}, \path{eess.IV} & CVF + arXiv OAI-PMH & \path{LAKEHOUSE_BUDGET_GB} & \texttt{20.0 GB} \\
+    \hline
+    \textbf{NLP} & \path{cs.CL} & arXiv OAI-PMH & \path{EST_BYTES_PER_PAPER} & \texttt{160,000 B} ($\sim 156\text{ KB}$) \\
+    \hline
+    \textbf{ML} & \path{cs.LG}, \path{stat.ML}, \path{cs.NE} & arXiv OAI-PMH & \path{QDRANT_BYTES_PER_POINT} & \texttt{6,500 B} ($\sim 6.3\text{ KB}$) \\
+    \hline
+    \textbf{AI} & \path{cs.AI}, \path{cs.MA} & arXiv OAI-PMH & \path{HARVEST_BATCH} & \texttt{1,000 papers} \\
+    \hline
+    \textbf{Robotics} & \path{cs.RO} & arXiv OAI-PMH & \path{HARVEST_LOW_WATER} & \texttt{200 papers} \\
+    \hline
+    \textbf{IR} & \path{cs.IR} & arXiv OAI-PMH & \path{FLOOR} (mốc đáy ngày) & \texttt{2024-01-01} \\
+    \hline
+    \textbf{Speech} & \path{cs.SD}, \path{eess.AS} & arXiv OAI-PMH & \path{SLICE_SECONDS} / \path{RUN_HOURS} & \texttt{3,600 s} / \texttt{23 h} \\
+    \hline
+  \end{tabularx}
+  \ReportNote{Nguồn: Tham số lớp \texttt{Harvest} trong \path{dags/dag_tier2_near_past_harvest.py} và các hàm quản trị ngân sách/hàng đợi trong \path{dags/_common.py}.}
+\end{table}
+
+\subsection{Thuật Toán Water-Filling Cân Bằng Bảy Nhóm Chủ Đề và Nguồn}
+\label{sec:ch2_wf_algo}
+
+Tại thời điểm khởi chạy \texttt{Harvest.\_\_init\_\_}, hệ thống quét song song (\texttt{ThreadPoolExecutor(max\_workers=8)}) các cột \texttt{["paper\_id", "tier", "source", "categories"]} từ Silver để đếm số bài Tier 2 hiện có trên từng nhóm chủ đề $g \in \mathcal{G}$ ($|\mathcal{G}| = 7$) và từng nguồn $s \in \mathcal{S}$. Hàm \texttt{\_group\_of(categories)} ánh xạ mỗi bài báo về \textbf{duy nhất một nhóm chủ đề đầu tiên} xuất hiện trong danh sách \texttt{categories} (riêng bài từ CVF mặc định thuộc nhóm \texttt{CV}).
+
+Bài toán phân bổ sức chứa còn trống $R$ (\texttt{self.room}) cho tập các khóa có số lượng hiện tại $c_1 \le c_2 \le \dots \le c_K$ được giải bằng thuật toán \textbf{Water-Filling} (đổ nước vào bình thông nhau --- ưu tiên lấp đầy các nhóm thiếu hụt nhất lên cùng một mực nước chung $L^*$):
+\begin{equation}
+  L^* = \max \left\{ L \in \mathbb{Z}_{\ge 0} \;\middle|\; \sum_{k=1}^{K} \max\bigl(0,\, L - c_k\bigr) \le R \right\}
+  \label{eq:ch2_waterfill_def}
+\end{equation}
+\noindent Trong đó: $c_k$ là số bài Tier 2 hiện có của nhóm (hoặc nguồn) thứ $k$, $K$ là tổng số nhóm (hoặc số nguồn), $R$ là số bài còn trống trong ngân sách lưu trữ (\texttt{room}), và $L^*$ là ngưỡng trần chung áp dụng cho lượt chạy hiện tại (\texttt{self.level["group"]} và \texttt{self.level["source"]}).
+
+Cụ thể, trong hàm \texttt{\_fill\_level(counts, room)}, các giá trị được sắp xếp tăng dần $v_0 \le v_1 \le \dots \le v_{K-1}$; tại bước $i \in \{1,\dots,K\}$, lượng bài cần thiết để nâng $i$ nhóm thấp nhất từ mực hiện tại lên $v_i$ là $\Delta_i = (v_i - \text{level}) \cdot i$. Nếu $\Delta_i > \text{left}$, mực nước chung được xác định trực tiếp bằng:
+\begin{equation}
+  L^* = \text{level} + \left\lfloor \frac{\text{left}}{i} \right\rfloor
+  \label{eq:ch2_waterfill_step}
+\end{equation}
+\noindent Trong đó: $\text{level}$ là mực nước trung gian ngay trước bước tràn, $\text{left}$ là phần dư của $R$ còn lại tại bước $i$, và $i$ là số lượng nhóm có giá trị dưới mức $v_i$.
+
+Khi xem xét một bài báo ứng viên thuộc nhóm $g$ và nguồn $s$, hạn mức còn lại mà hệ thống cho phép thu nhận được tính đồng thời theo cả hai chiều:
+\begin{equation}
+  \text{left}(g, s) = \max\Bigl(0,\; \min\bigl(L_{\text{group}}^* - \text{count}_{\text{group}}[g],\; L_{\text{source}}^* - \text{count}_{\text{source}}[s]\bigr)\Bigr)
+  \label{eq:ch2_waterfill_left}
+\end{equation}
+\noindent Trong đó: $L_{\text{group}}^*, L_{\text{source}}^*$ lần lượt là mực nước Water-Filling theo 7 nhóm chủ đề và theo danh sách nguồn (\texttt{cvf}, \texttt{arxiv}); $\text{count}_{\text{group}}[g]$ và $\text{count}_{\text{source}}[s]$ là số lượng bài đã ghi nhận của nhóm $g$ và nguồn $s$. Nếu $\text{left}(g, s) = 0$, bài báo bị giữ lại cho các lượt sau (\texttt{over\_mix += 1}) để nhường chỗ cho các nhóm ít bài hơn.
+
+\subsection{Thuật Toán Điều Tiết Tín Dụng Theo Ngày (Credit Pacing)}
+\label{sec:ch2_credit_pacing}
+
+Thuật toán Water-Filling giải quyết cân bằng \textit{giữa các ngành}, nhưng nếu chỉ lấy tham lam theo thứ tự thời gian đi ngược từ hôm nay, các ngành có hạn mức lớn sẽ tiêu hết toàn bộ chỉ tiêu ngay trong vài tuần gần nhất, gây ra thiên lệch thời gian (\textit{recency bias}). Để rải đều chỉ tiêu của từng nhóm $g$ trên toàn bộ khoảng ngày $D_{\text{left}} = (\text{day} - \text{FLOOR}).\text{days} + 1$ còn phải đi qua, \texttt{\_arxiv\_stream} áp dụng bộ đếm tín dụng xác định (\textit{deterministic credit counter}, không dùng ngẫu nhiên):
+\begin{equation}
+  \text{credit}_g \leftarrow \text{credit}_g + \min\!\left(1.0,\; \frac{\text{left}(g, \text{arxiv})}{\hat{r}_g \cdot D_{\text{left}}}\right), \qquad \text{với } \hat{r}_g = \frac{\text{met}_g}{d + 1}
+  \label{eq:ch2_credit_pacing}
+\end{equation}
+\noindent Trong đó: $\text{met}_g$ là tổng số bài báo mới chưa có trong Silver của nhóm $g$ gặp được sau $d+1$ ngày đã duyệt trong phiên hiện tại; $\hat{r}_g$ là tốc độ xuất hiện trung bình theo ngày của nhóm $g$; $\text{left}(g, \text{arxiv})$ là hạn mức còn lại của nhóm $g$ trên nguồn arXiv; và $D_{\text{left}}$ là số ngày còn lại tính đến \texttt{FLOOR = 2024-01-01}. Một bài báo chỉ được đưa vào hàng đợi khi $\text{credit}_g \ge 1.0$, khi đó hệ thống trừ đi $1.0$ tín dụng (\texttt{credit[g] -= 1}); ngược lại bài báo tạm bỏ qua (\texttt{over\_mix += 1}), bảo đảm phân bố bài thu thập trải đều từ 2024 đến hiện tại.
+
+\subsection{Quản Trị Ngân Sách Lưu Trữ Thời Gian Thực và Backpressure}
+\label{sec:ch2_budget}
+
+Trước khi bắt đầu và trước mỗi lô phát hành \texttt{HARVEST\_BATCH = 1,000} bài, hệ thống đo trực tiếp lượng tài nguyên đang chiếm dụng trên cả 3 thành phần (MinIO bucket, Qdrant points và các bản ghi đang nằm chờ trong hàng đợi chưa kịp ghi xuống đĩa) qua hàm \texttt{budget\_papers\_left()} tại \path{dags/_common.py}:
+\begin{equation}
+  \text{Used} = B_{\text{MinIO}} + N_{\text{points}} \cdot 6{,}500 + N_{\text{queued}} \cdot 160{,}000 \;\le\; \text{LAKEHOUSE\_BUDGET\_GB} \cdot 2^{30}
+  \label{eq:ch2_storage_used}
+\end{equation}
+\noindent Trong đó: $B_{\text{MinIO}}$ là tổng kích thước byte thực tế của tất cả đối tượng trong bucket \path{uth-scientific-lakehouse} (quét qua paginator \texttt{list\_objects\_v2}), $N_{\text{points}}$ là số điểm vector hiện hữu trong collection \path{scientific_papers_gold} của Qdrant (mỗi vector 768-D kèm chỉ mục HNSW ước lượng \texttt{QDRANT\_BYTES\_PER\_POINT = 6,500} bytes), $N_{\text{queued}}$ là độ sâu hàng đợi \path{scientific_paper_ingest} (\texttt{messages\_ready + messages\_unacknowledged}), và \texttt{160,000} bytes là chi phí lưu trữ tổng hợp trung bình cho một bài báo (Bronze \texttt{.html.gz} + Silver + Chunks + Vector). Từ đó, sức chứa còn lại tính theo số bài báo là:
+\begin{equation}
+  \text{Room}_{\text{papers}} = \max\!\left(0,\; \left\lfloor \frac{\text{LAKEHOUSE\_BUDGET\_GB} \cdot 2^{30} - \text{Used}}{160{,}000} \right\rfloor\right)
+  \label{eq:ch2_storage_room}
+\end{equation}
+\noindent Trong đó: $\text{LAKEHOUSE\_BUDGET\_GB} = 20.0\text{ GB}$ là trần ngân sách lưu trữ được phép sử dụng trọn vẹn (không áp đặt ngưỡng dừng cứng 90\% như tài liệu cũ), còn $\text{Used}$ là tổng dung lượng đang dùng tính theo Công thức~\eqref{eq:ch2_storage_used}. Sau từng lô, hệ thống cập nhật động \texttt{self.room = min(self.queued + budget\_papers\_left(), max\_papers)}.
+
+Song song với ngân sách đĩa, hàm \texttt{wait\_for\_queue\_room("tier2", low=200, poll\_seconds=30)} thực thi cơ chế \textbf{kiểm soát áp lực ngược (\textit{Backpressure})}: cứ mỗi lô \texttt{HARVEST\_BATCH = 1,000} bài, DAG thu thập tạm dừng và thăm dò RabbitMQ mỗi \texttt{30} giây cho đến khi độ sâu hàng đợi \path{scientific_paper_ingest} rút xuống $\le \text{HARVEST\_LOW\_WATER} = 200$ rồi mới phát lô tiếp theo, ngăn chặn tình trạng thu thập chạy quá xa khả năng xử lý của worker GPU.
+
+\section{Chiến Lược Phân Mảnh Thu Thập Phân Tán (MD5 Hash-Modulo Sharding)}
+\label{sec:ch2_sharding}
+
+Trong các đợt thu hoạch quy mô lớn đa máy trạm (máy trạm Windows RTX, máy chủ Linux, laptop macOS Apple Silicon), hệ thống sử dụng hàm phân hoạch băm xác định \textbf{MD5 Hash-Modulo Partitioning} trên mã định danh \texttt{paper\_id}:
+\begin{equation}
+  \text{worker\_shard} = \operatorname{int}\Bigl(\operatorname{MD5}(\text{paper\_id}),\; 16\Bigr) \bmod N
+  \label{eq:ch2_md5_shard}
+\end{equation}
+\noindent Trong đó: $\operatorname{MD5}(\text{paper\_id})$ là chuỗi băm thập lục phân 128-bit của mã định danh bài báo, $\operatorname{int}(\cdot, 16)$ chuyển đổi sang số nguyên không dấu 128-bit, $N = \text{total\_shards}$ là tổng số worker vật lý tham gia thu thập, và $\text{worker\_shard} \in \{0, 1, \dots, N-1\}$ là chỉ số shard sở hữu bài báo đó.
+
+Cơ chế này mang lại ba bảo đảm kỹ thuật trực tiếp: (i) chi phí bỏ qua bằng $0\text{ ms}$ ngay trên RAM trước khi mở kết nối HTTP khi $\text{worker\_shard} \neq \text{shard\_index}$; (ii) tái phân vùng an toàn (\textit{Safe Resharding}) khi mở rộng cụm từ $N=2$ lên $N=4$ máy mà không tải lại bài cũ nhờ kết hợp tra cứu bộ nhớ đệm \texttt{known\_paper\_ids} từ Silver; và (iii) ghi S3 không xung đột vào các phân vùng riêng (\path{fulltext_papers_shard{k}.parquet}), hoặc chuyển tiếp mượt sang mô hình \textit{competing consumers / prefetch QoS} trên RabbitMQ khi mở rộng ngang tầng xử lý.
+\FloatBarrier

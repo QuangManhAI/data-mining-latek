@@ -1,0 +1,205 @@
+% ==============================================================================
+% CHƯƠNG 4 (PHẦN 2): KIẾN TRÚC HYBRID RAG, RERANKING VÀ CỔNG CHỨNG CỨ
+% ==============================================================================
+
+\section{Kiến Trúc Phân Tầng Tách Biệt Trách Nhiệm (Tiered Separation of Concerns)}
+\label{sec:ch4_tiered_rag}
+
+Đường ống hỏi đáp và truy hồi học thuật phải cân bằng đồng thời tốc độ tìm kiếm dưới giây trên hơn \textbf{1.04 triệu vector} với bài toán tiết kiệm bộ nhớ RAM trên hạ tầng Qdrant và S3~\cite{lewis2020retrieval,qdrant2023vector,minio2023storage}. Theo quyết định kiến trúc \texttt{D-058} (xem thêm Bảng~\ref{tab:chunkstore_schema} tại Chương~\ref{chap:data_preparation}), toàn bộ hệ thống trong \path{backend/app/services/retrieval_service.py} và \path{src/storage/chunk_store.py} được phân tách thành 3 tầng trách nhiệm độc lập như Bảng~\ref{tab:ch4_tiered_rag}.
+
+\begin{table}[!htbp]
+\centering
+\small
+\setlength{\tabcolsep}{3.5pt}
+\caption[Kiến trúc 3 tầng tách biệt trách nhiệm trong Hybrid RAG]{Kiến trúc 3 tầng tách biệt trách nhiệm giữa chỉ mục vector, kho đoạn văn và tín hiệu khai phá}
+\label{tab:ch4_tiered_rag}
+\begin{tabularx}{\linewidth}{|>{\raggedright\arraybackslash}p{26mm}|>{\raggedright\arraybackslash}p{31mm}|>{\raggedright\arraybackslash}p{46mm}|L|}
+\hline
+\textbf{Tầng trách nhiệm} & \textbf{Thành phần lưu trữ} & \textbf{Nội dung nắm giữ} & \textbf{Mục tiêu thiết kế} \\ \hline
+\textbf{Tầng 1: Vector Index gọn nhẹ} & Qdrant Cloud (\path{scientific_papers_gold}) & Vector 768-D HNSW~\cite{malkov2018efficient} + đúng \textbf{5 trường payload} (\path{chunk_id}, \path{paper_id}, \path{year}, \path{primary_category}, \path{section_type}) & Giảm 80--90\% dấu chân RAM chỉ mục HNSW trên Qdrant so với lưu toàn văn \\ \hline
+\textbf{Tầng 2: Kho đoạn văn bền vững} & MinIO S3 \path{gold/chunks/} (\texttt{ChunkStore}) & Toàn văn chunk nén ZSTD (\path{ROW_GROUP_SIZE = 512}), \path{section_title}, \path{word_count}, danh mục \& tác giả & Thủy hóa ngẫu nhiên song song theo lô cho Top-$K$ ứng viên sau tìm kiếm vector \\ \hline
+\textbf{Tầng 3: Tín hiệu tri thức offline} & MinIO \path{gold/mining/*.json} + RAM & Điểm PageRank chuẩn hóa (\path{max_pagerank = 0.012632}) và bản đồ luật FP-Growth & Gia cố xếp hạng bài nền tảng và chú thích mở rộng không tốn chi phí đồ thị runtime \\ \hline
+\end{tabularx}
+\ReportNote{Nguồn: Kiến trúc triển khai thực tế tại \path{src/storage/chunk_store.py}, \path{src/indexing/qdrant_manager.py} và \path{backend/app/services/retrieval_service.py}.}
+\end{table}
+
+\subsection{\texorpdfstring{Ranh Giới Bất Biến giữa Qdrant Vector Index và \texttt{ChunkStore} Parquet}{Ranh Gioi Bat Bien giua Qdrant Vector Index va ChunkStore Parquet}}
+\label{sec:ch4_qdrant_boundary}
+
+Ở kiến trúc LanceDB sơ khai (143,523 đoạn), việc nhúng toàn bộ chuỗi văn bản và siêu dữ liệu tác giả vào payload chỉ mục làm dung lượng bộ nhớ tăng tuyến tính theo độ dài văn bản và tăng độ trễ truyền tải mạng khi trả Top-40 ứng viên. Để khắc phục triệt để, \path{src/storage/chunk_store.py} định nghĩa hằng số bất biến \texttt{QDRANT\_PAYLOAD\_FIELDS = ("chunk\_id", "paper\_id", "year", "primary\_category", "section\_type")}. Mỗi điểm vector trên Qdrant dùng khóa định danh UUIDv5 tất định sinh từ \path{chunk_id} theo không gian \texttt{NAMESPACE\_DNS} (\path{src/indexing/qdrant_manager.py}), tuyệt đối không lưu văn bản thô dài dòng trong chỉ mục vector.
+
+\subsection{\texorpdfstring{Cơ Chế Hydration theo \texttt{row-group min/max} và LRU RAM Cache}{Co Che Hydration theo row-group min/max va LRU RAM Cache}}
+\label{sec:ch4_hydration}
+
+Khi \texttt{RetrievalService} lấy \texttt{candidate\_limit = min(max(k * 2, 25), 40)} ứng viên từ Qdrant, các đoạn có payload rút gọn thiếu nội dung \texttt{text}, \texttt{title} hoặc \texttt{authors} được bổ sung tự động thông qua \texttt{ChunkStore.fetch\_chunks(chunk\_ids)}:
+\begin{enumerate}[label=\textbf{\arabic*.}]
+  \item \textbf{Bộ đệm LRU 20,000 đoạn trong RAM (\texttt{cache\_size = 20000})}: Các đoạn thuộc bài báo kinh điển được hỏi lặp lại được phục vụ ngay trong bộ nhớ RAM ở mức dưới mili-giây mà không cần đọc từ MinIO S3.
+  \item \textbf{Đọc chọn lọc theo thống kê \texttt{row-group min/max} trên Parquet ZSTD}: Thay vì đọc toàn bộ các phân mảnh trong \path{gold/chunks/parts/} và các tệp hợp nhất \path{gold/chunks/chunk_store_*.parquet}, \texttt{ChunkStore} kiểm tra siêu dữ liệu \texttt{min/max} của cột \texttt{chunk\_id} trong từng nhóm hàng (\texttt{ROW\_GROUP\_SIZE = 512}). Chỉ các nhóm hàng có khoảng \texttt{[min, max]} bao phủ khóa \texttt{chunk\_id} đích mới được tải song song qua \texttt{ThreadPoolExecutor(max\_workers=16)} (kèm tối đa 4 luồng dự phòng tại \path{retrieval_service.py} khi tra cứu siêu dữ liệu tác giả từ \texttt{lake\_service.lookup\_paper}).
+  \item \textbf{Cơ chế \texttt{latest\_only}}: Tự động bỏ qua các tệp phân mảnh \path{part-*.parquet} có dấu thời gian cũ hơn tệp hợp nhất chính \path{chunk_store_*.parquet}, tránh đọc trùng lặp khi tiến trình hợp nhất chạy nền.
+\end{enumerate}
+
+\FloatBarrier
+\section{\texorpdfstring{Đường Ống Hybrid Retrieval, RRF ($k=60$) và Gia Cố PageRank}{Duong Ong Hybrid Retrieval, RRF (k=60) va Gia Co PageRank}}
+\label{sec:ch4_hybrid_retrieval}
+
+Hàm \texttt{RetrievalService.retrieve()} điều phối truy hồi theo tham số \texttt{retrieval\_mode} (\texttt{"hybrid"} mặc định, \texttt{"vector"}, hoặc \texttt{"graph"}), kết hợp khớp định danh chính xác, tìm kiếm ngữ nghĩa dày đặc, chấm điểm từ vựng tại chỗ và hợp nhất thứ hạng.
+
+\subsection{Nhánh Khớp Định Danh Trực Tiếp và Khớp Tiêu Đề}
+\label{sec:ch4_id_title_match}
+
+Trước khi nhúng câu hỏi thành vector, dịch vụ kiểm tra hai bộ trích xuất tức thời:
+\begin{itemize}
+  \item \textbf{\path{_extract_paper_id_from_query(query)}}: Nhận diện mã định danh OpenAlex (\texttt{\textbackslash b(W\textbackslash d\{8,11\})\textbackslash b}) hoặc mã arXiv (\texttt{\textbackslash b(\textbackslash d\{4\}\textbackslash.\textbackslash d\{4,5\}\allowbreak(?:v\textbackslash d+)?)\textbackslash b}) không phân biệt hoa thường. Khi khớp, \path{lake_service.lookup_paper(paper_id)} đọc thẳng các đoạn của bài báo đó từ hồ với điểm khởi đầu \textbf{0.98}, bảo đảm tỷ lệ bỏ sót bằng 0 cho các câu hỏi hỏi đích danh mã bài (như \textit{``Explain paper 1706.03762''}).
+  \item \textbf{\texttt{\_search\_title\_matches(query)}}: Khi câu hỏi chứa cụm trong ngoặc kép hoặc là cụm ngắn $\le 6$ từ không phải từ để hỏi (\texttt{what}, \texttt{how}, \texttt{explain}, \texttt{summarize}), dịch vụ đối chiếu trên bộ nhớ \texttt{lake\_service.search\_titles(query)} và bổ sung tối đa 5 bài khớp vào tập ứng viên ở điểm nền \textbf{0.95}.
+\end{itemize}
+
+\subsection{Nhánh Dense (\texttt{nomic-embed-text-v1.5}) và Tiền Xử Lý An Toàn}
+\label{sec:ch4_dense_branch}
+
+Dịch vụ \texttt{EmbedderService} (\path{backend/app/services/embedder_service.py}) nạp mô hình \path{nomic-embed-text-v1.5} (\texttt{trust\_remote\_code=True})~\cite{nussbaum2024nomic,nomicmodelcard2024}, áp dụng bản vá \texttt{\_patch\_extended\_mask} tương thích thư viện \texttt{transformers} nhằm mở rộng nội suy vị trí RoPE lên tối đa \textbf{2,048 token}. Mọi truy vấn trước khi đưa vào bộ mã hóa đều gắn tiền tố bắt buộc \texttt{"search\_query: "} (đối xứng với \texttt{"search\_document: "} khi lập chỉ mục), lưu vào bộ đệm LRU kích thước 1,024 truy vấn, chuẩn hóa vector $L_2$ và đi qua bộ lọc loại ký tự Unicode surrogate (\texttt{re.sub(r"[\textbackslash ud800-\textbackslash udfff]", " ", text)}) để ngăn lỗi sập bộ tách từ Rust (\texttt{BUG-01}).
+
+\subsection{Nhánh Lexical Scoring và Chú Thích Luật FP-Growth}
+\label{sec:ch4_lexical_branch}
+
+Trong phiên bản FastAPI sản xuất (\path{retrieval_service.py}), nhánh từ vựng thực thi bộ chấm điểm đa tầng \texttt{\_compute\_lexical\_score()} trực tiếp trên tập ứng viên hợp nhất từ Qdrant và nhánh tra cứu trực tiếp (Đoạn mã~\ref{lst:ch4_lexical_scorer}), đồng thời gọi \texttt{\_expand\_rules()} để sinh tối đa 3 chú thích mở rộng khái niệm từ tập luật FP-Growth (Trụ cột 1).
+
+\begin{lstlisting}[language=Python, caption={Bo cham diem tu vung uu tien cum tu, tieu de va tu viet tat hoc thuat}, label={lst:ch4_lexical_scorer}]
+# In-pool lexical scoring weighting exact phrases, titles, acronyms and sections
+if phrase_present:
+    score += 5.0
+if exact_title_match:
+    score += 8.0
+if term_count >= 2 and all_terms_in_title:
+    score += 10.0
+for t in terms:
+    is_acronym = len(t) >= 2 and len(t) <= 6 and t.isupper()
+    if t in body_lower:
+        score += 3.0 if is_acronym else 1.0
+    if t in title_lower:
+        score += 4.0 if is_acronym else 2.0
+    if t in section_lower:
+        score += 1.5
+score += (matched_terms / max(1, len(terms))) * 3.0
+norm_lexical = min(1.0, score / max(1.0, len(terms) * 5.0))
+\end{lstlisting}
+
+Thiết kế trên thưởng trọng số cao cho các từ viết tắt in hoa chuyên ngành (2--6 ký tự như \texttt{RRF}, \texttt{PPO}, \texttt{VAE}, \texttt{LoRA}: cộng $+3.0$ trong thân bài và $+4.0$ trong tiêu đề thay vì $+1.0$ / $+2.0$), đồng thời cộng hệ số bao phủ từ khóa (\texttt{coverage * 3.0}). Song song đó, trong nhánh đánh giá độc lập \texttt{RAG\_TS} (\texttt{EXP-05}, Chương~\ref{chap:evaluation}), nhánh từ vựng sử dụng chỉ mục \textbf{BM25 toàn văn trên SQLite FTS5}~\cite{robertson2009probabilistic} trước khi hợp nhất với kết quả Dense.
+
+\subsection{Hợp Nhất RRF và Cơ Chế Gia Cố Uy Tín PageRank}
+\label{sec:authority_multiplier}
+
+Khi cả hai danh sách xếp hạng ngữ nghĩa (\texttt{dense\_ranked}) và từ vựng (\texttt{lexical\_ranked}) hoàn tất ở chế độ \texttt{"hybrid"}, hệ thống hợp nhất thứ hạng bằng thuật toán \textbf{Reciprocal Rank Fusion (RRF)}~\cite{cormack2009reciprocal} với hằng số làm trơn $k_{\text{RRF}} = 60$, sau đó ánh xạ tuyến tính điểm RRF thô (cực đại lý thuyết $2/61 \approx 0.032787$) về dải $[0.70, 0.95]$:
+\begin{equation}
+  \mathrm{RRF}(d) = \frac{1}{k_{\text{RRF}} + r_{\text{dense}}(d)} + \frac{1}{k_{\text{RRF}} + r_{\text{lexical}}(d)},
+  \qquad
+  S_{\text{base}}(d) = 0.70 + \left(\frac{\mathrm{RRF}(d)}{2 / 61}\right) \times 0.25
+  \label{eq:ch4_rrf}
+\end{equation}
+Trong đó: $k_{\text{RRF}} = 60$ là hằng số ổn định thứ hạng; $r_{\text{dense}}(d)$ và $r_{\text{lexical}}(d)$ là thứ hạng (tính từ 1) của đoạn văn $d$ trong hai danh sách xếp hạng tương ứng; $S_{\text{base}}(d) \in [0.70, 0.95]$ là điểm cơ sở sau chuẩn hóa. Tiếp theo, uy tín học thuật từ Trụ cột 3 được tích hợp thông qua \textbf{hệ số gia cố nhân tính PageRank} (khi bật \texttt{use\_pagerank}):
+\begin{align}
+  \widetilde{\mathrm{PR}}(d) &= \min\!\left(1.0,\; \frac{\max_{a \in \text{Authors}(d)} \mathrm{PR}(a)}{\max(10^{-6},\; \mathrm{PR}_{\max})}\right), \notag \\
+  S_{\text{final}}(d) &= \min\!\left(0.9999,\; S_{\text{base}}(d) \cdot \left(1 + 0.25\,\widetilde{\mathrm{PR}}(d)\right)\right)
+  \label{eq:ch4_authority}
+\end{align}
+Trong đó: $\mathrm{PR}(a)$ là điểm PageRank khớp được cho tác giả hoặc công trình thông qua \texttt{\_match\_authority()}; $\mathrm{PR}_{\max} = 0.012632$ là ngưỡng PageRank trần của đồ thị trích dẫn; hệ số $0.25$ giới hạn mức thưởng uy tín tối đa là \textbf{+25\%} và biên trên \texttt{0.9999} ngăn vượt quá ngưỡng 1.0. Hình~\ref{fig:rag_pipeline_flow} minh họa toàn bộ luồng dữ liệu từ câu hỏi đầu vào tới kết quả trả về.
+
+\begin{figure}[!htbp]
+\centering
+\DrawRagPipelineDiagram
+\caption[Luồng truy xuất và sinh câu trả lời trong kiến trúc Hybrid RAG]{Luồng truy xuất, hợp nhất RRF gia cố PageRank, tái xếp hạng và sinh câu trả lời Hybrid RAG}
+\ReportNote{Nguồn: Kiến trúc luồng xử lý truy vấn triển khai trong \path{backend/app/services/retrieval_service.py}, \path{reranker_service.py} và \path{rag_service.py}.}
+\label{fig:rag_pipeline_flow}
+\end{figure}
+\FloatBarrier
+
+\textbf{Đối sánh hai biến thể hợp nhất trong mã nguồn và thực nghiệm}:
+\begin{enumerate}[label=\textbf{\arabic*.}]
+  \item \textbf{Trong API sản xuất (\path{retrieval_service.py})}: Hệ số $(1 + 0.25\,\widetilde{\mathrm{PR}}(d))$ được nhân trực tiếp vào điểm ứng viên vector/tiêu đề trước khi lập danh sách \texttt{dense\_ranked}, và sau bước tính RRF chuẩn hóa $[0.70, 0.95]$ lại tiếp tục nhân một lần nữa trước khi chuyển sang Reranker.
+  \item \textbf{Trong kịch bản đánh giá đối chứng \texttt{EXP-04} (\path{benchmarks/evaluate_120_ranking_5_scenarios.py}, Bảng~\ref{tab:laya_5_scenarios} tại Chương~\ref{chap:evaluation})}: Để tách bạch đóng góp độc lập của từng thành phần qua 5 kịch bản (Vector, Cross-Encoder, RRF, PageRank, Full), thực nghiệm dùng công thức \textbf{Weighted RRF kết hợp PageRank logarit cộng biên}:
+  \begin{equation}
+    S_{\text{EXP04}}(d) = \frac{0.65}{60 + r_{\text{vec}}(d)} + \frac{1.35}{60 + r_{\text{ce}}(d)} + 0.0001\,S_{\text{lex}}(d) + 0.025\,\widetilde{\mathrm{PR}}_{\log}(d)
+    \label{eq:ch4_exp04_rrf}
+  \end{equation}
+  Trong đó: trọng số Cross-Encoder (1.35) cao hơn gấp đôi trọng số Vector (0.65), $S_{\text{lex}}(d)$ là điểm từ vựng bổ trợ, và $\widetilde{\mathrm{PR}}_{\log}(d)$ là giá trị $\ln(1 + \mathrm{PR} \cdot 10^4)$ trích từ \path{citation_metrics.parquet} được chuẩn hóa min-max trong nhóm ứng viên để tránh bài báo kinh điển lấn át bài viết mới khớp sát câu hỏi hơn.
+\end{enumerate}
+
+\section{Cross-Encoder Reranking, Temperature Scaling và Evidence Gate}
+\label{sec:ch4_reranking}
+
+\subsection{Bi-Encoder so với Cross-Encoder và Kiến Trúc Chấm Điểm Kép}
+\label{sec:ch4_ce_arch}
+
+Mô hình Bi-Encoder (\path{nomic-embed-text-v1.5}) mã hóa truy vấn $q$ và đoạn văn $d$ thành hai vector độc lập trước khi tính tích vô hướng, nên không nắm bắt được tương tác chú ý chéo ở mức từng token (\textit{token-level cross-attention}) giữa thuật ngữ câu hỏi và biểu thức chứng minh trong đoạn văn. Ngược lại, \textbf{Cross-Encoder}~\cite{nogueira2019passage} ghép nối trực tiếp cặp \texttt{[CLS] q [SEP] d [SEP]} qua toàn bộ các tầng Transformer để tính điểm hợp chuẩn $z_{\text{CE}}$. Do chi phí suy luận tỷ lệ bậc hai $\mathcal{O}(C \cdot L^2)$ theo số ứng viên $C$, Cross-Encoder chỉ vận hành ở tầng tinh lọc trên \texttt{RERANKER\_CANDIDATE\_K = 8} ứng viên hàng đầu (hoặc 10--40 trong các kịch bản benchmark).
+
+Trong dịch vụ Python sản xuất (\path{backend/app/services/reranker_service.py}), lớp \texttt{RerankerService} nạp \texttt{AutoModelForSequenceClassification} với mô hình mặc định \path{cross-encoder/ms-marco-MiniLM-L-6-v2} (dự phòng \path{BAAI/bge-reranker-base}, \texttt{max\_length = 256}), định dạng chuỗi đầu vào \texttt{"Title: \{title\}. Section: \{section\_title\}.\textbackslash n\{text[:1500]\}"} và cộng phần thưởng đối sánh tiêu đề cùng từ viết tắt trước khi qua hàm sigmoid:
+\begin{equation}
+  z' = z_{\text{CE}} + 3.0 \cdot \operatorname{title\_ratio}(q, d) + 2.0 \cdot \operatorname{acronym\_hits}(q, d),
+  \qquad
+  p_{\text{rerank}} = \frac{1}{1 + e^{-z'}}
+  \label{eq:ch4_ce_boost}
+\end{equation}
+Trong đó: $z_{\text{CE}}$ là logit thô của Cross-Encoder; $\operatorname{title\_ratio}(q, d) \in [0, 1]$ là tỷ lệ từ khóa của $q$ xuất hiện trong tiêu đề bài báo chứa $d$; $\operatorname{acronym\_hits}(q, d)$ là số lượng từ viết tắt in hoa ($\ge 2$ ký tự) khớp giữa $q$ và đoạn ứng viên $d$.
+
+\subsection{\texorpdfstring{Tinh Chỉnh \texttt{Laya} ONNX (\texttt{Soft-CE}), Temperature Scaling và Ngưỡng $\theta = 0.60$}{Tinh Chinh Laya ONNX (Soft-CE), Temperature Scaling va Nguong theta = 0.60}}
+\label{sec:ch4_laya_calibration}
+
+Các mô hình Cross-Encoder zero-shot tổng quát (như MS MARCO) thường gặp hai hạn chế trên miền văn bản khoa học: (i) không phân biệt được câu trả lời có thật với thông tin bịa đặt nhưng trùng từ khóa (tỷ lệ chấp nhận nhầm \textit{False Acceptance} đạt 57.4\%--58.8\% ở ngưỡng 0.60), và (ii) đầu ra xác suất bị lệch chuẩn (\textit{miscalibration}). Để giải quyết, nhánh thực nghiệm tinh chỉnh mô hình \texttt{Laya} (\texttt{laya 0.4.27}, xuất sang ONNX INT8/FP32, \texttt{max\_len = 512}, 4 epochs, tốc độ học \texttt{2.5e-5} cho backbone và \texttt{1e-4} cho lớp phân loại trong \path{report_seed0.json} và \path{RUN_INFO.json}) thực thi quy trình 3 bước:
+\begin{enumerate}[label=\textbf{\arabic*.}]
+  \item \textbf{Hàm mất mát Soft-Cross-Entropy có cân bằng nhóm (\texttt{Soft-CE})}: Huấn luyện trên tập 3,432 mẫu (381 mẫu hiệu chỉnh \texttt{calib}, 820 mẫu kiểm thử độc lập ở \path{report_seed0.json}) bao gồm mẫu dương thật, mẫu thiếu chi tiết (\textit{missing detail}), mẫu nhiễu ngoài chủ đề (\textit{retrieved irrelevant}) và mẫu bịa đặt (\textit{fabricated}).
+  \item \textbf{Hiệu chỉnh nhiệt độ hậu huấn luyện (\textit{Post-hoc Temperature Scaling})}~\cite{guo2017calibration}: Tối ưu vô hướng nhiệt độ $T^*$ trên tập hiệu chỉnh (\texttt{T = 3.0627} ở lần chạy 4 epochs \path{report_seed0.json}; hoặc \texttt{T = 1.0} ở biến thể 1 epoch \path{RUN_INFO.json}) để cực tiểu hóa NLL và \textit{Expected Calibration Error} (ECE):
+  \begin{equation}
+    \hat{p}(q, d) = \sigma\!\left(\frac{z_{\text{Laya}}(q, d)}{T^*}\right) = \frac{1}{1 + \exp\!\left(-z_{\text{Laya}}(q, d) / T^*\right)}
+    \label{eq:ch4_temp_scaling}
+  \end{equation}
+  Trong đó: $z_{\text{Laya}}(q, d)$ là logit đầu ra trước kích hoạt của mạng \texttt{Laya}; $T^*$ là nhiệt độ tối ưu giúp làm dịu xác suất quá tự tin mà vẫn bảo toàn tuyệt đối thứ tự xếp hạng (\textit{rank-preserving}), giảm \textbf{ECE gần 6 lần từ 0.1900 xuống 0.0332}.
+  \item \textbf{Cổng Chứng Cứ (\textit{Evidence Gate} $\theta = 0.60$)}: Trong đường ống \texttt{RAG\_TS} (\path{benchmarks/rag_eval/score_retrieval.py}), truy vấn chỉ được chuyển sang bước sinh câu trả lời khi xác suất hiệu chỉnh của đoạn tốt nhất đạt ngưỡng:
+  \begin{equation}
+    \operatorname{Gate}(q) = \mathbb{I}\!\left[\max_{d \in \mathcal{C}_q} \hat{p}(q, d) \ge \theta\right], \qquad \theta = 0.60
+    \label{eq:ch4_evidence_gate}
+  \end{equation}
+  Trong đó: $\mathbb{I}[\cdot]$ là hàm chỉ thị nhận giá trị 1 nếu điều kiện thỏa mãn và 0 nếu ngược lại; $\mathcal{C}_q$ là tập ứng viên sau tái xếp hạng cho truy vấn $q$; $\hat{p}(q, d)$ là xác suất đã hiệu chỉnh nhiệt độ; $\theta = 0.60$ là ngưỡng cổng. Nếu toàn bộ ứng viên đều có $\hat{p} < 0.60$, hệ thống từ chối trả lời ngay để chặn ảo giác. Kết hợp \texttt{laya\_ft1\_hybrid}, Cổng Chứng cứ chặn chính xác \textbf{50/50 (100\%)} câu hỏi âm tính giả mạo trong khi giữ lại \textbf{86/100} câu có đáp án (Bảng~\ref{tab:retrieval_v1}, Chương~\ref{chap:evaluation}).
+\end{enumerate}
+
+\FloatBarrier
+\section{\texorpdfstring{Tổng Hợp Sinh Câu Trả Lời, Bảo Toàn Grounding (\texttt{BUG-02}) và Multi-Backend LLM}{Tong Hop Sinh Cau Tra Loi, Bao Toan Grounding (BUG-02) va Multi-Backend LLM}}
+\label{sec:ch4_llm_synthesis}
+
+\subsection{\texorpdfstring{Giao Thức Prompt Ép Trích Dẫn và Sửa Lỗi \texttt{BUG-02} (\texttt{D-058})}{Giao Thuc Prompt Ep Trich Dan va Sua Loi BUG-02 (D-058)}}
+\label{sec:ch4_prompt_bug02}
+
+Sau khi nhận \texttt{top\_k = 5} đoạn văn từ Reranker, \texttt{RagService} (\path{backend/app/services/rag_service.py}) giới hạn mỗi đoạn tối đa \textbf{3,000 ký tự}, gắn thẻ định danh \texttt{[Paper: \{paper\_id\}, Section: \{section\_title\}]} và áp đặt 5 quy tắc trong Prompt hệ thống: (1) chỉ trả lời dựa trên chứng cứ được cấp và nêu rõ phần thiếu sót; (2) chủ động tổng hợp cân bằng toàn bộ các đoạn liên quan thay vì dừng ở đoạn đầu tiên; (3) gắn trích dẫn chuẩn \texttt{[Paper: ..., Section: ...]} ngay sau mỗi nhận định; (4) trả lời súc tích theo đúng ngôn ngữ câu hỏi; và (5) giữ nguyên mọi biểu thức toán LaTeX (\texttt{\$...\$}, \texttt{\$\$...\$\$}) để frontend React 19 + KaTeX hiển thị trực tiếp.
+
+\begin{calloutbox}{Nghiên cứu điển hình khắc phục lỗi \texttt{BUG-02} (Quyết định \texttt{D-058})}
+Ở phiên bản đầu, khi người dùng hỏi các câu hỏi tổng hợp phương pháp (như \textit{``What methodology does Attention Is All You Need propose?''}), dù Qdrant truy xuất đúng ngữ cảnh, LLM vẫn kích hoạt từ chối sai. Phân tích nhật ký xác định 3 nguyên nhân đồng thời: (1) prompt cũ dùng câu cấm cứng nhắc \textit{``DO NOT extrapolate beyond the text''} cùng mẫu từ chối mặc định khiến \texttt{Qwen-2.5-7B} phản ứng quá nhạy khi thiếu đúng từ khóa \texttt{methodology}; (2) gán nhãn mục sai giữa \textit{Introduction / Model Architecture} và \texttt{Section: Methodology}; và (3) hàm dự phòng \texttt{\_synthesize\_grounded\_fallback()} chưa xuất đầy đủ trích dẫn nguồn. Bản sửa lỗi trong \path{rag_service.py} chuyển sang chiến lược \textbf{Synthesis-First Grounded Answering} (ép tổng hợp mọi chi tiết có thật từ tất cả đoạn trước khi kết luận phần thiếu), tăng \texttt{CANDIDATE\_K = 8} cho Reranker và chuẩn hóa fallback có dẫn nguồn khi LLM ngoại tuyến.
+\end{calloutbox}
+
+\subsection{Phân Cấp Chuỗi Cung Cấp LLM và Chặn Tràn Cửa Sổ Ngữ Cảnh}
+\label{sec:ch4_llm_fallback}
+
+Lớp \texttt{LlmClient} (\path{backend/app/services/llm_client.py}) tự động dò tìm theo 4 tầng ưu tiên để bảo đảm hệ thống vận hành xuyên suốt trên nhiều cấu hình GPU hoặc đám mây:
+\begin{enumerate}[label=\textbf{\arabic*.}]
+  \item \textbf{Tầng 1}: Cổng HTTP nội bộ \texttt{:9001} (\texttt{node-llama-cpp} / \texttt{llama-server}).
+  \item \textbf{Tầng 2}: Dịch vụ cục bộ \textbf{Ollama} tại cổng \texttt{:11434} (khi tầng 1 ngoại tuyến).
+  \item \textbf{Tầng 3}: API đám mây \textbf{Groq Cloud} (\path{llama-3.3-70b-versatile}, khi có biến môi trường \texttt{GROQ\_API\_KEY}).
+  \item \textbf{Tầng 4}: Thực thi nội tiến trình \texttt{llama\_cpp.Llama} nạp trọng số lượng tử hóa \texttt{Qwen-2.5-7B-Instruct Q4\_K\_M} (\texttt{n\_gpu\_layers=-1})~\cite{qwen25report2024}.
+\end{enumerate}
+
+Mặc định cửa sổ ngữ cảnh của backend là \texttt{LLM\_CONTEXT\_WINDOW = 16,384} token (\texttt{LLM\_MAX\_TOKENS = 1,536}, \texttt{temperature = 0.1} trong \texttt{ChatRequest} nhằm ổn định văn phong học thuật). Để ngăn tuyệt đối lỗi tràn KV Cache trên \texttt{llama.cpp} khi 5 đoạn ngữ cảnh dài kết hợp prompt tiệm cận giới hạn ngữ cảnh, phương thức \texttt{\_clamp\_max\_tokens()} tính toán động số token sinh tối đa:
+\begin{equation}
+  T_{\text{gen}}^{\max} = \max\!\left(64,\; \min\!\left(T_{\text{req}},\; N_{\text{ctx}} - \hat{T}_{\text{prompt}} - 32\right)\right)
+  \label{eq:ch4_clamp_tokens}
+\end{equation}
+Trong đó: $T_{\text{req}} = 1,536$ là số token đầu ra yêu cầu; $N_{\text{ctx}} = 16,384$ là kích thước cửa sổ ngữ cảnh; $\hat{T}_{\text{prompt}}$ là số token thực tế của toàn bộ thông điệp đầu vào; $32$ là khoảng đệm an toàn; và $64$ là ngưỡng sàn tối thiểu để LLM hoàn tất câu trả lời kèm trích dẫn. Luồng phản hồi sau đó được phát qua giao thức \textbf{Server-Sent Events (SSE)}, gửi trước sự kiện \texttt{metadata} (chứa danh sách \texttt{citations} kèm điểm Vector, Lexical, Rerank, PageRank và liên kết arXiv) trước các gói \texttt{token} văn bản theo thời gian thực.
+
+\FloatBarrier
+\section{Tổng Kết Tích Hợp Khai Phá -- RAG và Tham Chiếu Siêu Tham Số}
+\label{sec:mining_rag_integration}
+
+Nhằm tránh hiểu nhầm rằng mọi sản phẩm khai phá dữ liệu đều can thiệp cứng vào bộ truy xuất, kiến trúc hiện tại phân tách rạch ròi vai trò của bốn trụ cột trong đường ống Hybrid RAG:
+\begin{itemize}
+  \item \textbf{Tín hiệu xếp hạng trực tiếp}: Chỉ \textbf{PageRank} (Trụ cột 3, khớp tên tác giả qua \texttt{\_match\_authority()}) tham gia trực tiếp vào công thức tính điểm truy hồi~\eqref{eq:ch4_authority} trước khi chuyển sang Cross-Encoder.
+  \item \textbf{Chú thích ngữ cảnh (\textit{Annotation})}: Tập luật \textbf{FP-Growth} (Trụ cột 1) bổ sung tối đa 3 khái niệm liên quan vào trường \texttt{rule\_expansions} của kết quả API để hỗ trợ người dùng khám phá tiếp, không sửa đổi vector nhúng truy vấn gốc.
+  \item \textbf{Phân tích khám phá trên Dashboard}: \textbf{Phân cụm EM GMM} (Trụ cột 2) và \textbf{Động lượng thị phần / Isolation Forest} (Trụ cột 4) phục vụ trực quan hóa cấu trúc tri thức và phát hiện tài liệu dị biệt cấu trúc, không dùng để lọc cứng tập ứng viên truy xuất (tránh loại nhầm các bài báo liên ngành).
+\end{itemize}
+
+Toàn bộ danh mục siêu tham số cấu hình mặc định của cả 4 trụ cột khai phá dữ liệu (FP-Growth, Clustering, Graph, Anomalies) và đường ống Hybrid RAG / LLM được tổng hợp tập trung tại \textbf{Bảng~\ref{tab:hyperparameters} ở Phụ lục A}. Chương~\ref{chap:evaluation} tiếp theo sẽ đánh giá định lượng hiệu năng toàn phần của từng thành phần qua năm bộ thực nghiệm độc lập (\texttt{EXP-01} đến \texttt{EXP-05}), đối chuẩn DeepEval và đo lường tài nguyên phần cứng trên GPU.

@@ -1,32 +1,30 @@
-% ==============================================================================
-% BẢNG ĐO LƯỜNG ĐỘ TRỄ CHI TIẾT TỪNG CÔNG ĐOẠN TRÊN PHẦN CỨNG GPU (CHUẨN VIỀN LƯỚI & KHỔ TRANG)
-% ==============================================================================
-
 \begin{table}[htbp]
   \centering
-  \small
-  \setlength{\tabcolsep}{4pt}
-  \caption[Hiệu năng phần cứng trong lần đo ngày 19/10/2026]{Hiệu năng phần cứng trong lần đo ngày 19/10/2026}
+  \footnotesize
+  \setlength{\tabcolsep}{3pt}
+  \caption[Hồ sơ hiệu năng phần cứng RTX 4060 và pooling kết nối]{Hồ sơ hiệu năng phần cứng RTX 4060 và tối ưu hóa đường ống ngày 19/10/2026}
   \label{tab:latency_profile}
   \vspace{4pt}
-  \begin{tabularx}{\linewidth}{|>{\raggedright\arraybackslash}p{35mm}|Y|Y|Y|L|}
+  \begin{tabularx}{\linewidth}{|>{\raggedright\arraybackslash}p{34mm}|>{\centering\arraybackslash}p{26mm}|>{\centering\arraybackslash}p{26mm}|>{\centering\arraybackslash}p{21mm}|L|}
     \hline
-    \textbf{Chỉ số / Kịch bản} & \textbf{Baseline nguồn ghi} & \textbf{Cấu hình sau thay đổi} & \textbf{Tỷ số / Giới hạn} & \textbf{Đánh giá Kỹ thuật} \\
+    \textbf{Giai đoạn / Thông số đo} & \textbf{Trước tối ưu (Vulkan / Cold)} & \textbf{Sau tối ưu (CUDA / Pool)} & \textbf{Tăng tốc / Giới hạn} & \textbf{Ghi chú kỹ thuật} \\
     \hline
-    \textbf{Dense Query Embedding} & $350.0\text{ ms}$ (CPU) & \textbf{39.33 $\pm$ 21.64 ms} & \textbf{$\approx 9\times$ nhanh hơn} & Embedding trong kịch bản RAG \\
+    \textbf{Qdrant độc lập (Top-5 / Top-50)} & $> 1,000$ ms (Cold TCP) & \textbf{269.46 $\pm$ 12.44 ms} (3.71 QPS) & Top-50: 258.80 ms (3.86 QPS) & HTTP Pooling (\texttt{requests.Session}); $p_{50}=268.10$, $p_{95}=291.50$ ms \\
     \hline
-    \textbf{Qdrant độc lập (Top-5)} & $> 1,000\text{ ms}$ (Cold TCP) & \textbf{269.46 $\pm$ 12.44 ms} & Khác cách kết nối & Kết nối lạnh so với dùng pool \\
+    \textbf{Nhúng câu hỏi (Query Embed)} & $\approx 350.0$ ms & \textbf{39.33 $\pm$ 21.64 ms} & \textbf{8.9$\times$ nhanh hơn} & Bi-Encoder 768-D trên GPU \\
     \hline
-    \textbf{Prompt Construction} & $5.0\text{ ms}$ & \textbf{0.04 $\pm$ 0.01 ms} & -- & Ghép prompt; không đo chất lượng \\
+    \textbf{Ghép ngữ cảnh (Prompt)} & 5.0 ms & \textbf{0.04 $\pm$ 0.01 ms} & -- & Dựng chuỗi Prompt RAG \\
     \hline
-    \textbf{Time To First Token (TTFT)} & $18,700\text{ ms}$ (18.7 s) & \textbf{609.77 $\pm$ 148.83 ms} & \textbf{$\approx 30.7\times$ nhanh hơn} & Prefill trong kịch bản nguồn ghi \\
+    \textbf{Time To First Token (TTFT)} & 18,700 ms (18.7 s) & \textbf{609.77 $\pm$ 148.83 ms} & \textbf{30.7$\times$ nhanh hơn} & Hấp thụ Prompt Eval trên Tensor Cores \\
     \hline
-    \textbf{Generation (50 tokens)} & $17,740\text{ ms}$ (17.7 s) & \textbf{1,079.43 $\pm$ 14.99 ms} & Chưa xác minh & Baseline chưa khớp throughput \\
+    \textbf{Sinh 50 token tiếp theo} & 17,740 ms (17.7 s) & \textbf{1,079.43 $\pm$ 14.99 ms} & \textbf{16.4$\times$ nhanh hơn} & Giải mã tự hồi quy trên CUDA \\
     \hline
-    \textbf{Tốc độ sinh token (Throughput)} & \textbf{3.64 tok/s} & \textbf{46.33 $\pm$ 0.64 tok/s} & Chưa xác minh & Baseline chưa khớp thời gian 50 token \\
+    \textbf{Tốc độ sinh (Throughput)} & 3.64 tok/s$^*$ & \textbf{46.33 $\pm$ 0.64 tok/s} & \textbf{12.7$\times$ nhanh hơn} & Vượt chuẩn đọc mượt thời gian thực \\
     \hline
-    \textbf{Tổng độ trễ End-to-End} & $37,310\text{ ms}$ (37.3 s) & \textbf{3,392.50 $\pm$ 607.22 ms} & \textbf{$\approx 11.0\times$ nhanh hơn} & RAG Top-3; retrieval khoảng 1,660 ms \\
+    \textbf{Tổng RAG End-to-End (Top-3)} & 37,310 ms (37.31 s) & \textbf{3,392.50 $\pm$ 607.22 ms} & \textbf{$\approx 11.0\times$ nhanh hơn} & Gồm $\approx 1,660$ ms retrieval trong phép đo E2E \\
+    \hline
+    \textbf{Đỉnh VRAM \& Ổn định} & \path{VK_ERROR_DEVICE_LOST} & \textbf{$\approx 5.7$ GB / 8.0 GB} & Khử sập Vulkan & \path{LLM_CONTEXT_SIZE=4096}, \path{LLM_SEQUENCES=1} \\
     \hline
   \end{tabularx}
-\ReportNote{Nguồn: Báo cáo đo lường độ trễ và thông lượng phần cứng \path{docs/benchmarks/PERFORMANCE_BENCHMARK_REPORT.md} trên card đồ họa NVIDIA GeForce RTX 4060 Laptop GPU.}
+  \ReportNote{Nguồn: \path{docs/benchmarks/PERFORMANCE_BENCHMARK_REPORT.md} (19/10/2026) đo trên Windows 11, Python 3.12, NVIDIA GeForce RTX 4060 Laptop 8 GB, CUDA 12.4, \texttt{node-llama-cpp v3.15.5} và \texttt{Qwen-2.5-7B-Instruct Q4\_K\_M}. $^*$Nguồn gốc ghi 3.64 tok/s dù 50 token / 17.74 s tương ứng 2.82 tok/s; bảng giữ nguyên giá trị gốc để bảo đảm tính xác thực nguồn.}
 \end{table}

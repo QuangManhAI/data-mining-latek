@@ -1,40 +1,38 @@
 \begingroup
-\small
-\setlength{\tabcolsep}{4pt}
+\footnotesize
+\setlength{\tabcolsep}{3pt}
 \setlength{\LTpre}{4pt}
 \setlength{\LTpost}{6pt}
-\begin{longtable}{|>{\raggedright\arraybackslash}p{27mm}|>{\raggedright\arraybackslash}p{40mm}|>{\centering\arraybackslash}p{15mm}|>{\raggedright\arraybackslash}p{61mm}|}
-\caption[Tham số cấu hình hệ thống]{Tham số cấu hình mặc định của hệ thống}
+\begin{longtable}{|>{\raggedright\arraybackslash}p{25mm}|>{\raggedright\arraybackslash}p{45mm}|>{\raggedright\arraybackslash}p{40mm}|>{\raggedright\arraybackslash}p{38mm}|}
+\caption[Bảng siêu tham số hợp nhất toàn hệ thống]{Bảng siêu tham số hợp nhất toàn hệ thống đã kiểm chứng trong mã nguồn (Phụ lục A)}
 \label{tab:hyperparameters}\\
 \hline
-\textbf{Phân hệ} & \textbf{Tham số} & \textbf{Giá trị} & \textbf{Ý nghĩa} \\ \hline
+\textbf{Phân hệ} & \textbf{Tên Siêu tham số (\texttt{Symbol / Env})} & \textbf{Giá trị Mặc định / Dùng Thực nghiệm} & \textbf{Tệp nguồn xác thực} \\ \hline
 \endfirsthead
 \multicolumn{4}{l}{\small Bảng \thetable{} (tiếp theo)}\\
 \hline
-\textbf{Phân hệ} & \textbf{Tham số} & \textbf{Giá trị} & \textbf{Ý nghĩa} \\ \hline
+\textbf{Phân hệ} & \textbf{Tên Siêu tham số (\texttt{Symbol / Env})} & \textbf{Giá trị Mặc định / Dùng Thực nghiệm} & \textbf{Tệp nguồn xác thực} \\ \hline
 \endhead
 \hline
 \multicolumn{4}{r}{\small Còn tiếp ở trang sau}\\
 \endfoot
 \hline
 \endlastfoot
-FP-Growth & \path{min_support} & 0.02 & Mặc định; snapshot cũ dùng 0.015 \\ \hline
-FP-Growth & \path{min_lift} & 1.20 & Ngưỡng lift ban đầu; có fallback \\ \hline
-FP-Growth & \path{top_k} & 50 & Giới hạn số luật trả về \\ \hline
-FP-Growth & \path{min_abs_transactions} & 25 & Số giao dịch hỗ trợ tuyệt đối tối thiểu \\ \hline
-Clustering & \path{vector_dim} & 768 & Số chiều embedding Nomic \\ \hline
-Clustering & \path{n_clusters} & 6 & Mặc định KMeans và GMM \\ \hline
-Clustering & \path{pca_components} & 2 & Chiếu 2D để hiển thị và fit GMM \\ \hline
-Clustering & \path{dbscan_eps / min_samples} & 0.28 / 10 & DBSCAN dùng khoảng cách cosine trên mẫu \\ \hline
-Graph & \path{pagerank_alpha} & 0.85 & Hệ số suy giảm PageRank \\ \hline
-Graph & \path{authority_beta} & 0.25 & Hệ số uy tín theo tác giả; tối đa +25\% \\ \hline
-Anomalies & \path{contamination} & 0.02 & Tỷ lệ dị biệt cấu trúc đặt trước \\ \hline
-Anomalies & \path{n_estimators} & 100 & Số cây trong Isolation Forest \\ \hline
-RAG & \path{RERANKER_CANDIDATE_K} & 8 & Ứng viên retrieval trả cho reranker; pool Qdrant mặc định 25 \\ \hline
-RAG & \path{RERANKER_TOP_K} & 5 & Số đoạn giữ lại; request có thể ghi đè \\ \hline
-RAG & \path{rrf_constant} & 60 & Hằng số làm mịn RRF \\ \hline
-Chat & \path{temperature} & 0.1 & Mặc định của \texttt{ChatRequest}; config backend là 0.7 \\ \hline
-LLM & \path{LLM_CONTEXT_WINDOW} & 16,384 & Ngữ cảnh mặc định backend; \texttt{QwenGGUFEngine} là 4,096 \\ \hline
+\textbf{Lakehouse Storage} & \path{MINIO_BUCKET_NAME} / \path{LAKEHOUSE_BUDGET_GB} & \path{"uth-scientific-lakehouse"} / 20.0 GB & \path{backend/app/core/config.py} \\ \hline
+\textbf{DuckDB S3 OLAP} & \path{http_retries} / \path{http_retry_wait_ms} / \path{backoff} & 8 lần / 500 ms / hệ số 2 & \path{src/mining/lake_access.py} \\ \hline
+\textbf{RabbitMQ \& Harvest} & \path{EMBED_QUEUE_MAX} / \path{HEARTBEAT_SECONDS} / \path{HARVEST_BATCH} & 500 / 600 s / 1,000 (\path{LOW_WATER}=200) & \path{src/config/settings.py}, \path{src/ingestion/queue_consumer.py}, \path{dags/_common.py} \\ \hline
+\textbf{Chunking \& Store} & \path{max_chunk_words} / \path{overlap_ratio} / \path{min_tail_ratio} & 300 (450 worker) / 0.15 ([20, 80]) / 0.4 & \path{src/indexing/chunker.py}, \path{src/ingestion/queue_consumer.py} \\ \hline
+\textbf{ChunkStore Cache} & \path{ROW_GROUP_SIZE} / \path{cache_size} / \path{max_workers} & 512 dòng (ZSTD) / 20,000 đoạn / 16 luồng & \path{src/storage/chunk_store.py} \\ \hline
+\textbf{Embedding Model} & \path{nomic-embed-text-v1.5} / \path{max_length} / Vector Dim & 2,048 token (RoPE) / 768 chiều ($L_2$-norm) & \path{backend/app/services/embedder_service.py}, \path{src/indexing/embedder.py} \\ \hline
+\textbf{FP-Growth (Pillar 1)} & \path{min_support} / \path{min_lift} / \path{min_abs_tx} / \path{top_k} & 0.02 (fallback 0.01) / 1.2 (1.0) / 25 / 50 & \path{src/mining/association_rules.py} \\ \hline
+\textbf{Clustering (Pillar 2)} & \path{n_clusters} / \path{batch_size} / \path{GMM covariance} / \path{cross_thr} & 6 / 2,048 / \texttt{"full"} (\path{max_iter=200}) / $< 0.65$ & \path{src/mining/cluster_analysis.py} \\ \hline
+\textbf{DBSCAN (Pillar 2)} & \path{eps} / \path{min_samples} / \path{metric} / \path{dbscan_sample} & 0.28 / 10 / \texttt{"cosine"} / 3,000 & \path{src/mining/cluster_analysis.py} \\ \hline
+\textbf{Graph (Pillar 3)} & \path{pagerank alpha} / \path{louvain seed} / \path{top_hubs_limit} & 0.85 / 42 / 100 & \path{src/mining/graph_mining.py}, \path{src/mining/mining_engine.py} \\ \hline
+\textbf{Trend \& IF (Pillar 4)} & \path{all_time_total} / \path{SURGING} / \path{contamination} / \path{n_est} & $\ge 40$ / $>15\%$ hoặc $>+1.5\text{pp}$ / 0.02 / 100 & \path{src/mining/trend_anomaly_mining.py} \\ \hline
+\textbf{Hybrid RAG \& RRF} & \path{k_RRF} / \path{candidate_limit} / PageRank boost / \path{_MAX_PR} & 60 / $\min(\max(2k, 25), 40)$ / +25\% / 0.012632 & \path{backend/app/services/retrieval_service.py} \\ \hline
+\textbf{Reranker \& Gate} & \path{RERANKER_CANDIDATE_K} / \path{max_len} (FastAPI vs Laya) / $\theta$ & 8 / 256 (FastAPI) vs 512 (Laya) / 0.60 & \path{backend/app/services/reranker_service.py}, \path{notebooks/laya_finetune/report_seed0.json} \\ \hline
+\textbf{Laya Fine-Tune} & \path{epochs} / \path{micro_batch x accum} / \path{lr} / $T^*$ & 4 (1 ONNX v1) / $8 \times 8$ / $2.5\times 10^{-5}$ (head $10^{-4}$) / 3.0627 & \path{notebooks/laya_finetune/report_seed0.json}, \path{notebooks/laya_onnx_20261108-2053_seed0/RUN_INFO.json} \\ \hline
+\textbf{LLM Generation} & \texttt{Qwen-2.5-7B Q4\_K\_M} / \path{N_ctx} / \path{max_tokens} / \path{temp} & 16,384 (Vulkan 4,096) / 1,536 / 0.1 (\texttt{ChatRequest}) & \path{backend/app/core/config.py}, \path{backend/app/schemas/chat.py}, \path{backend/app/services/llm_client.py} \\ \hline
 \end{longtable}
-\ReportNote{Nguồn: Tổng hợp các tham số siêu cấu hình phục vụ vận hành từ mã nguồn và cấu hình backend hệ thống.}
+\ReportNote{Nguồn: Đối chiếu trực tiếp từng hằng số trong mã nguồn Python hiện hành và các tệp JSON cấu hình huấn luyện tại mốc ngày 25/11/2026 nhằm bảo đảm khả năng tái lập chính xác mọi thực nghiệm và triển khai.}
 \endgroup

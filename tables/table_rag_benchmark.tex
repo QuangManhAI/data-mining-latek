@@ -1,30 +1,26 @@
-% ==============================================================================
-% BẢNG ĐÁNH GIÁ HIỆU NĂNG RAG BẰNG DEEPEVAL 2.X (CHUẨN VIỀN LƯỚI & KHỔ TRANG)
-% ==============================================================================
-
 \begin{table}[htbp]
   \centering
   \small
-  \caption[Kết quả DeepEval trên LanceDB ngày 05/10/2026]{Kết quả DeepEval trên LanceDB ngày 05/10/2026}
+  \caption[Kết quả DeepEval lịch sử trên LanceDB ngày 05/10/2026]{Kết quả đánh giá DeepEval lịch sử trên kiến trúc LanceDB ngày 05/10/2026 (21 mẫu PoC)}
   \label{tab:rag_benchmark}
   \vspace{4pt}
   \setlength{\tabcolsep}{3.0pt}
   \begin{tabularx}{\linewidth}{|>{\raggedright\arraybackslash}p{28mm}|>{\centering\arraybackslash}p{15mm}|>{\centering\arraybackslash}p{22mm}|>{\centering\arraybackslash}p{16mm}|>{\centering\arraybackslash}p{23mm}|>{\centering\arraybackslash}p{16mm}|>{\centering\arraybackslash}X|}
     \hline
-    \textbf{Chỉ số DeepEval} & \textbf{Baseline} & \textbf{Tỷ lệ Đạt} & \textbf{Upgraded} & \textbf{Tỷ lệ Đạt} & \textbf{Mức tăng $\Delta$} & \textbf{Tăng tương đối} \\
+    \textbf{Chỉ số DeepEval} & \textbf{Baseline} & \textbf{Tỷ lệ đạt} & \textbf{Upgraded} & \textbf{Tỷ lệ đạt} & \textbf{Chênh $\Delta$} & \textbf{Tương đối} \\
     \hline
-    \textbf{Contextual Precision} $\uparrow$ & 0.637 & 60.0\% (12/20) & \textbf{0.860} & \textbf{80.0\% (16/20)} & \textbf{+0.223} & \textbf{+35.0\%} \\
+    \textbf{Context Precision} $\uparrow$ & 0.637 & 60.0\% (12/20) & \textbf{0.860} & \textbf{80.0\% (16/20)} & \textbf{+0.223} & \textbf{+35.0\%} \\
     \hline
     \textbf{Answer Relevancy} $\uparrow$ & 0.687 & 47.4\% (9/19) & \textbf{0.752} & \textbf{55.0\% (11/20)} & \textbf{+0.065} & \textbf{+9.4\%} \\
     \hline
-    \textbf{Contextual Recall} $\uparrow$ & 0.950 & 95.0\% (19/20) & \textbf{1.000} & \textbf{100.0\% (19/19)} & \textbf{+0.050} & \textbf{+5.3\%} \\
+    \textbf{Context Recall} $\uparrow$ & 0.950 & 95.0\% (19/20) & \textbf{1.000} & \textbf{100.0\% (19/19)} & \textbf{+0.050} & \textbf{+5.3\%} \\
     \hline
     \textbf{Faithfulness} $\uparrow$ & 0.668 & 50.0\% (8/16) & \textbf{0.699} & \textbf{52.9\% (9/17)} & \textbf{+0.031} & \textbf{+4.7\%} \\
     \hline
     \textbf{Citation Grounding} $\uparrow$ & 0.757 & 90.5\% (19/21) & \textbf{0.720} & \textbf{90.0\% (18/20)} & -0.037 & -4.9\% \\
     \hline
-    \textbf{Contextual Relevancy} & 0.578 & 44.4\% (4/9) & 0.562 & 40.0\% (6/15) & -0.016 & Đánh đổi \\
+    \textbf{Context Relevancy} & 0.578 & 44.4\% (4/9) & 0.562 & 40.0\% (6/15) & -0.016 & Đánh đổi \\
     \hline
   \end{tabularx}
-\ReportNote{Nguồn: Báo cáo thực nghiệm \path{docs/benchmarks/RAG_EVALUATION_REPORT_21_SAMPLES.md} đo lường trên tập kiểm thử 21 mẫu truy vấn học thuật.}
+  \ReportNote{Nguồn: Thử nghiệm PoC lịch sử ngày 05/10/2026 (\path{docs/benchmarks/RAG_EVALUATION_REPORT_21_SAMPLES.md}, commit \texttt{6cb1c52}, kho LanceDB R2 gồm 143,523 đoạn văn) trên 21 truy vấn (\texttt{gold-001} đến \texttt{gold-021}) sử dụng giám khảo \texttt{Qwen2.5-7B-Instruct}. Đây là mốc thăm dò tiền đề cho việc tinh chỉnh Laya ở \texttt{EXP-05}.}
 \end{table}

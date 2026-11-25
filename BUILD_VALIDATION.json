@@ -1,8 +1,8 @@
 {
-  "pdf_pages": 66,
-  "compiler": "Tectonic 0.17.0",
-  "pdf_sha256": "7d4a208145cbf811a2ffee154b3fbf3c8dc5bb43dbea3610e21ae838f87808d5",
-  "format_revision": "2026-11-23",
+  "pdf_pages": 140,
+  "compiler": "XeTeX 3.141592653-2.6-0.999997 (TeX Live 2025)",
+  "pdf_sha256": "172baead1afa621cb46df3da59e5843b2712c166f76fe7fb9be0466040099dec",
+  "format_revision": "2026-11-25",
   "status": "PASSED_ALL_CHECKS",
-  "summary": "Hoàn thành sửa lỗi số trang La Mã vii/viii ở đầu trang, sửa context_text ở Mục 3.6 và dọn dẹp thư mục sạch sẽ."
+  "summary": "Hoàn thành tái cấu trúc toàn bộ báo cáo LaTeX theo quy trình Pipeline-First KDD 7 chương từ docs/report_v2/ (00-07): cập nhật Tóm tắt 71,927 bài / 1,043,594 vector, tách Chương 2 thành 04a-04d (Collect->Integrate->Clean->Transform), Chương 3 EDA 3 Lăng kính, Chương 4 (05a 4 Trụ cột & 05b Hybrid RAG + Laya/Evidence Gate), Chương 5 tổng hợp EXP-01..EXP-05, Chương 6 Triển khai & Bảo mật, Chương 7 & Phụ lục A-D; biên dịch XeLaTeX 140 trang với 0 lỗi tham chiếu, 0 thiếu ký tự và 0 cảnh báo Overfull > 15pt."
 }

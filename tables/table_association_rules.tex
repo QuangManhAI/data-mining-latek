@@ -1,24 +1,20 @@
-\begin{table}[htbp]
+\begin{table}[!htbp]
 \centering
-\small
-\caption[Một số luật kết hợp trong snapshot lịch sử]{Một số luật kết hợp trong snapshot lịch sử}
+\footnotesize
+\setlength{\tabcolsep}{3pt}
+\caption[Các luật kết hợp tiêu biểu đã khử đối xứng]{Các luật kết hợp tiêu biểu đã khử đối xứng từ FP-Growth (\texttt{association\_rules.json})}
 \label{tab:association_rules}
-\begin{tabularx}{\textwidth}{|p{0.8cm}|L|L|p{1.5cm}|p{1.3cm}|p{1.3cm}|}
+\begin{tabularx}{\linewidth}{|L|>{\centering\arraybackslash}p{12mm}|>{\centering\arraybackslash}p{12mm}|>{\centering\arraybackslash}p{14mm}|>{\centering\arraybackslash}p{12mm}|>{\centering\arraybackslash}p{14mm}|>{\raggedright\arraybackslash}p{34mm}|}
 \hline
-\textbf{STT} & \textbf{Tiền đề} & \textbf{Hệ quả} & \textbf{Support} & \textbf{Conf.} & \textbf{Lift} \\
-\hline
-1 & tag:transformer & tag:model-quantization & 0.0177 & 0.1190 & 3.3571 \\
-\hline
-2 & tag:model-quantization & tag:transformer & 0.0177 & 0.5000 & 3.3571 \\
-\hline
-3 & tag:knowledge-distillation & tag:federated-learning & 0.0248 & 0.2800 & 2.8200 \\
-\hline
-4 & tag:federated-learning & tag:knowledge-distillation & 0.0248 & 0.2500 & 2.8200 \\
-\hline
-5 & tag:autonomous-agents & tag:reinforcement-learning & 0.0993 & 0.6087 & 2.7686 \\
-\hline
-6 & tag:reinforcement-learning & tag:autonomous-agents & 0.0993 & 0.4516 & 2.7686 \\
-\hline
+\textbf{Luật kết hợp ($A \Rightarrow B$)} & \textbf{Supp.} & \textbf{Conf.} & \textbf{Lift} & \textbf{Lev.} & \textbf{Conv.} & \textbf{Ý nghĩa ngữ nghĩa \& RAG} \\ \hline
+\path{cat:cs.SY} $\Rightarrow$ \path{cat:eess.SY} & 0.0287 & 1.0000 & 34.8746 & 0.0279 & 999.0 & Mã đồng danh Hệ thống Điều khiển CS \& EE \\ \hline
+\path{cat:cs.SD} $\Rightarrow$ \path{cat:eess.AS} & 0.0328 & 0.9920 & 27.0652 & 0.0316 & 121.0605 & Âm học máy tính liên thông Xử lý âm thanh \\ \hline
+\path{tag:reinforcement-learning} $\Rightarrow$ \path{tag:autonomous-agents} & 0.0208 & 0.3273 & 6.3272 & 0.0175 & 1.4097 & Mở rộng truy vấn RL sang Autonomous Agents \\ \hline
+\path{cat:cs.CL + cat:cs.AI} $\Rightarrow$ \path{tag:large-language-models} & 0.0358 & 0.3901 & 3.7317 & 0.0262 & 1.4681 & Hội tụ Xử lý ngôn ngữ \& AI tại LLM \\ \hline
+\path{cat:eess.IV} $\Rightarrow$ \path{cat:cs.CV} & 0.0481 & 0.8941 & 2.9999 & 0.0321 & 6.6307 & Giao thoa xử lý ảnh và thị giác máy tính \\ \hline
+\path{tag:transformer} $\Rightarrow$ \path{tag:attention-mech} & 0.0246 & 0.3143 & 2.6945 & 0.0154 & 1.2882 & Liên kết kiến trúc Transformer với Attention \\ \hline
+\path{tag:diffusion-models} $\Rightarrow$ \path{cat:cs.CV} & 0.0382 & 0.6708 & 2.2505 & 0.0212 & 2.1321 & Mô hình khuếch tán gắn chặt nhánh Thị giác \\ \hline
+\path{cat:stat.ML} $\Rightarrow$ \path{cat:cs.LG} & 0.0714 & 0.9554 & 1.8682 & 0.0332 & 10.9549 & 95.54\% bài \texttt{stat.ML} đồng thời thuộc \texttt{cs.LG} \\ \hline
 \end{tabularx}
-\ReportNote{Nguồn: Trích xuất từ artifact luật kết hợp FP-Growth (\path{data/gold/mining/association_rules.json}, 282 giao dịch hợp lệ).}
+\ReportNote{Nguồn: Trích xuất trực tiếp từ \path{data/gold/mining/association_rules.json} (11,404 giao dịch hợp lệ, 162 hạng mục, 80 tập phổ biến, 30 luật sau khử đối xứng; Conviction giới hạn tại 999.0 khi Confidence = 1.0). Đối chiếu lần chạy toàn hồ ngày 04/11/2026 (\texttt{SNAP-06A}): 61,319 giao dịch hợp lệ (85.3\% của 71,927 bài), 96 tập phổ biến, 45 luật, max Lift 34.940 trong 36.26 giây.}
 \end{table}

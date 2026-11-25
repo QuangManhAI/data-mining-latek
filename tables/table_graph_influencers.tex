@@ -1,26 +1,17 @@
-\begin{table}[htbp]
+\begin{table}[!htbp]
 \centering
-\small
-\caption[PageRank tác giả trong mạng đồng tác giả]{PageRank tác giả trong mạng đồng tác giả}
+\footnotesize
+\setlength{\tabcolsep}{3pt}
+\caption[Cấu trúc mạng lưới khoa học chế độ kép và Top nút uy tín PageRank]{Cấu trúc mạng lưới khoa học chế độ kép (Trích dẫn có hướng vs Đồng tác giả) và Top nút uy tín PageRank}
 \label{tab:graph_influencers}
-\begin{tabularx}{\textwidth}{|L|L|p{1.2cm}|p{1.2cm}|L|}
+\begin{tabularx}{\linewidth}{|>{\raggedright\arraybackslash}p{28mm}|>{\centering\arraybackslash}p{14mm}|>{\centering\arraybackslash}p{15mm}|>{\centering\arraybackslash}p{16mm}|L|>{\raggedright\arraybackslash}p{34mm}|}
 \hline
-\textbf{Tác giả} & \textbf{PageRank} & \textbf{Bậc} & \textbf{Số bài} & \textbf{Cộng đồng} \\
-\hline
-Yang Liu & 0.000509 & 237 & 38 & 0 \\
-\hline
-Hao Chen & 0.000463 & 189 & 32 & 0 \\
-\hline
-Yang Li & 0.000310 & 134 & 20 & 0 \\
-\hline
-Yu Qiao & 0.000281 & 153 & 19 & 0 \\
-\hline
-Wei Wang & 0.000275 & 103 & 17 & 2 \\
-\hline
-Hao Wang & 0.000264 & 83 & 19 & 1 \\
-\hline
-Wei Zhang & 0.000253 & 101 & 17 & 0 \\
-\hline
+\textbf{Chế độ đồ thị} & \textbf{Nút ($|V|$)} & \textbf{Cạnh ($|E|$)} & \textbf{Cộng đồng} & \textbf{Nút uy tín tiêu biểu} & \textbf{PageRank \& Chỉ số chi tiết} \\ \hline
+\textbf{Trích dẫn Có hướng} (hạng 1) & 8,892 & 86,295 & 92 & Vaswani et al. (\textit{Attention Is All You Need}~\cite{vaswani2017attention}) & \textbf{0.012632}; \path{in_degree} = 1,213; \path{cites} = 26,678 \\ \hline
+\textbf{Trích dẫn Có hướng} (hạng 2) & 8,892 & 86,295 & 92 & Matthew E. Peters et al. (\textit{ELMo}) & \textbf{0.008603}; \path{in_degree} = 900; \path{cites} = 12,264 \\ \hline
+\textbf{Trích dẫn Có hướng} (hạng 3) & 8,892 & 86,295 & 92 & Jakub\r{u}v, Jan et al. (\textit{Exploiting GenAI...}) & \textbf{0.007782}; \path{in_degree} = 1,145; \path{cites} = 78,459 \\ \hline
+\textbf{Mạng Đồng tác giả} (snapshot cục bộ) & 35,117 & 130,082 & 3,740 & Yang Liu (hạng 1) / Hao Chen (hạng 2) & 0.000509 (\path{deg}=237, 38 bài) / 0.000463 (\path{deg}=189, 32 bài) \\ \hline
+\textbf{Chỉ số mở rộng} (\path{citation_metrics.parquet}) & 29,523 tác giả & 10,000 bài nền & -- & Từ điển PageRank phục vụ thí nghiệm \texttt{EXP-04} & Kết hợp đồ thị bài báo và tác giả (Chương~\ref{chap:evaluation}) \\ \hline
 \end{tabularx}
-\ReportNote{Nguồn: Thống kê điểm số PageRank và chỉ số kết nối trong mạng lưới đồng tác giả từ \path{data/gold/mining/graph_coauthorship.json}.}
+\ReportNote{Nguồn: \path{data/gold/mining/graph_coauthorship.json} (mật độ \path{density = 0.001092}, 29,911 bài lập chỉ mục), snapshot mạng đồng tác giả 35,117 tác giả, và \path{data/gold/graphs/citation_metrics.parquet}. Trong lần chạy sản xuất 04/11/2026 (\texttt{SNAP-06A}), \texttt{ScientificGraphMiner} tiêu tốn 116.39 giây (49.6\% tổng thời gian 234.57 giây).}
 \end{table}

@@ -1,0 +1,71 @@
+\begingroup
+\small
+\setlength{\tabcolsep}{3.5pt}
+\setlength{\LTpre}{0pt}
+\setlength{\LTpost}{4pt}
+\begin{longtable}{|>{\centering\arraybackslash}p{8mm}|>{\raggedright\arraybackslash}p{28mm}|>{\raggedright\arraybackslash}p{22mm}|>{\raggedright\arraybackslash}p{44mm}|>{\raggedright\arraybackslash}p{38mm}|}
+\caption[Lược đồ chuẩn hóa 23 cột của bảng Silver Papers]{Lược đồ chuẩn hóa 23 cột của bảng \texttt{silver/papers/} (\texttt{SilverLakehouseWriter.SCHEMA})}
+\label{tab:silver_schema}\\
+\hline
+\textbf{STT} & \textbf{Tên cột} & \textbf{Kiểu Arrow} & \textbf{Quy tắc chuẩn hóa / Giá trị mặc định} & \textbf{Nguồn gốc \& Vai trò hệ thống} \\
+\hline
+\endfirsthead
+\multicolumn{5}{l}{\small Bảng \thetable{} (tiếp theo)}\\
+\hline
+\textbf{STT} & \textbf{Tên cột} & \textbf{Kiểu Arrow} & \textbf{Quy tắc chuẩn hóa / Giá trị mặc định} & \textbf{Nguồn gốc \& Vai trò hệ thống} \\
+\hline
+\endhead
+\hline
+\multicolumn{5}{r}{\small (Còn tiếp ở trang sau)}\\
+\endfoot
+\hline
+\endlastfoot
+1 & \path{paper_id} & \path{pa.string()} & Ép chuỗi chuẩn hóa (vd. \texttt{2401.01234}, \path{cvf_*}, \path{s2_*}) & Khóa định danh chính dùng khử trùng \& phân mảnh \\
+\hline
+2 & \path{abstract_hash} & \path{pa.string()} & SHA-256 (64 hex) của \path{abstract}; nếu rỗng dùng \path{title} & Khóa khử trùng nội dung liên nguồn \\
+\hline
+3 & \path{doi} & \path{pa.string()} & Có thể \texttt{None} nếu nguồn không cung cấp & Liên kết chuẩn trích dẫn học thuật \\
+\hline
+4 & \path{journal_ref} & \path{pa.string()} & Tên hội nghị/tạp chí (vd. \texttt{CVPR2024}, \path{venue} S2); có thể \texttt{None} & Ngữ cảnh xuất bản \\
+\hline
+5 & \path{title} & \path{pa.string()} & Ưu tiên \path{parsed_title} từ HTML, fallback \path{raw_meta["title"]} & Tiêu đề bài báo làm sạch \\
+\hline
+6 & \path{abstract} & \path{pa.string()} & Ưu tiên \path{parsed_abstract}, fallback \path{raw_meta["abstract"]} & Nội dung tóm tắt chuẩn \\
+\hline
+7 & \path{authors} & \path{pa.list_(pa.string())} & Chuẩn hóa iterable thành danh sách chuỗi tên tác giả & Đầu vào mạng đồng tác giả PageRank / Louvain \\
+\hline
+8 & \path{categories} & \path{pa.list_(pa.string())} & Danh sách đầy đủ các nhãn ngành; chuyển scalar thành \texttt{[str]} & Đầu vào giao dịch FP-Growth \& \path{category_count} \\
+\hline
+9 & \path{primary_category} & \path{pa.string()} & Lấy \path{raw_meta["primary_category"]}, fallback \path{categories[0]} hoặc \texttt{"unknown"} & Phân tầng EDA, Trend Velocity \& lọc Qdrant \\
+\hline
+10 & \path{published_date} & \path{pa.string()} & Chuỗi ISO 8601 hoặc \texttt{YYYY-MM} / \texttt{YYYY} theo quy tắc OAI/CVF/S2 & Phân vùng theo năm (\path{year=YYYY}) \& thị phần theo tháng \\
+\hline
+11 & \path{crawled_at} & \path{pa.string()} & Thời điểm thu thập UTC ISO 8601 từ DAG/Harvester & Truy vết độ trễ thu thập \\
+\hline
+12 & \path{pdf_url} & \path{pa.string()} & URL tệp PDF gốc (arXiv, CVF, hoặc \path{openAccessPdf} của S2) & Nguồn dự phòng cho Tier 3 ngoài arXiv \\
+\hline
+13 & \path{html_url} & \path{pa.string()} & URL bản HTML5 / landing page (rỗng nếu không có) & Nguồn chính cho bóc tách LaTeXML \\
+\hline
+14 & \path{total_sections} & \path{pa.int64()} & Tổng số mục cấu trúc bóc tách được (\path{len(sections)}) & Quality Gate ($\ge 2$) \& Chỉ dấu làm giàu \\
+\hline
+15 & \path{total_math_count} & \path{pa.int64()} & Số phần tử toán \texttt{<math>} / \path{ltx_Math} parser đếm được & EDA \& Đặc trưng Isolation Forest \\
+\hline
+16 & \path{total_words} & \path{pa.int64()} & Tổng số từ toàn văn (hoặc fallback đếm từ \path{clean_full_text}) & Quality Gate ($\ge 300$) \& Đặc trưng Isolation Forest \\
+\hline
+17 & \path{sections_json} & \path{pa.string()} & Chuỗi JSON UTF-8 (\path{ensure_ascii=False}) lưu mảng đối tượng section & Đầu vào cho \texttt{AcademicChunker} tầng 2 \\
+\hline
+18 & \path{clean_full_text} & \path{pa.string()} & Văn bản liên tục ghép Title, Abstract và các mục \texttt{\#\# \{title\}} & Văn bản chuẩn cho phân đoạn tầng 3 \& kiểm tra \\
+\hline
+19 & \path{transformed_at} & \path{pa.string()} & Thời điểm UTC ISO 8601 khi tạo bản ghi Silver & Nhật ký chuyển đổi \\
+\hline
+20 & \path{cite_count} & \path{pa.int64()} & Lấy \path{cite_count} hoặc \path{citation_count}, điền khuyết \texttt{0} & Xếp hạng Semantic Scholar \& EDA tương quan \\
+\hline
+21 & \path{source} & \path{pa.string()} & Mặc định \texttt{"arxiv"} (\path{arxiv_rss_realtime}, \path{cvf}, \path{semantic_scholar}, \ldots) & Truy vết nhà cung cấp \\
+\hline
+22 & \path{tier} & \path{pa.string()} & Mặc định \texttt{"tier1"} (\texttt{tier1}, \texttt{tier2}, \texttt{tier3}) & Phân tách tầng thu thập trong cùng bảng Silver \\
+\hline
+23 & \path{content_origin} & \path{pa.string()} & \path{arxiv_html5}, \path{ar5iv_html5}, \path{cached_html}, \path{open_access_pdf}, \path{abstract_fallback}, \path{abstract_only} & Kiểm toán nguồn gốc bóc tách nội dung \\
+\hline
+\end{longtable}
+\ReportNote{Nguồn: Đặc tả 23 trường Apache Arrow tại \path{src/transformation/silver_writer.py} (\texttt{SilverLakehouseWriter.SCHEMA}, \texttt{prepare\_record()}, \texttt{\_normalize\_frame()}) và \path{unified_content_resolver.py} (kiểm chứng trên commit \texttt{f421707}/\texttt{aae74de} ngày 25/11/2026); giúp DuckDB S3 và \texttt{AcademicChunker} đọc thống nhất mọi nguồn dị thể.}
+\endgroup

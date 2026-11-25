@@ -1,0 +1,204 @@
+% ==============================================================================
+% CHƯƠNG 2 - PHẦN C: LÀM SẠCH VÀ BÓC TÁCH HỌC THUẬT (CLEAN & EXTRACT)
+% ==============================================================================
+
+\section{Cơ Chế Phân Giải Thác Nước HTML-First (\texttt{UnifiedContentResolver})}
+\label{sec:ch2_resolver}
+
+Để tối ưu hóa đồng thời tốc độ xử lý CPU/GPU, dung lượng lưu trữ Bronze (\texttt{20 GB}) và độ trung thực của công thức toán học, lớp \texttt{UnifiedContentResolver} (\path{src/transformation/unified_content_resolver.py}) thực thi kiến trúc phân giải song song (\texttt{resolve\_batch\_concurrent}, mặc định \texttt{max\_workers=4} trong \texttt{QueueConsumer}) theo mô hình \textbf{thác nước 4 tầng (\textit{4-Tier Waterfall Resolution})} minh họa ở Hình~\ref{fig:content_resolver} và so sánh đặc tính kỹ thuật tại Bảng~\ref{tab:ch2_resolver_tiers}.
+
+\begin{figure}[htbp]
+  \centering
+  \DrawContentResolverWaterfall
+  \caption[Sơ đồ thác nước bốn tầng phân giải nội dung HTML-First]{Sơ đồ thác nước 4 tầng phân giải nội dung HTML-First của \texttt{UnifiedContentResolver}}
+  \ReportNote{Nguồn: Luồng phân giải nội dung trong \path{src/transformation/unified_content_resolver.py} kết hợp \path{src/transformation/html_parser.py} và bản vá \texttt{BUG-01} tại \path{src/indexing/embedder.py}.}
+  \label{fig:content_resolver}
+\end{figure}
+
+\subsection{Tầng 0: Bộ Đệm Bronze Gzip và Tính Toàn Vẹn SHA-256}
+\label{sec:ch2_tier0_cache}
+
+Trước khi phát sinh bất kỳ yêu cầu HTTP nào ra mạng ngoài, \path{resolve_single_paper()} kiểm tra đối tượng lưu trữ tại \path{bronze/{source}/raw_html/{year}/{clean_id}.html.gz} (kèm khả năng đọc ngược tệp \texttt{.html} chưa nén từ phiên bản cũ qua \path{read_bronze_html()}). Khi tải mới thành công từ Internet, \path{vault_html_to_bronze()} nén trực tiếp luồng UTF-8 trong RAM bằng \path{gzip.compress(..., compresslevel=6)} và đẩy lên MinIO kèm thuộc tính metadata \texttt{sha256}, \texttt{paper\_id}, và \path{inner-type: "text/html"}. Phép nén gzip giảm dung lượng HTML5 thô từ arXiv đi khoảng \textbf{6--8 lần} (từ mức \texttt{200--800 KB} xuống còn vài chục KB mỗi bài), giữ cho kho Bronze vận hành thoải mái trong giới hạn \texttt{20 GB}. Nếu HTML đọc từ cache vượt qua cổng kiểm định chất lượng (\texttt{total\_words >= 300} và \texttt{total\_sections >= 2}), hàm gán nhãn \path{content_origin = "cached_html"} và kết thúc ngay lập tức.
+
+\subsection{Tầng 1: Ưu Tiên arXiv HTML5 và Dự Phòng ar5iv LaTeXML}
+\label{sec:ch2_tier1_html5}
+
+Nếu bài báo có mã arXiv (bao gồm cả mã trước năm 2007 dạng \texttt{cs/0101001} lẫn mã mới \texttt{YYMM.NNNNN}, đã tước hậu tố \texttt{v\textbackslash d+\$}, hoặc được suy từ liên kết \path{pdf_url} dạng \path{arxiv.org/pdf/...}), bộ giải mã gọi \texttt{fetch\_arxiv\_html()}:
+\begin{enumerate}[label=\textbf{\arabic*.}]
+  \item \textbf{Nguồn chính thức \path{https://arxiv.org/html/{ar_id}}} (\texttt{timeout = 8.0 s}): Yêu cầu mã trạng thái \texttt{200}, độ dài thân trang \texttt{len(resp.text) > 1200} ký tự, chứa thẻ \texttt{<html} và đặc trưng DOM của LaTeXML (\texttt{"ltx\_"}). Khi đạt chuẩn, gán nhãn phụ \texttt{arxiv\_html5}.
+  \item \textbf{Nguồn dự phòng \path{https://ar5iv.labs.arxiv.org/html/{ar_id}}} (\texttt{timeout = 8.0 s}): Kích hoạt khi bài báo chưa có bản HTML5 chính thức trên \texttt{arxiv.org} (phổ biến với các công trình giai đoạn 2017--2023), gán nhãn \texttt{ar5iv\_html5}.
+  \item \textbf{Chống trang giữ chỗ (\textit{Stub Guard})}: Ngay cả khi HTTP trả về \texttt{200}, một số trang ar5iv chỉ là thông báo lỗi biên dịch TeX ngắn. Do đó, kết quả bóc tách phải vượt qua điều kiện \texttt{total\_words >= 300} và \texttt{total\_sections >= 2} trước khi được chấp nhận làm toàn văn; nếu không đạt, bài báo tự động chuyển xuống nhánh dự phòng tóm tắt.
+\end{enumerate}
+
+\subsection{Tầng 2: Giải Mã PDF bằng \texttt{PyMuPDF} cho Công Trình Kinh Điển Tier 3}
+\label{sec:ch2_tier2_pdf}
+
+Khác với thiết kế thử nghiệm giai đoạn đầu vốn sử dụng mô hình thị giác \texttt{Marker} FP16 ($4$--$10\text{ s/bài}$ trên GPU) cho toàn bộ bài hội nghị PDF, kiến trúc sản xuất hiện hành (\path{src/transformation/unified_content_resolver.py}) áp dụng chiến lược \textbf{Tier 1 và Tier 2 thuần HTML (\textit{HTML-only})} để tối đa hóa thông lượng, và chỉ kích hoạt tải PDF cho \textbf{các bài báo kinh điển Tier 3 không có trên arXiv} (từ \texttt{dag\_tier3\_landmark\_harvest} hoặc \texttt{dag\_tier3\_pdf\_backfill}):
+\begin{enumerate}[label=\textbf{\arabic*.}]
+  \item \textbf{Tải và Xác thực PDF (\texttt{fetch\_pdf})}: Thực thi yêu cầu \texttt{timeout = 45.0 s}. Nếu URL trỏ về trang đích của kho lưu trữ đại học hoặc nhà xuất bản (như HAL) thay vì tệp nhị phân trực tiếp, bộ tải trích xuất siêu dữ liệu \texttt{<meta name="citation\_pdf\_url" content="...">} để đi theo liên kết PDF thực. Tệp chỉ được chấp nhận khi có chữ ký byte đầu \texttt{\%PDF-} (\texttt{body[:5] == b"\%PDF-"}) và dung lượng không vượt quá \texttt{MAX\_PDF\_BYTES = 40 MB}, sau đó lưu vào Bronze tại \path{bronze/{source}/raw_pdf/{year}/{clean_id}.pdf} kèm mã băm SHA-256.
+  \item \textbf{Phân tích Cấu trúc Trang và Khử gạch nối (\texttt{parse\_pdf})}: Thay vì chuyển đổi qua đĩa tạm, \texttt{fitz.open(stream=pdf\_bytes, filetype="pdf")} (PyMuPDF) đọc trực tiếp từ buffer bộ nhớ, duyệt toàn bộ \texttt{blocks $\rightarrow$ lines $\rightarrow$ spans} để thu thập cặp \texttt{(size, text)} với \texttt{size = max(sp["size"])} và thống kê kích thước chữ thân bài phổ biến nhất $s_{\text{body}}$ (\textit{mode} có trọng số độ dài ký tự). Một dòng được nhận diện là tiêu đề mục mới khi thỏa mãn đồng thời ba điều kiện hình thái:
+\end{enumerate}
+\begin{equation}
+  s_{\text{line}} \ge 1.15 \cdot s_{\text{body}}, \qquad |\text{text}| \le 90\text{ ký tự}, \qquad \text{có ít nhất } 3\text{ chữ cái liên tiếp } \bigl(\texttt{[A-Za-z]\{3\}}\bigr)
+  \label{eq:ch2_pdf_heading}
+\end{equation}
+\noindent Trong đó: $s_{\text{line}}$ là cỡ chữ lớn nhất trên dòng hiện tại, $s_{\text{body}}$ là cỡ chữ xuất hiện nhiều ký tự nhất toàn tài liệu (\texttt{sizes.most\_common(1)[0][0]}), và ngưỡng $1.15$ tách biệt tiêu đề chương/mục khỏi chữ thường. Toàn bộ các từ bị ngắt gạch nối qua dòng trong bố cục 2 cột PDF được hàn gắn lại bằng biểu thức chính quy \texttt{re.sub(r"-\textbackslash s+(?=[a-z])", "", ...)} trước khi đóng gói vào các phân mục \texttt{section\_type = "body"} và gán nhãn \texttt{content\_origin = "open\_access\_pdf"}. Nếu văn bản trích xuất có ít hơn \texttt{300} từ (dấu hiệu PDF dạng ảnh quét chưa OCR), hệ thống loại bỏ để rơi về tóm tắt.
+
+\subsection{Tầng 3: Dự Phòng Tóm Tắt (\texttt{abstract\_fallback})}
+\label{sec:ch2_tier3_abstract}
+
+Khi một công trình bị khóa bản quyền (\textit{paywall}), là bài báo mới trong ngày chưa kịp biên dịch LaTeXML, hoặc không có bản PDF truy cập mở, tầng 3 đóng gói tiêu đề và tóm tắt thành Markdown tối giản (\texttt{\# \{title\}\textbackslash n\textbackslash n\#\# Abstract\textbackslash n\textbackslash n\{abstract\}\textbackslash n}) với \texttt{total\_sections = 1}, \texttt{total\_math\_count = 0}, và \path{content_origin = "abstract_fallback"} (hoặc \path{"abstract_only"} trong \path{QueueConsumer._silver_record} khi không đi qua resolver). Nhờ cơ chế này, hệ thống vẫn bảo toàn khả năng lập chỉ mục và tìm kiếm ngữ nghĩa ở cấp độ tóm tắt thay vì bỏ sót tài liệu.
+
+\begin{table}[htbp]
+  \centering
+  \footnotesize
+  \caption[So sánh bốn tầng phân giải nội dung của UnifiedContentResolver]{So sánh đặc tính kỹ thuật của 4 tầng phân giải nội dung trong \texttt{UnifiedContentResolver}}
+  \label{tab:ch2_resolver_tiers}
+  \setlength{\tabcolsep}{3.5pt}
+  \begin{tabularx}{\linewidth}{|>{\raggedright\arraybackslash}p{27mm}|>{\raggedright\arraybackslash}p{31mm}|>{\raggedright\arraybackslash}p{31mm}|>{\raggedright\arraybackslash}p{25mm}|L|}
+    \hline
+    \textbf{Tầng \& Nhãn \path{content_origin}} & \textbf{Nguồn dữ liệu / Công cụ} & \textbf{Phạm vi áp dụng} & \textbf{Tốc độ \& Tài nguyên} & \textbf{Bảo tồn công thức \& Cấu trúc} \\
+    \hline
+    \textbf{Tầng 0}\newline(\path{cached_html}) & MinIO \path{raw_html/*.html.gz} + \path{AcademicHTMLParser} & Mọi bài đã từng tải HTML vào Bronze & Rất nhanh ($\sim 100\text{ ms}$), 0 request ngoài & Bảo toàn nguyên bản DOM / LaTeX từ kho gốc \\
+    \hline
+    \textbf{Tầng 1}\newline(\path{arxiv_html5} / \path{ar5iv_html5}) & \path{arxiv.org/html} $\rightarrow$ \path{ar5iv} (\texttt{timeout=8s}) + \texttt{lxml} & Bài có \path{arxiv_id} (Tier 1, 2, 3 và CVF liên kết arXiv) & $0.3$--$1.5\text{ s/bài}$ CPU, nén gzip 6--8 lần & Trực tiếp đọc \path{<annotation encoding="application/x-tex">} \\
+    \hline
+    \textbf{Tầng 2}\newline(\path{open_access_pdf}) & \texttt{PyMuPDF} (\texttt{fitz}) in-memory ($\le 40\text{ MB}$) & Chỉ Tier 3 ngoài arXiv (\path{s2_*}) có \path{openAccessPdf} & Nhẹ trên CPU, khử gạch nối qua dòng & Phân mục theo cỡ chữ ($\ge 1.15 \cdot s_{\text{body}}$), \texttt{math\_count = 0} \\
+    \hline
+    \textbf{Tầng 3}\newline(\path{abstract_fallback}) & Metadata \path{title} + \path{abstract} & Bài mới chưa render HTML5 hoặc CVF/S2 thiếu PDF mở & Tức thời ($< 1\text{ ms}$) & Chỉ có mục \texttt{Abstract} (\texttt{total\_sections = 1}) \\
+    \hline
+  \end{tabularx}
+  \ReportNote{Nguồn: Phân tích nhánh rẽ hàm \texttt{resolve()} tại \path{src/transformation/unified_content_resolver.py} và \path{src/ingestion/queue_consumer.py} (kiểm chứng ngày 25/11/2026).}
+\end{table}
+
+\section{Bộ Bóc Tách HTML Học Thuật (\texttt{AcademicHTMLParser})}
+\label{sec:ch2_html_parser}
+
+Lớp \texttt{AcademicHTMLParser} (\path{src/transformation/html_parser.py}) sử dụng \texttt{BeautifulSoup} kết hợp trình phân tích tốc độ cao \texttt{lxml} để chuyển đổi cây DOM LaTeXML thành cấu trúc phân mục giàu ngữ nghĩa: trích xuất tiêu đề (\texttt{h1.ltx\_title}) và tóm tắt (\texttt{div/section.ltx\_abstract}), quét toàn bộ phần tử toán học \texttt{<math>} / \texttt{span.ltx\_Math}, phân loại 9 loại phân mục học thuật, nhân bản cục bộ từng nút đoạn văn (\texttt{p\_copy}) để bảo toàn cú pháp LaTeX trước khi trích xuất văn bản, lọc bỏ đoạn văn ngắn $\le 20$ ký tự, và đưa qua khâu làm sạch Unicode.
+
+\subsection{Trích Xuất Biểu Thức Toán LaTeX và Bảo Toàn Inline Math}
+\label{sec:ch2_latex_math}
+
+Trong tài liệu HTML5 do LaTeXML sinh ra, công thức toán học được biểu diễn dưới dạng MathML lồng trong thẻ \texttt{<math>} hoặc \texttt{<span class="ltx\_Math">} / \texttt{class="math"}. Nếu gọi \texttt{.get\_text()} trực tiếp lên đoạn văn \texttt{<p>}, toàn bộ cấu trúc phân số, chỉ số trên/dưới và ký hiệu Hy Lạp sẽ bị làm phẳng thành chuỗi rời rạc không thể đọc hiểu. Để giải quyết triệt để vấn đề này, \texttt{AcademicHTMLParser.parse()} thực thi cơ chế \textbf{nhân bản nút DOM cục bộ (\texttt{p\_copy})}:
+\begin{itemize}
+  \item Với mỗi thẻ đoạn văn \texttt{<p>} bên trong \texttt{<section>}, parser tạo bản sao \texttt{p\_copy = BeautifulSoup(str(p), "lxml")} nhằm không làm biến đổi cây DOM gốc đang duyệt.
+  \item Tìm mọi phần tử \texttt{["math", "span"]} có lớp \texttt{ltx\_Math} hoặc \texttt{math}, giải mã theo thứ tự ưu tiên 3 tầng:
+    \begin{enumerate}[label=\textbf{\arabic*.}]
+      \item \textbf{Ưu tiên 1 (Mã nguồn TeX nguyên thủy)}: Đọc thẻ con \texttt{<annotation encoding="application/x-tex">} chứa chính xác lệnh LaTeX do tác giả soạn thảo.
+      \item \textbf{Ưu tiên 2 (Thuộc tính thay thế)}: Đọc thuộc tính \texttt{alttext} trên thẻ \texttt{<math>}.
+      \item \textbf{Ưu tiên 3 (Fallback văn bản hiển thị)}: Đọc \texttt{m.get\_text().strip()} khi thiếu cả hai nguồn trên.
+    \end{enumerate}
+  \item Gọi \texttt{m.replace\_with(f" \$\{tex\_str\}\$ ")} để chèn trực tiếp chuỗi LaTeX vào đúng vị trí ngữ cảnh bên trong đoạn văn \textit{trước khi} rút trích văn bản thuần bằng \texttt{clean\_text(p\_copy.get\_text())}.
+\end{itemize}
+
+Lưu ý kỹ thuật: phiên bản hiện tại đóng gói đồng nhất mọi biểu thức toán tìm được trong cặp dấu \texttt{\$ \ldots\ \$} (không tách riêng nhánh display math \texttt{\$\$ \ldots\ \$\$}), tương thích hoàn toàn với trình kết xuất KaTeX trên giao diện React 19; đồng thời lưu tối đa \texttt{100} công thức tiêu biểu vào \texttt{math\_equations} và đếm tổng số phần tử toán học vào \texttt{total\_math\_count}.
+
+\subsection{Bộ Phân Loại Chín Nhãn Mục Học Thuật và Lọc Nhiễu Đoạn Văn}
+\label{sec:ch2_section_classifier}
+
+Mỗi tiêu đề mục (\texttt{h2}, \texttt{h3}, \texttt{h4}, \texttt{h5}) được phân loại tự động bằng hệ thống 9 biểu thức chính quy chuẩn hóa (\texttt{SECTION\_TYPE\_PATTERNS} tại \path{src/transformation/html_parser.py}), các mục không khớp rơi vào nhãn \texttt{"other"} (Bảng~\ref{tab:ch2_section_types}). Đồng thời, các đoạn văn có độ dài $\le 20$ ký tự (thường là số thứ tự phương trình đứng lẻ, nhãn hình ảnh vụn hoặc chú thích điều hướng) bị loại bỏ khỏi danh sách \texttt{paragraphs}.
+
+\begin{table}[htbp]
+  \centering
+  \scriptsize
+  \caption[Bộ phân loại chín nhãn phân mục học thuật trong AcademicHTMLParser]{Bộ phân loại 9 nhãn phân mục học thuật trong \texttt{AcademicHTMLParser}}
+  \label{tab:ch2_section_types}
+  \setlength{\tabcolsep}{3pt}
+  \begin{tabularx}{\linewidth}{|>{\centering\arraybackslash}p{7mm}|>{\raggedright\arraybackslash}p{23mm}|>{\raggedright\arraybackslash}p{68mm}|L|}
+    \hline
+    \textbf{STT} & \textbf{Nhãn \path{section_type}} & \textbf{Mẫu Regex khớp tiêu đề (không phân biệt hoa/thường)} & \textbf{Vai trò hạ nguồn (RAG \& Chunker)} \\
+    \hline
+    1 & \path{abstract} & \texttt{abstract} & Phân tách riêng làm vector đại diện cấp bài báo (\path{{pid}_abs}) \\
+    \hline
+    2 & \path{introduction} & \texttt{\^{}\textbackslash s*(\textbackslash d+(\textbackslash.\textbackslash d+)*\textbackslash.?\textbackslash s+)?\allowbreak(intro|\allowbreak introduction)} & Ngữ cảnh đặt vấn đề và đóng góp chính \\
+    \hline
+    3 & \path{related_work} & \texttt{\^{}\textbackslash s*(\textbackslash d+(\textbackslash.\textbackslash d+)*\textbackslash.?\textbackslash s+)?\allowbreak(related|\allowbreak background|\allowbreak prior)} & Đối chiếu công trình tiền nhiệm \\
+    \hline
+    4 & \path{methodology} & \texttt{\^{}\textbackslash s*(\textbackslash d+(\textbackslash.\textbackslash d+)*\textbackslash.?\textbackslash s+)?\allowbreak(method|\allowbreak approach|\allowbreak proposed|\allowbreak architecture|\allowbreak model|\allowbreak formulation|\allowbreak algorithm)} & Trọng tâm cho truy vấn cơ chế \& công thức kỹ thuật \\
+    \hline
+    5 & \path{experiments} & \texttt{\^{}\textbackslash s*(\textbackslash d+(\textbackslash.\textbackslash d+)*\textbackslash.?\textbackslash s+)?\allowbreak(experiment|\allowbreak eval|\allowbreak evaluation|\allowbreak result|\allowbreak ablation|\allowbreak benchmark)} & Nguồn bằng chứng thực nghiệm \& siêu tham số \\
+    \hline
+    6 & \path{discussion} & \texttt{\^{}\textbackslash s*(\textbackslash d+(\textbackslash.\textbackslash d+)*\textbackslash.?\textbackslash s+)?\allowbreak(discussion|\allowbreak analysis|\allowbreak limitation)} & Phân tích hạn chế và diễn giải kết quả \\
+    \hline
+    7 & \path{conclusion} & \texttt{\^{}\textbackslash s*(\textbackslash d+(\textbackslash.\textbackslash d+)*\textbackslash.?\textbackslash s+)?\allowbreak(conclu|\allowbreak future work|\allowbreak summary)} & Tóm lược kết luận và hướng mở rộng \\
+    \hline
+    8 & \path{references} & \texttt{\^{}\textbackslash s*(reference|\allowbreak bibliography)} & Danh mục trích dẫn cuối bài \\
+    \hline
+    9 & \path{appendix} & \texttt{\^{}\textbackslash s*(appendix|\allowbreak supplementary)} & Chứng minh toán học phụ lục \& chi tiết bổ sung \\
+    \hline
+  \end{tabularx}
+  \ReportNote{Nguồn: Danh sách biểu thức chính quy \texttt{SECTION\_TYPE\_PATTERNS} trong \path{src/transformation/html_parser.py} (các mục không khớp nhận nhãn mặc định \texttt{"other"}).}
+\end{table}
+
+\subsection{Phân Biệt Chỉ Dấu Quy Mô Parser và Độ Chính Xác Nội Dung}
+\label{sec:ch2_extraction_quality}
+
+Các thống kê quy mô như \texttt{2,220,938} công thức (\texttt{SNAP-01}, 10k bài) hay \texttt{2,825,871} công thức (\texttt{SNAP-03}, 13k bài) và chỉ số tỷ lệ làm giàu (\texttt{total\_sections > 1}, đạt \texttt{90.15\%} và \texttt{89.38\%}) phản ánh \textbf{số lượng đơn vị cấu trúc mà parser nhận diện và đếm được}, không đồng nghĩa tự động với tỷ lệ đúng ngữ nghĩa 100\% khi đối chiếu thủ công (chẳng hạn khi tài liệu gốc dùng macro \texttt{\textbackslash def} phức tạp hoặc khi parser rơi về nhánh fallback text hiển thị nếu thiếu \texttt{annotation}). Để xác nhận độ chính xác trích xuất ở các nghiên cứu kế tiếp, quy trình kiểm định mẫu có kiểm soát cần thực hiện theo ba bước: (i) ghi cố định snapshot, commit parser, seed lấy mẫu phân tầng theo chuyên ngành/nguồn; (ii) đối chiếu từng thành phần (section, cú pháp vs ngữ nghĩa công thức, hàng/cột bảng, metadata); và (iii) báo cáo riêng mẫu số đơn vị đã chấm (tách biệt mẫu số bài khỏi mẫu số công thức).
+
+\section{Làm Sạch Unicode, Diệt Surrogate (\texttt{BUG-01}) và Cổng Chất Lượng}
+\label{sec:ch2_clean_gates}
+
+\subsection{Phân Tích Lỗi \texttt{BUG-01}: Rust PyO3 Panic trên Lone UTF-16 Surrogates}
+\label{sec:ch2_bug01}
+
+Trong quá trình chạy nhúng hàng loạt quy mô lớn (\texttt{635,901} chunks trên \texttt{12,641} bài toàn văn được ghi nhận tại \path{docs/bugs/BUG_01_TOKENIZER_SURROGATE_CRASH.md}), hệ thống gặp sự cố sập tiến trình nghiêm trọng (\texttt{pyo3\_runtime.PanicException: called Result::unwrap() on an Err value: Utf8Error}).
+
+\begin{itemize}
+  \item \textbf{Nguyên nhân gốc rễ}: Chuỗi \texttt{str} của Python cho phép tồn tại các điểm mã \textit{lone surrogate} UTF-16 nằm trong dải \texttt{\textbackslash uD800} đến \texttt{\textbackslash uDFFF} (phát sinh từ các ligature toán học bị lỗi mã hóa trong tệp PDF hoặc thực thể HTML lỗi). Tuy nhiên, thư viện \texttt{tokenizers} của HuggingFace được viết bằng ngôn ngữ Rust và liên kết qua PyO3; kiểu \texttt{\&str} / \texttt{String} trong Rust \textbf{bắt buộc dữ liệu phải là UTF-8 hợp lệ 100\%} (chuẩn UTF-8 cấm tuyệt đối các điểm mã surrogate đơn lẻ). Khi PyO3 gọi \texttt{str::from\_utf8(...).unwrap()}, một ký tự lỗi duy nhất làm sập toàn bộ worker thay vì ném ngoại lệ Python có thể bắt được.
+  \item \textbf{Giải pháp triệt để trong \texttt{NomicEmbedder}}: Trước khi đưa bất kỳ chuỗi tài liệu (\texttt{embed\_documents()}) hay câu truy vấn (\texttt{embed\_query()}) nào vào bộ \texttt{self.tokenizer}, \path{src/indexing/embedder.py} thực hiện phép lọc mã hóa kép UTF-8 an toàn (Đoạn mã~\ref{lst:ch2_strip_surrogates}). Phép xử lý này loại bỏ chính xác các byte surrogate không hợp lệ mà không làm sai lệch bảng chữ cái Unicode chuẩn (tiếng Anh, ký hiệu toán học Hy Lạp, tiếng Việt). Kết quả kiểm chứng sau khi vá lỗi trên \texttt{635,901} chunks hoàn thành trọn vẹn với tốc độ \texttt{4,012.3 chunks/s} và 0 lần crash.
+\end{itemize}
+
+\begin{lstlisting}[language=Python, caption={Xu ly loai bo lone UTF-16 surrogates chong panic Rust PyO3 (BUG-01)}, label={lst:ch2_strip_surrogates}]
+# Trich doan tu src/indexing/embedder.py (embed_documents & embed_query)
+# Strip lone UTF-16 surrogates (U+D800..U+DFFF) to prevent Rust PyO3 PanicException
+formatted_texts = [
+    f"search_document: {t.encode('utf-8', 'ignore').decode('utf-8', 'ignore') if isinstance(t, str) else ''}"
+    for t in texts
+]
+
+# Tuong tu cho cau truy van dau vao trong embed_query(self, query: str)
+clean_q = query.encode("utf-8", "ignore").decode("utf-8", "ignore") if isinstance(query, str) else ""
+formatted_query = f"search_query: {clean_q}"
+\end{lstlisting}
+
+\subsection{Lọc Bài Bị Rút, Chuẩn Hóa Năm và Cổng Kiểm Soát Chất Lượng}
+\label{sec:ch2_quality_gates}
+
+Bên cạnh việc lọc surrogate và chuẩn hóa khoảng trắng (\texttt{re.sub(r"\textbackslash s+", " ", text).strip()}), hệ thống áp dụng các chốt chặn làm sạch sau trước khi đưa dữ liệu vào Silver và Gold (tổng hợp tại Bảng~\ref{tab:ch2_quality_gates}):
+\begin{enumerate}[label=\textbf{\arabic*.}]
+  \item \textbf{Loại bỏ bài báo bị rút (\textit{Withdrawn Detection})}: Trong \path{dags/dag_tier2_near_past_harvest.py}, hàm \texttt{\_withdrawn(abstract, comment)} kiểm tra từ khóa \texttt{"withdrawn"} trong trường bình luận \texttt{comments} của arXiv hoặc tiền tố \texttt{"this paper has been withdrawn"} trong phần tóm tắt để loại bỏ ngay từ bước thu thập (\texttt{h.dropped += 1}).
+  \item \textbf{Chuẩn hóa Năm Xuất bản}: Do trường \texttt{published\_date} từ nhiều nguồn mang các định dạng khác nhau (ISO 8601 \texttt{2024-05-12T...}, RFC-2822 của RSS, hoặc chuỗi 4 chữ số \texttt{"2024"}), hàm \texttt{AcademicChunker.\_parse\_year()} (\path{src/indexing/chunker.py}) trích xuất biểu thức chính quy \texttt{r"(?:19|20)\textbackslash d\{2\}"} về số nguyên \texttt{int} cho cột \texttt{year} của \texttt{ChunkStore} và chỉ mục Qdrant, phục vụ lọc khoảng thời gian trên giao diện 3D và RAG.
+  \item \textbf{Cổng Kiểm soát Chất lượng Toàn văn (\textit{Quality Gate})}: Một tài liệu tải về từ HTML5 hoặc PDF chỉ được công nhận là bản ghi toàn văn (\textit{Full-Text}) khi thỏa mãn đồng thời điều kiện định lượng tại \path{src/transformation/unified_content_resolver.py}:
+\end{enumerate}
+\begin{equation}
+  \operatorname{IsFullText}(d) \iff \Bigl(\text{total\_words}(d) \ge 300\Bigr) \;\land\; \Bigl(\text{total\_sections}(d) \ge 2\Bigr)
+  \label{eq:ch2_quality_gate}
+\end{equation}
+\noindent Trong đó: $\text{total\_words}(d)$ là tổng số từ trong toàn văn và phần tóm tắt của tài liệu $d$, và $\text{total\_sections}(d)$ là tổng số phân mục bóc tách được có nội dung khác rỗng sau khi đã lọc đoạn văn ngắn $\le 20$ ký tự.
+
+\begin{table}[htbp]
+  \centering
+  \small
+  \caption[Tổng hợp các quy tắc làm sạch và cổng chất lượng dữ liệu]{Tổng hợp các chốt chặn làm sạch và cổng kiểm soát chất lượng dữ liệu}
+  \label{tab:ch2_quality_gates}
+  \setlength{\tabcolsep}{3.5pt}
+  \begin{tabularx}{\linewidth}{|>{\raggedright\arraybackslash}p{32mm}|>{\raggedright\arraybackslash}p{39mm}|>{\raggedright\arraybackslash}p{39mm}|L|}
+    \hline
+    \textbf{Chốt chặn chất lượng} & \textbf{Ngưỡng / Điều kiện} & \textbf{Hành động khi vi phạm} & \textbf{Module thực thi} \\
+    \hline
+    \textbf{Lọc bài bị rút} & \texttt{"withdrawn"} trong \path{comment} hoặc đầu \path{abstract} & Hủy bản ghi ngay tại Tier 2 (\texttt{dropped += 1}) & \path{dags/dag_tier2_near_past_harvest.py} \\
+    \hline
+    \textbf{Xác thực PDF nhị phân} & \texttt{body[:5] == b"\%PDF-"} và $\le 40\text{ MB}$ & Rơi xuống tầng dự phòng tóm tắt & \path{unified_content_resolver.py} \\
+    \hline
+    \textbf{Lọc đoạn văn rác} & \texttt{len(p\_text) > 20} ký tự & Loại bỏ mảnh DOM ngắn / nhãn điều hướng & \path{src/transformation/html_parser.py} \\
+    \hline
+    \textbf{Quality Gate toàn văn} & \texttt{total\_words >= 300} và \texttt{total\_sections >= 2} & Chặn trang stub HTML/scan PDF; gắn \path{abstract_fallback} & \path{unified_content_resolver.py} \\
+    \hline
+    \textbf{Diệt Lone Surrogates (\texttt{BUG-01})} & \path{.encode('utf-8','ignore').decode('utf-8','ignore')} & Lọc bỏ điểm mã \texttt{\textbackslash uD800}--\texttt{\textbackslash uDFFF} trước tokenizer & \path{src/indexing/embedder.py} \\
+    \hline
+    \textbf{Chuẩn hóa Năm \& Khoảng trắng} & Regex \texttt{(?:19|20)\textbackslash d\{2\}} và \texttt{\textbackslash s+} $\rightarrow$ \texttt{" "} & Trả về \texttt{None} (hoặc năm hiện tại khi ghi part) & \path{chunker.py}, \path{queue_consumer.py} \\
+    \hline
+  \end{tabularx}
+  \ReportNote{Nguồn: Tổng hợp từ 5 module tiền xử lý trong \path{src/} và \path{dags/} cùng hồ sơ phân tích sự cố \path{docs/bugs/BUG_01_TOKENIZER_SURROGATE_CRASH.md}.}
+\end{table}
+\FloatBarrier

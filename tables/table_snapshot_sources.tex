@@ -1,17 +1,19 @@
 \begin{table}[!htbp]
 \centering
 \small
-\setlength{\tabcolsep}{4pt}
-\begin{tabularx}{\linewidth}{|>{\raggedright\arraybackslash}p{31mm}|>{\raggedright\arraybackslash}p{30mm}|L|}
-\hline
-\textbf{Nguồn / mốc} & \textbf{Quy mô ghi nhận} & \textbf{Phạm vi sử dụng} \\ \hline
-Artifact local; manifest 04/10/2026 & 10,000 bài & Bảng EDA và các nhận xét lịch sử trong chương. \\ \hline
-EDA \& Mining trên kho; 17/10/2026 & 13,000 bài; 11,619 làm giàu; 2,825,871 công thức & Ảnh UI Silver/Manifest (8.15 GB, 10,452 objects, 30 luật, Silhouette 0.0515). \\ \hline
-Ma trận thuộc artifact EDA trên kho & $n=11,659$ trên giao diện & Ảnh Pearson/Spearman; cỡ mẫu chưa đồng nhất với tổng quan. \\ \hline
-GMM trên kho; lưu 20/10/2026 & 800 mẫu, $K=6$ & Ảnh cụm ở Chương~\ref{chap:modeling}; không thay metric của snapshot 5,000 mẫu. \\ \hline
-Lakehouse toàn phần; log 04--08/11/2026 & 71,927 bài Silver; 1,043,594 vector Qdrant & Phiên chạy EDA + 4 trụ cột (234.57 s) tại \path{logs/run/backend.log} và \path{rag_eval}. \\ \hline
-\end{tabularx}
-\caption[Phạm vi các snapshot và bộ ảnh]{Phạm vi các snapshot dùng trong bảng và ảnh}
+\setlength{\tabcolsep}{3.5pt}
+\caption[Phạm vi các mốc dữ liệu và bằng chứng (SNAP-01 đến SNAP-06B)]{Phạm vi các mốc dữ liệu và bằng chứng thực nghiệm (\texttt{SNAP-01} đến \texttt{SNAP-06B})}
 \label{tab:snapshot_sources}
-\ReportNote{Nguồn: Bảng đối chiếu nguồn gốc và phạm vi của các tập dữ liệu, artifact và giao diện trực quan hóa trong báo cáo.}
+\begin{tabularx}{\linewidth}{|>{\raggedright\arraybackslash}p{16mm}|>{\raggedright\arraybackslash}p{33mm}|>{\raggedright\arraybackslash}p{38mm}|L|}
+\hline
+\textbf{Mã mốc} & \textbf{Thời điểm \& Nền tảng} & \textbf{Quy mô Corpus \& Vector} & \textbf{Phạm vi \& Bằng chứng kiểm chứng} \\ \hline
+\textbf{SNAP-01} & 04--06/10/2026; Silver Parquet cục bộ \& LanceDB & 10,000 bài (9,015 làm giàu = 90.15\%, 2,220,938 công thức); Gold 06/10/2026: 29,911 full-text / 100,000 catalog / 913,205 vector & Bảng đối chiếu lịch sử (282 giao dịch FP-Growth, 5,000 mẫu Silhouette 0.0210); manifest tại \path{data/gold/mining/mining_manifest.json}, \path{association_rules.json}, \path{trends_anomalies.json}. \\ \hline
+\textbf{SNAP-02} & 05--07/10/2026; LanceDB trên Cloudflare R2 (\path{6cb1c52}) & 143,523 chunks (21 mẫu) $\rightarrow$ 164,702 chunks (26 mẫu, 768-D Nomic) & Benchmark DeepEval 2.x lịch sử (Chương~\ref{chap:evaluation}): Contextual Precision 0.860, Faithfulness 0.699 (21 mẫu); 0.890 / 0.892 (768-D reranked). \\ \hline
+\textbf{SNAP-03} & 17/10/2026 (chụp 23/11/2026); MinIO S3 EDA & 13,000 bài (11,619 làm giàu = 89.38\%, 2,825,871 công thức, 62,288,266 từ); mẫu sạch $n=11,659$ & Hình~\ref{fig:eda_pareto_growth}, \ref{fig:pearson_capture}, \ref{fig:spearman_capture}; Bảng~\ref{tab:eda_categories}, \ref{tab:three_lens}; tệp \path{evidence/eda_api.json} (8.15 GB, 10,452 đối tượng MinIO). \\ \hline
+\textbf{SNAP-04} & 19/10/2026; RTX 4060 8 GB + CUDA 12.4 + Qdrant & 374,082 vector 768-D trên Qdrant Cloud & Benchmark phần cứng (Chương~\ref{chap:evaluation}): 269.46 ms Qdrant pool Top-5, 609.77 ms TTFT, 46.33 tok/s, 3,392.50 ms E2E, 5.7 GB VRAM đỉnh. \\ \hline
+\textbf{SNAP-05} & 20/10/2026 (chụp 23/11/2026); GMM UI trên kho & 800 mẫu tuyển chọn, $K=6$ thành phần Gaussian & Hình~\ref{fig:gmm_capture}, Bảng~\ref{tab:clustering_metrics}, \path{evidence/clusters_api.json}: minh họa GMM 2D (BIC 2,889.41, Silhouette 0.3528, 25.62\% liên ngành). \\ \hline
+\textbf{SNAP-06A} & 04/11/2026; Production MinIO + Qdrant (\texttt{D-058}) & 71,927 bài Silver phân biệt; 1,043,594 vector Qdrant (70,539 vector abstract) & Nhật ký \path{logs/run/backend.log}: chạy toàn phần EDA + 4 trụ cột (234.57 s: 39.09 s EDA, 36.26 s FP-Growth 45 luật, 39.94 s GMM, 116.39 s Graph, 2.89 s IF). \\ \hline
+\textbf{SNAP-06B} & 06--09/11/2026; Commit \path{f421707} \& \path{aae74de} & 1,000 bài Chunking A/B; 120 câu 5-Scenario (29,523 PageRank); 150 câu Retrieval v1 / 3-Way & Chương~\ref{chap:evaluation}: \path{chunking_ab/summary.json}, \path{report_retrieval.json}, \path{laya_ab_final_benchmark.json} (Evidence Gate AUROC 0.986, 3-Way MRR 0.8939). \\ \hline
+\end{tabularx}
+\ReportNote{Nguồn: Tổng hợp từ ma trận truy vết snapshot trong kho chứng cứ thực nghiệm (\path{logs/run/backend.log}, \path{data/gold/mining/mining_manifest.json}, \path{figures/captured_20261123_082337/manifest.json} và \path{logs/benchmarks/}).}
 \end{table}

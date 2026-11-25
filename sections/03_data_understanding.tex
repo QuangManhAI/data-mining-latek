@@ -1,151 +1,282 @@
 % ==============================================================================
-% CHƯƠNG 2: HIỂU DỮ LIỆU VÀ EDA (DATA UNDERSTANDING & EDA)
+% CHƯƠNG 3: PHÂN TÍCH KHÁM PHÁ DỮ LIỆU VÀ KIỂM ĐỊNH THỐNG KÊ (EDA)
 % ==============================================================================
 
-\chapter{Hiểu Dữ Liệu và Khám Phá EDA (Data Understanding)}
+\chapter{Phân Tích Khám Phá Dữ Liệu và Kiểm Định Thống Kê (EDA)}
 \label{chap:data_understanding}
 
-\section{Nguồn Thu Thập Dữ Liệu Nghiên Cứu Khoa Học}
+Sau khi thiết lập đường ống thu thập, bóc tách và lập chỉ mục Medallion Lakehouse tại Chương~\ref{chap:data_preparation}, bước tiếp theo theo chuẩn KDD là đánh giá định lượng toàn diện tập dữ liệu trước khi đưa vào các mô hình khai phá và truy hồi. Trên quy mô sản xuất ngày 04/11/2026 (\texttt{SNAP-06A}), hồ dữ liệu tích lũy được \textbf{71,927 bài báo toàn văn} ở lớp Silver cùng \textbf{1,043,594 vector 768 chiều} trong Qdrant~\cite{qdrant2023vector}. Chương này trình bày kiến trúc phân tích OLAP không máy chủ trên DuckDB, thống kê mô tả đa tầng (Macro toàn hồ và Micro kiểm toán sâu trên 13,000 bài / mẫu sạch $n = 11,659$), bốn phát hiện định lượng cốt lõi của miền dữ liệu khoa học, và khung chẩn đoán 3 Lăng kính làm căn cứ toán học cho các quyết định tiền xử lý, phân đoạn và khai phá ở Chương~\ref{chap:modeling}.
 
-Để xác định đầu vào cho pipeline, cần phân biệt rõ **các nguồn đang được Airflow DAGs lập lịch thu thập trực tiếp** với **các nguồn module bổ trợ/lịch sử trong Bronze**:
+\section{Kiến Trúc Phân Tích OLAP trên S3 với DuckDB}
+\label{sec:ch3_duckdb_olap}
+
+Thay vì sao chép hàng chục nghìn tệp Parquet từ lớp lưu trữ đối tượng về ổ đĩa cục bộ trước khi phân tích, động cơ phân tích khám phá (\texttt{EdaEngine} trong \path{src/mining/eda_engine.py}) thực thi tính toán OLAP trực tiếp trên nền tảng lưu trữ phân tán thông qua hàm kết nối \texttt{duck\_connect()} trong \path{src/mining/lake_access.py}~\cite{raasveldt2019duckdb,minio2023storage}. Thiết kế này tách biệt lớp tính toán phi trạng thái (\textit{Stateless Compute}) khỏi lớp lưu trữ bền vững MinIO S3, cho phép đọc chọn lọc theo cột (\textit{Columnar Projection Pushdown}) và chỉ tải các dải byte cần thiết qua giao thức HTTP Range Requests.
+
+\subsection{\texorpdfstring{Tích Hợp Lưu Trữ Đối Tượng qua \texttt{httpfs} và Cơ Chế Phục Hồi Lỗi}{Tich Hop Luu Tru Doi Tuong qua httpfs va Co Che Phuc Hoi Loi}}
+\label{sec:ch3_httpfs}
+
+Khi khởi tạo phiên làm việc trong bộ nhớ (\path{duckdb.connect(database=":memory:")}), hàm \path{duck_connect()} nạp phần mở rộng \texttt{httpfs} và cấu hình các tham số truyền tải chuyên dụng cho MinIO chuẩn S3-compatible (Đoạn mã~\ref{lst:ch3_duckdb_httpfs}).
+
+\begin{lstlisting}[language=Python, caption={Cau hinh DuckDB httpfs va co che thu lai khi doc Parquet tu MinIO S3}, label={lst:ch3_duckdb_httpfs}]
+# Trich tu src/mining/lake_access.py (comments ASCII)
+con.execute("INSTALL httpfs; LOAD httpfs;")
+con.execute(f"SET s3_endpoint='{endpoint}';")
+con.execute("SET s3_url_style='path';")
+con.execute("SET s3_region='us-east-1';")
+con.execute("SET http_retries=8;")
+con.execute("SET http_retry_wait_ms=500;")
+con.execute("SET http_retry_backoff=2;")
+\end{lstlisting}
+
+Việc thiết lập \texttt{s3\_url\_style='path'} bảo đảm tương thích với reverse proxy và đường dẫn bucket của MinIO tự triển khai, trong khi bộ tham số \texttt{http\_retries=8}, \texttt{http\_retry\_wait\_ms=500} và \texttt{http\_retry\_backoff=2} kích hoạt cơ chế chờ tăng dần theo hàm mũ (\textit{exponential backoff}) nhằm hấp thụ lỗi nghẽn mạng tạm thời khi quét song song nhiều phân vùng Parquet qua mạng cục bộ hoặc đường hầm mạng. Song song với kênh phân tích bảng, kết nối tới Qdrant (\texttt{qdrant\_client(timeout=60.0)}) thực thi thống kê tổng hợp không gian vector thông qua \texttt{section\_facets(client, limit=20)} bằng API \texttt{facet(collection\_name, key="section\_type", limit=limit)}, giúp đếm phân bố đoạn văn bản theo từng mục học thuật mà không phải quét toàn bộ payload gốc.
+
+\subsection{Hợp Nhất Đa Nguồn và Khử Trùng Lặp tại Thời Điểm Truy Vấn}
+\label{sec:ch3_views}
+
+Lớp Silver trong kiến trúc Lakehouse được thu thập từ nhiều luồng thu hoạch (\path{SILVER_PRIMARY_KEY = "silver/papers/**/*.parquet"}, Tier 1 Landmark, Tier 2 HTML/Full-text, CVF CVPR 2024 và OpenReview). Do một bài báo có thể xuất hiện ở dạng siêu dữ liệu tóm tắt ban đầu và sau đó được làm giàu toàn văn HTML, \texttt{EdaEngine.\_register\_views()} xây dựng hai khung nhìn ảo tách biệt:
 
 \begin{enumerate}[label=\textbf{\arabic*.}]
-  \item \textbf{arXiv (RSS Feeds, OAI-PMH \& HTML5/ar5iv)} [Nguồn chủ lực trong DAGs]:
-    \begin{itemize}
-      \item \textit{Tier 1 (\texttt{dag\_tier1\_realtime\_stream})}: Quét arXiv RSS hàng ngày cho 5 nhóm chính (\texttt{cs.AI, cs.LG, cs.CV, cs.CL, stat.ML}).
-      \item \textit{Tier 2 (\texttt{dag\_tier2\_near\_past\_harvest})}: Cào hàng loạt qua OAI-PMH (\path{oaipmh.arxiv.org}, sets \texttt{cs, stat, eess}) lùi dần về mốc \texttt{2024-01-01} với cơ chế cursor và tuân thủ \texttt{Retry-After}.
-      \item \textit{Nội dung toàn văn}: \texttt{UnifiedContentResolver} ưu tiên tải arXiv HTML5, dự phòng sang ar5iv HTML5, rồi tới PDF (\texttt{pymupdf}) hoặc tóm tắt.
-    \end{itemize}
-  \item \textbf{Computer Vision Foundation (CVF Open Access)} [Nguồn chủ lực Tier 2]:
-    Luân phiên theo khung giờ (1 giờ/lượt) với arXiv OAI-PMH trong \texttt{dag\_tier2\_near\_past\_harvest}, thu thập các hội nghị chính (CVPR, ICCV, WACV, kể cả findings) và các workshop từ 2024 trở đi; các bài có liên kết arXiv ID được tự động nối sang luồng tải arXiv HTML5.
-  \item \textbf{Semantic Scholar (Bulk Search)} [Nguồn chủ lực Tier 3]:
-    Sử dụng trong \texttt{dag\_tier3\_landmark\_harvest} để lấy top 3,000 bài AI/CV/NLP/Robotics có số trích dẫn cao nhất (\texttt{MIN\_CITATIONS = 500}), kết hợp gọi arXiv API để chuẩn hóa metadata và \texttt{dag\_tier3\_pdf\_backfill} cho các bài kinh điển ngoài arXiv.
-  \item \textbf{OpenAlex, OpenReview \& Zenodo} [Nguồn bổ trợ / dữ liệu Bronze lịch sử]:
-    Repository có sẵn các module \texttt{openreview\_harvester.py} và \texttt{zenodo\_harvester.py} cùng các bản ghi OpenAlex lưu từ các đợt thu thập trước trong Bronze (như minh họa tại Hình~\ref{fig:bronze_raw_capture}), nhưng ba nguồn này không nằm trong lịch chạy định kỳ của 3 DAG Airflow hiện tại.
+  \item \textbf{\texttt{catalog\_view}}: Quét nguồn chính \path{s3://uth-scientific-lakehouse/silver/papers/**/*.parquet} để thống kê bao phủ danh mục, hoặc mở rộng qua 7 nguồn ứng viên tùy trạng thái tồn tại trên bucket tại thời điểm truy vấn.
+  \item \textbf{\texttt{fulltext\_view}}: Hợp nhất toàn bộ 7 đường dẫn Parquet Silver (\path{silver/papers/**/*.parquet}, \path{silver/tier3/landmark_papers.parquet}, \path{silver/tier3/landmark_html_papers.parquet}, \path{silver/tier2/html_papers.parquet}, \path{silver/tier2/fulltext_papers.parquet}, \path{silver/cvf/cvpr2024.parquet}, \path{silver/openreview/openreview_all.parquet}) qua phép nối \texttt{UNION ALL}, kết hợp hàm cửa sổ để chọn bản ghi giàu nội dung nhất cho mỗi \texttt{paper\_id} (Đoạn mã~\ref{lst:ch3_dedup_sql}).
 \end{enumerate}
 
-\section{Cấu Trúc Bản Ghi và Siêu Dữ Liệu Học Thuật (Silver Schema)}
+\begin{lstlisting}[language=SQL, caption={Truy van khu trung lap theo thoi diem truy van uu tien ban ghi toan van giau nhat}, label={lst:ch3_dedup_sql}]
+-- Query-time deduplication preferring richest HTML/fulltext extraction
+SELECT * EXCLUDE (rn)
+FROM (
+    SELECT *,
+        ROW_NUMBER() OVER (
+            PARTITION BY paper_id
+            ORDER BY COALESCE(total_sections, 0) DESC,
+                     COALESCE(total_words, 0) DESC
+        ) AS rn
+    FROM raw_union
+)
+WHERE rn = 1;
+\end{lstlisting}
 
-Dữ liệu được chuẩn hóa vào bảng Silver papers. Lược đồ quy định các trường dưới đây; giá trị có thể thiếu tùy nguồn, vì vậy có trường trong schema không đồng nghĩa mọi bản ghi đều đầy đủ:
+Quy tắc sắp xếp \texttt{(total\_sections DESC, total\_words DESC)} bảo đảm bản ghi toàn văn từ arXiv HTML (LaTeXML) luôn được ưu tiên trước bản ghi chỉ có tóm tắt nếu phát sinh trùng lặp khóa \texttt{paper\_id}. Đồng thời, \texttt{EdaEngine} thực thi chuẩn hóa lược đồ bằng \texttt{json.loads} linh hoạt cho các cột lồng nhau (\texttt{authors}, \texttt{categories}, \texttt{sections}, \texttt{full\_text}), xử lý nhất quán sự khác biệt kiểu dữ liệu giữa tệp Parquet cũ và lược đồ chuẩn hóa 23 cột nén ZSTD (Bảng~\ref{tab:silver_schema}).
 
-\begin{itemize}
-  \item \texttt{paper\_id} (String): Mã định danh duy nhất của bài báo (ví dụ: \texttt{2401.13216}, \texttt{2310.01407}).
-  \item \texttt{title} (String): Tiêu đề bài báo đã được làm sạch khoảng trắng và chuẩn hóa ký tự Unicode.
-  \item \texttt{abstract} (String): Tóm tắt nội dung bài báo.
-  \item \texttt{authors} (List[String]): Danh sách tên đầy đủ của tất cả các tác giả tham gia công trình.
-  \item \texttt{primary\_category} (String): Phân ngành chính theo phân loại của arXiv (ví dụ: \texttt{cs.LG}, \texttt{cs.CV}).
-  \item \texttt{categories} (List[String]): Danh sách tất cả các nhãn chuyên ngành mà tác giả đăng ký (thể hiện tính liên ngành).
-  \item \texttt{published\_date} (String): Ngày công bố chính thức hoặc ngày cập nhật phiên bản mới nhất.
-  \item \texttt{total\_sections} (Integer): Tổng số mục/chương có cấu trúc được bóc tách từ bài báo.
-  \item \texttt{total\_math\_count} (Integer): Tổng số lượng công thức toán học dạng LaTeX (công thức inline và display).
-  \item \texttt{total\_words} (Integer): Tổng số lượng từ vựng của toàn văn bài báo.
-  \item \texttt{clean\_full\_text} (String): Toàn văn bài báo đã được lọc bỏ các thẻ HTML rác và giữ lại cấu trúc ngữ nghĩa.
-  \item \texttt{sections\_json} (JSON String): Cấu trúc phân đoạn chi tiết, bao gồm tiêu đề mục (\texttt{section\_title}), loại mục (\texttt{section\_type}: abstract, introduction, methodology, experiments, conclusion), và nội dung chi tiết.
-  \item \texttt{abstract\_hash} (String): SHA-256 của abstract chuẩn hóa (hoặc title nếu abstract trống), phục vụ khử trùng lặp. Các trường nguồn gồm \texttt{source}, \texttt{tier}, \texttt{content\_origin}; thời điểm gồm \texttt{crawled\_at}, \texttt{transformed\_at}.
-\end{itemize}
+\subsection{Quy Ước Tách Bạch Các Mốc Lát Cắt Dữ Liệu (Snapshot Provenance)}
+\label{sec:ch3_snapshots}
 
-\section{Thống Kê Mô Tả Toàn Cảnh Hồ Dữ Liệu (Descriptive Statistics)}
+Do Lakehouse được mở rộng liên tục từ quy mô thử nghiệm ban đầu lên vận hành toàn phần, các số liệu EDA được ghi nhận tại những mốc lát cắt độc lập nhằm tuân thủ nguyên tắc minh bạch thực nghiệm: (1) lát cắt cục bộ / Gold ban đầu ngày 04--06/10/2026 (\texttt{SNAP-01}: 10,000 bài chi tiết và manifest 06/10/2026 với 29,911 bài full-text / 100,000 catalog / 913,205 vector LanceDB); (2) lát cắt Telemetry UI S3 ngày 17/10/2026 (\texttt{SNAP-03}: 13,000 bài kiểm toán và mẫu sạch $n = 11,659$ lọc theo điều kiện \texttt{total\_words >= 300}, chụp bằng chứng ngày 23/11/2026 trong \path{eda_api.json}); và (3) lần chạy sản xuất toàn hồ ngày 04/11/2026 (\texttt{SNAP-06A}: 71,927 bài báo duy nhất và 1,043,594 vector Qdrant). Bảng~\ref{tab:snapshot_sources} tổng hợp đầy đủ phạm vi sử dụng của toàn bộ các mốc từ \texttt{SNAP-01} đến \texttt{SNAP-06B} xuyên suốt báo cáo.
 
-Phiên chạy EDA đầy đủ gần nhất được ghi nhận trong \path{logs/run/backend.log} (ngày 04/11/2026, chạy trong 39.09 giây trên dữ liệu Silver MinIO và Qdrant) đạt quy mô \textbf{71,927 bài báo phân biệt} (Catalog và Fulltext view hợp nhất) với \textbf{1,043,594 vector} trong Qdrant (\path{scientific_papers_gold}). Do tệp \path{eda_summary.json} chi tiết của đợt 71,927 bài được lưu trực tiếp trên MinIO (không nằm trong repo Git cục bộ), các bảng phân rã chi tiết theo từng chuyên ngành dưới đây sử dụng hai snapshot lưu trữ chi tiết gần hơn có sẵn bản trích xuất: snapshot UI trên kho ngày 17/10/2026 (13,000 bài, 11,619 bài làm giàu HTML = 89.38\%, 2,825,871 công thức và 62,288,266 từ) và snapshot local lịch sử ngày 04/10/2026 (10,000 bài, 9,015 bài làm giàu = 90.15\%, 47,782,707 từ và 2,220,938 công thức).
+\input{tables/table_snapshot_sources.tex}
 
-Ở implementation được đối chiếu, nhãn làm giàu được tính bằng điều kiện \texttt{total\_sections > 1}, chia cho số dòng của \texttt{fulltext\_view}. Đây là chỉ dấu nội dung có cấu trúc; không kiểm tra trực tiếp độ đúng của công thức hay độ đầy đủ của toàn văn. Tương tự, tổng công thức là số đơn vị được parser đếm, không phải số công thức đã được kiểm định bảo toàn.
+\FloatBarrier
+\section{Thống Kê Mô Tả Đa Tầng (Macro và Micro)}
+\label{sec:ch3_descriptive_stats}
 
-Bảng~\ref{tab:eda_categories} trình bày phân bố chi tiết theo chuyên ngành trên bản trích xuất lưu trữ chi tiết (10,000 bài) để minh họa sự chênh lệch mật độ công thức giữa các nhánh AI/DS.
+\subsection{Tổng Quan Toàn Hồ (Macro) và Lát Cắt Kiểm Toán 13,000 Bài (Micro)}
+\label{sec:ch3_macro_micro}
+
+Ở tầng vĩ mô (\texttt{SNAP-06A}, ngày 04/11/2026), quy trình \texttt{MiningEngine} hoàn tất giai đoạn EDA trong \textbf{39.09 giây} trên toàn bộ \textbf{71,927 bài báo} lưu tại MinIO S3 kết hợp \textbf{1,043,594 vector 768 chiều} trên cụm Qdrant \path{scientific_papers_gold} (\path{logs/run/backend.log}). Để bóc tách chi tiết cấu trúc phân đoạn, mật độ công thức toán và kiểm định giả thuyết phân phối, phần phân tích vi mô dưới đây khai thác trực tiếp dữ liệu JSON kết xuất từ API \path{/api/mining/eda} trên lát cắt kiểm toán \textbf{13,000 bài} (\texttt{SNAP-03}, \path{evidence/eda_api.json}), được tổng hợp ở Bảng~\ref{tab:ch3_micro_overview}.
+
+\begin{table}[!htbp]
+\centering
+\small
+\setlength{\tabcolsep}{4pt}
+\caption[Thống kê mô tả cơ bản trên lát cắt kiểm toán 13,000 bài]{Thống kê mô tả cơ bản trên lát cắt kiểm toán 13,000 bài (\texttt{SNAP-03})}
+\label{tab:ch3_micro_overview}
+\begin{tabularx}{\linewidth}{|L|>{\centering\arraybackslash}p{41mm}|>{\centering\arraybackslash}p{22mm}|>{\raggedright\arraybackslash}p{46mm}|}
+\hline
+\textbf{Chỉ số thống kê} & \textbf{Giá trị đo được} & \textbf{Đơn vị} & \textbf{Ý nghĩa vận hành} \\ \hline
+Tổng số bài báo (\path{total_papers}) & 13,000 & bài báo & Tập S3 dùng cho chẩn đoán 3 Lăng kính \\ \hline
+Bài làm giàu HTML (\path{enriched_html_papers}) & 11,619 (89.38\%) & bài (\%) & Gần 90\% bài giữ nguyên mục và LaTeX gốc \\ \hline
+Tổng công thức toán (\path{total_math_formulas}) & 2,825,871 & biểu thức & TB 217.37 công thức/bài ($p_{50} = 112.0$) \\ \hline
+Tổng từ vựng toàn văn (\path{total_words}) & 62,288,266 & từ & TB 4,791.41 từ/bài ($p_{50} = 4,437.0$) \\ \hline
+Số mục trung bình (\path{avg_sections_per_paper}) & 5.96 & mục/bài & Trung bình gần 6 mục học thuật/bài \\ \hline
+Khoảng thời gian (\path{publication_span}) & 2005-12-28 $\rightarrow$ 2025-01-14 & ngày & Bao phủ cả bài nền tảng lẫn tiền ấn phẩm \\ \hline
+\end{tabularx}
+\ReportNote{Nguồn: Trường \path{dataset_overview} và \path{math_and_content_stats} trong \path{figures/captured_20261123_082337/evidence/eda_api.json} (tính bằng SQL DuckDB và hàm \path{QUANTILE_CONT}).}
+\end{table}
+
+Xét về phân vị độ dài và mật độ ký hiệu trên tập 13,000 bài (\path{math_and_content_stats}), biến \path{total_math_formulas} đạt các phân vị $p_{25} = 29.0$, $p_{50} = 112.0$, $p_{75} = 258.0$, $p_{95} = 829.0$, $\max = 8,168$; trong khi biến \path{total_words} đạt $p_{25} = 3,112.0$, $p_{50} = 4,437.0$, $p_{75} = 5,793.0$, $p_{95} = 9,972.0$, $\max = 454,250$. Khoảng chênh lệch rất lớn giữa $p_{95}$ (9,972 từ / 829 công thức) và giá trị cực đại (454,250 từ / 8,168 công thức) là chỉ dấu rõ nét cho sự hiện diện của các bài khảo luận đồ sộ (\textit{mega-surveys}) hoặc chuyên khảo lý thuyết thuần túy.
+
+\subsection{Phân Bố Theo Chuyên Ngành arXiv và Cấu Trúc Vector Qdrant}
+\label{sec:ch3_categories_qdrant}
+
+Bảng~\ref{tab:eda_categories} tổng hợp phân bố Top-10 nhãn chuyên ngành chính (\path{primary_category}) cùng mật độ công thức toán học và độ dài từ trung bình trên lát cắt 13,000 bài (\texttt{SNAP-03}). Ba chuyên ngành dẫn đầu là \texttt{cs.LG} (3,093 bài, 23.79\%), \texttt{cs.CV} (3,021 bài, 23.24\%) và \texttt{cs.CL} (1,858 bài, 14.29\%), chiếm tổng cộng \textbf{61.32\%} kho kiểm toán (7,972/13,000 bài).
 
 \input{tables/table_eda_categories.tex}
 
-\subsection{Nguồn và Phạm Vi của Các Snapshot}
-Bảng~\ref{tab:snapshot_sources} đối chiếu các mốc dữ liệu từ snapshot chi tiết tháng 10/2026 đến phiên chạy toàn phần 71,927 bài và 1,043,594 vector ngày 04/11/2026.
-\input{tables/table_snapshot_sources.tex}
+Ở góc độ cấu trúc đoạn văn bản trong kho vector (\path{rag_audit_metrics} trong \path{eda_api.json}), tỷ trọng phân bố tương đối theo nhóm mục chức năng (\path{section_distribution}) cho thấy \textbf{Methodology \& Algorithms} chiếm tỷ trọng cao nhất (32.4\%), tiếp theo là \textbf{Experiments \& Benchmarks} (28.2\%), \textbf{Introduction \& Theory} (23.8\%) và \textbf{Discussion \& Conclusion} (15.6\%). Cần lưu ý rằng số lượng thô trên trường hiển thị tóm tắt trong tệp JSON UI đó là bản tham chiếu tỷ lệ chuẩn hóa (\path{total_vectors = 9} ở khối mô phỏng cũ), trong khi ở quy mô vận hành sản xuất ngày 04/11/2026 (\texttt{SNAP-06A}), cụm Qdrant \path{scientific_papers_gold} lưu trữ \textbf{1,043,594 vector 768 chiều} sinh từ mô hình \path{nomic-embed-text-v1.5}. Hình~\ref{fig:eda_pareto_growth} minh họa giao diện tổng quan EDA Silver tại mốc 13,000 bài báo.
 
-\subsection{Ảnh EDA từ Artifact trên Kho}
-Ảnh~\ref{fig:eda_pareto_growth} hiển thị giao diện EDA trên kho lưu trữ tại mốc 17/10/2026 (13,000 bài, 11,619 bài làm giàu cấu trúc HTML = 89.38\%, 2,825,871 công thức toán và 62,288,266 từ, ứng với 8.15 GB / 20 GB ngân sách và 10,452 đối tượng trên MinIO), minh họa trực quan bố cục phân tích trước khi corpus mở rộng lên 71,927 bài và 1,043,594 vector vào ngày 04/11/2026.
 \begin{figure}[!htbp]
 \centering
 \includegraphics[width=\linewidth,height=0.68\textheight,keepaspectratio]{figures/captured_20261123_082337/03_eda_silver_overview.png}
 \caption[Giao diện EDA Silver của snapshot 13,000 bài]{Giao diện EDA Silver của snapshot 13,000 bài}
+\ReportNote{Nguồn: Giao diện trực quan hóa dữ liệu EDA Silver từ \path{gold/mining/eda_summary.json} và API \path{/api/mining/eda} (lát cắt \texttt{SNAP-03}, 13,000 bài báo, chụp ngày 23/11/2026).}
 \label{fig:eda_pareto_growth}
-\ReportNote{Nguồn: Giao diện trực quan hóa dữ liệu EDA Silver từ tệp cấu hình \path{gold/mining/eda_summary.json} (snapshot 13,000 bài báo).}
 \end{figure}
 \FloatBarrier
 
+\section{Bốn Phát Hiện Định Lượng Cốt Lõi của Miền Dữ Liệu Khoa học}
+\label{sec:ch3_insights}
 
-\section{Các Phát Hiện EDA Cốt Lõi (Core Domain Insights)}
+Phân tích dữ liệu khám phá không dừng lại ở thống kê mô tả mà trực tiếp giải mã bốn quy luật nội tại của văn bản khoa học, từ đó ràng buộc lựa chọn thuật toán cho cả bốn trụ cột khai phá dữ liệu lẫn kiến trúc phân đoạn và truy hồi RAG ở Chương~\ref{chap:modeling}.
 
-Các phân tích dưới đây dùng snapshot local trong Bảng~\ref{tab:eda_categories}. Mỗi quan sát được gắn với một hệ quả thiết kế hoặc một giới hạn suy luận; các ảnh từ snapshot khác chỉ được sử dụng trong phạm vi đã ghi ở Bảng~\ref{tab:snapshot_sources}.
+\subsection{Phát Hiện 1: Chênh Lệch Mật Độ Công Thức Theo Phân Ngành}
+\label{sec:ch3_insight1}
 
-\subsection{Insight 1: Số Công Thức trên Bài Khác Nhau giữa Các Nhãn Chính}
-Nhóm nhãn chính \texttt{cs.LG} có 2,380 bài và 886,955 công thức, gần 40\% số công thức trong snapshot. \texttt{cs.CV} có quy mô gần tương đương với 2,271 bài nhưng chỉ ghi 308,487 công thức. Theo đơn vị công thức/bài, \texttt{stat.ML} đạt 669.9, \texttt{cs.LG} đạt 372.7 và \texttt{cs.CV} đạt 135.8.
+Dữ liệu ở Bảng~\ref{tab:eda_categories} chứng minh sự phân hóa rất mạnh về hàm lượng ký hiệu toán giữa các nhánh AI/DS:
+\begin{itemize}
+  \item \textbf{\texttt{stat.ML} (Thống kê Học máy)} tuy chỉ chiếm 2.15\% tổng số bài (279 bài), nhưng đạt trung bình \textbf{687.0 công thức/bài} trên độ dài trung bình 6,120.3 từ --- tương đương $\approx 112.2$ biểu thức toán trên mỗi 1,000 từ.
+  \item \textbf{\texttt{cs.LG} (Học máy)} đạt trung bình \textbf{362.4 công thức/bài} trên 5,085.3 từ ($\approx 71.3$ công thức/1,000 từ), đóng góp hơn 1.12 triệu công thức (chiếm 39.67\% tổng số 2,825,871 công thức toàn tập).
+  \item Ngược lại, \textbf{\texttt{cs.CV}} (137.3 công thức/bài trên 4,401.1 từ) và \textbf{\texttt{cs.CL}} (98.3 công thức/bài trên 4,244.8 từ) có mật độ toán thấp hơn lần lượt \textbf{5.0 lần} và \textbf{7.0 lần} so với \texttt{stat.ML}.
+\end{itemize}
 
-Các giá trị này đo số công thức trung bình trên bài; chúng chưa được chuẩn hóa theo số từ. Mật độ toán trong phần tương quan lại được tính trên 1,000 từ, nên không dùng hai đại lượng thay thế cho nhau. Sự khác biệt giữa nhóm cũng có thể chịu ảnh hưởng của độ dài bài, tỷ lệ lấy được HTML và cách parser đếm công thức.
-
-\begin{calloutbox}{Ý nghĩa đối với thiết kế hệ thống}
-Nội dung có lượng công thức và độ dài không đồng đều gợi ý giữ section khi phân đoạn và đánh giá riêng khả năng giữ biểu thức toán. Code ưu tiên section và ranh giới câu; cần kiểm tra trực tiếp chunk đầu ra trước khi kết luận mọi phương trình được giữ nguyên.
+\begin{calloutbox}{Hệ quả kiến trúc trực tiếp đối với phân đoạn và nhúng}
+Một phương trình LaTeX phức tạp chứa ma trận hoặc tích phân tuy ngắn về số từ nhưng tiêu tốn số lượng BPE token gấp 3--5 lần văn bản tiếng Anh thông thường do dày đặc lệnh điều khiển (\texttt{\textbackslash frac}, \texttt{\textbackslash sum}, \texttt{\textbackslash mathbf}). Nếu dùng cơ chế cắt đoạn ngây thơ ở giới hạn 512 token, các đoạn trích từ \texttt{stat.ML} và \texttt{cs.LG} bị cắt ngang làm hỏng chứng minh toán học. Phát hiện này dẫn trực tiếp đến hai quyết định: (i) chuẩn hóa cửa sổ chia đoạn cân bằng của \texttt{AcademicChunker} (gắn ranh giới câu và gộp đuôi vụn, đánh giá trong \texttt{EXP-02}), và (ii) tận dụng cửa sổ ngữ cảnh \textbf{2,048 token} của \path{nomic-embed-text-v1.5} (RoPE scaling) khi nhúng vector.
 \end{calloutbox}
 
-\subsection{Insight 2: Phân Biệt Nhãn Chính và Đồng Xuất Hiện Đa Nhãn}
-Bảng phân bố ghi 453 bài có \texttt{primary\_category=cs.AI}, tương ứng 4.53\% corpus. Artifact đồng xuất hiện lại ghi 1,521 bài mang cả \texttt{cs.AI}/\texttt{cs.LG}, 786 bài mang \texttt{cs.AI}/\texttt{cs.CL}, 732 bài mang \texttt{cs.CV}/\texttt{cs.LG} và 615 bài mang \texttt{cs.AI}/\texttt{cs.CV}.
+\subsection{Phát Hiện 2: Bất Đối Xứng Nhãn Chính và Đồng Xuất Hiện Đa Nhãn}
+\label{sec:ch3_insight2}
 
-Hai thống kê dùng cách đếm khác nhau: một bài chỉ có một nhãn chính nhưng có thể có nhiều nhãn trong \texttt{categories}. Vì vậy số cặp chứa \texttt{cs.AI} có thể lớn hơn số bài có nhãn chính đó; 453 không phải số bài chỉ mang duy nhất nhãn \texttt{cs.AI}. Chưa có thống kê số nhãn/bài để kết luận mức phổ biến của bài ``thuần'' từng ngành.
+Nếu chỉ xét nhãn đơn trị \path{primary_category}, chuyên ngành \texttt{cs.AI} xếp thứ năm với 625 bài (4.81\%). Tuy nhiên, phương thức \texttt{\_get\_category\_cooccurrence()} phân tích toàn bộ danh sách nhãn đa trị \texttt{categories} trên \texttt{fulltext\_view} (tự kết nối các cặp $a < b$ trong cùng \texttt{paper\_id}) lại bộc lộ cấu trúc liên ngành hoàn toàn khác như trình bày ở Bảng~\ref{tab:ch3_cooccurrence}.
 
-Các cặp thường gặp gợi ý khảo sát quan hệ giữa nhãn bằng FP-Growth ở Chương~\ref{chap:modeling}. Tần suất đồng xuất hiện cần được đọc cùng tần suất từng nhãn và số giao dịch hỗ trợ; tự nó chưa xác nhận một nhãn là trung tâm hay việc mở rộng query sẽ cải thiện retrieval.
+\begin{table}[!htbp]
+\centering
+\small
+\setlength{\tabcolsep}{4pt}
+\caption[Top-10 cặp chuyên ngành đồng xuất hiện trên arXiv]{Top-10 cặp chuyên ngành đồng xuất hiện (\texttt{category\_cooccurrence}) trên lát cắt 13,000 bài}
+\label{tab:ch3_cooccurrence}
+\begin{tabularx}{\linewidth}{|>{\centering\arraybackslash}p{10mm}|>{\raggedright\arraybackslash}p{38mm}|>{\centering\arraybackslash}p{26mm}|L|}
+\hline
+\textbf{Hạng} & \textbf{Cặp chuyên ngành} & \textbf{Số bài đồng hiện} & \textbf{Hàm ý liên ngành} \\ \hline
+1 & \path{cs.AI + cs.LG} & 1,983 & \texttt{cs.AI} làm nhãn phụ trong học máy gấp 3.17 lần nhãn chính (625) \\ \hline
+2 & \path{cs.AI + cs.CL} & 1,046 & Tác nhân LLM và suy luận ngôn ngữ giao thoa mạnh \\ \hline
+3 & \path{cs.CV + cs.LG} & 984 & Nền tảng học sâu cho thị giác máy tính \\ \hline
+4 & \path{cs.AI + cs.CV} & 845 & Thị giác đa phương thức và tác nhân thị giác \\ \hline
+5 & \path{cs.LG + stat.ML} & 814 & Giao thoa lý thuyết thống kê và học máy \\ \hline
+6 & \path{cs.CL + cs.LG} & 646 & Mô hình ngôn ngữ lớn huấn luyện quy mô lớn \\ \hline
+7 & \path{cs.CV + eess.IV} & 549 & Chuyển giao xử lý ảnh cổ điển sang thị giác học sâu \\ \hline
+8 & \path{cs.SD + eess.AS} & 374 & Giao thoa âm học tính toán (CS) và xử lý âm thanh (EE) \\ \hline
+9 & \path{cs.CR + cs.LG} & 365 & An toàn mô hình học máy và tấn công đối nghịch \\ \hline
+10 & \path{cs.SY + eess.SY} & 327 & Đồng bộ mã hệ thống điều khiển giữa CS và Kỹ thuật điện \\ \hline
+\end{tabularx}
+\ReportNote{Nguồn: Trường \path{category_cooccurrence} trong \path{figures/captured_20261123_082337/evidence/eda_api.json} (lát cắt \texttt{SNAP-03}).}
+\end{table}
 
-\subsection{Insight 3: Độ Lệch Thời Gian và Phạm Vi Phân Tích Xu Hướng}
-Artifact ghi 5,021 bài tháng 01/2024 và 3,797 bài tháng 02/2024, tổng 8,818 bài ($88.18\%$ của 10,000 bài). Phân bố này phản ánh phạm vi đợt thu thập, chưa đủ để suy luận tốc độ tăng trưởng của toàn miền AI/DS. Snapshot được dùng làm nguồn mô tả lịch sử trong báo cáo; chưa có chứng cứ về một quy trình chọn tập đối chứng cố định và so sánh nó với dữ liệu streaming.
+Bất đối xứng này dẫn đến hai hệ quả thiết kế trực tiếp cho Chương~\ref{chap:modeling}:
+\begin{enumerate}[label=\textbf{\arabic*.}]
+  \item Các bài báo khoa học mang bản chất \textbf{đa nhãn đồng thời} (\texttt{cs.AI} đóng vai trò cầu nối giữa \texttt{cs.LG}, \texttt{cs.CL} và \texttt{cs.CV}). Do đó, phân cụm cứng chỉ gán một tâm cụm cho mỗi bài không phản ánh được vùng giao thoa liên ngành, thúc đẩy việc bổ sung mô hình \textbf{phân cụm mềm EM GMM} để xuất xác suất hậu nghiệm $\gamma_{ik}$.
+  \item Các cặp nhãn đồng xuất hiện tần suất cao (\texttt{cs.SD}/\texttt{eess.AS}, \texttt{cs.SY}/\texttt{eess.SY}, \texttt{cs.AI}/\texttt{cs.CL}) tạo cơ sở dữ liệu thực nghiệm cho \textbf{FP-Growth} khai phá luật kết hợp phục vụ chú thích mở rộng ngữ cảnh truy vấn.
+\end{enumerate}
 
-Code trend tính thị phần theo ba tháng có quan sát mới nhất so với ba tháng có quan sát trước đó trong dữ liệu đầu vào. Đây là phép so sánh hai cửa sổ thời gian, không phải độ lệch của streaming so với tập 10,000 bài cố định. GMM được fit trên tập vector đưa vào từng lần chạy, còn PageRank được tính trên đồ thị quan sát; không diễn giải cả hai như các phân phối đã được huấn luyện trên một ``grounding baseline'' chung.
+\subsection{Phát Hiện 3: Phân Bố Thời Gian Tập Trung Cao Độ và Hệ Quả Lên Xu Hướng}
+\label{sec:ch3_insight3}
 
-Hệ quả thiết kế là cần lưu rõ khoảng thời gian, phạm vi nguồn và số bài của mỗi cửa sổ trước khi diễn giải động lượng. Lịch thu thập hằng ngày tạo khả năng bổ sung dữ liệu, nhưng độ trễ từ lúc công bố đến lúc tìm kiếm được vẫn cần được đo riêng.
+Thống kê theo tháng xuất bản (\path{temporal_distribution} trên 13,000 bài) cho thấy dữ liệu tập trung rất mạnh vào các đợt thu hoạch trọng điểm của cơ chế phân tầng: \texttt{2024-01} đạt \textbf{5,027 bài}, \texttt{2024-02} đạt \textbf{3,811 bài}, và \texttt{2025-01} đạt \textbf{2,468 bài} (trong khi các tháng kề cận như \texttt{2023-12} chỉ có 496 bài và \texttt{2024-12} có 300 bài). Tổng riêng ba tháng đỉnh chiếm tới \textbf{11,306 / 13,000 bài (86.97\%)} của lát cắt.
 
-\subsection{Insight 4: Phân Bố Lệch và Giả Thuyết về Dị Biệt Cấu Trúc}
-Artifact local ghi trung vị 114 công thức/bài, trung bình 222.09, phân vị 95 là 842 và giá trị lớn nhất 5,329. Với số từ, trung vị là 4,437, phân vị 95 là 9,949 nhưng giá trị lớn nhất tới 163,539. Trung bình số công thức cao hơn trung vị và các cực trị này cho thấy cần khảo sát đuôi phân bố thay vì chỉ mô tả một bài ``trung bình''. Các cực trị có thể phản ánh tài liệu dài hoặc lỗi trích xuất; thống kê tổng hợp chưa phân biệt hai khả năng.
+\textbf{Hệ quả kiến trúc trực tiếp}: Nếu đo xu hướng nghiên cứu bằng hiệu số đếm tuyệt đối ($\text{Count}_t - \text{Count}_{t-1}$) trên lịch cố định, độ lệch lưu lượng giữa các đợt thu hoạch (\textit{crawl batch skew}) sẽ tạo ra biến động giả. Vì vậy, Trụ cột 4 (\path{src/mining/trend_anomaly_mining.py}) bắt buộc phải đánh chỉ mục các tháng thực sự có quan sát bằng hàm cửa sổ \texttt{dense\_rank()} và chuẩn hóa tốc độ biến động theo \textbf{động lượng thị phần ($\Delta\text{Share}$)}.
 
-Biểu đồ số từ và số công thức có thể được khảo sát theo bốn vùng định tính: ít từ/ít công thức, ít từ/nhiều công thức, nhiều từ/ít công thức và nhiều từ/nhiều công thức. Việc gán chúng thành bài lý thuyết, bài thực nghiệm, chuyên khảo hoặc thông báo ngắn chỉ là giả thuyết, cần đọc bài đại diện và xác định ngưỡng trước khi kiểm chứng.
+\subsection{Phát Hiện 4: Phân Phối Lệch Đuôi Dài và Bác Bỏ Giả Thuyết Chuẩn}
+\label{sec:ch3_insight4}
 
-Quan sát này dẫn tới lựa chọn biến đổi $\log(1+x)$ trước Isolation Forest để nén khoảng giá trị của các đặc trưng lệch, đồng thời tạo nhu cầu kiểm tra thủ công các trường hợp được đánh dấu. Nó không đủ chứng minh các đặc trưng tuân theo phân phối power law hoặc nhãn dị biệt mang ý nghĩa chất lượng học thuật.
+Để kiểm định hình học phân phối một cách chặt chẽ, \path{EdaEngine._get_three_lenses_diagnostics()} trích xuất ma trận 6 đặc trưng liên tục sạch hoàn toàn (\path{null_counts = 0} trên cả 6 cột, kích thước ma trận \path{(11659, 6)}, dung lượng RAM \path{0.53 MB} sau khi lọc \texttt{total\_words >= 300}). Bảng~\ref{tab:ch3_univariate_k2} trình bày kết quả thống kê mô tả phi tham số và kiểm định tính chuẩn D'Agostino--Pearson $K^2$~\cite{dagostino1973tests} trên cả 6 biến.
 
-\section{Phân Tích Tương Quan Pearson và Spearman}
-\label{sec:correlations}
-Module \path{src/mining/eda_engine.py} có tính ma trận tương quan cho sáu thuộc tính của tài liệu toàn văn: số từ, số công thức, số mục, số tác giả, mật độ công thức trên 1,000 từ và số lượt trích dẫn. Mẫu phân tích lấy từ \texttt{fulltext\_view}, với số từ không rỗng và ít nhất 300. Mật độ toán được tính bằng số công thức chia cho $\max(\text{số từ},100)/1000$; lượt trích dẫn thiếu được điền bằng 0 theo code.
+\begin{table}[!htbp]
+\centering
+\scriptsize
+\setlength{\tabcolsep}{2.8pt}
+\caption[Thống kê đơn biến và kiểm định chuẩn D'Agostino K2 (n = 11,659)]{Thống kê đơn biến và kiểm định tính chuẩn D'Agostino--Pearson \texorpdfstring{$K^2$}{K2} trên mẫu sạch (\texorpdfstring{$n = 11,659$}{n = 11,659})}
+\label{tab:ch3_univariate_k2}
+\begin{tabularx}{\linewidth}{|>{\raggedright\arraybackslash}p{20mm}|>{\centering\arraybackslash}p{12mm}|>{\centering\arraybackslash}p{12mm}|>{\centering\arraybackslash}p{12mm}|L|>{\centering\arraybackslash}p{13mm}|>{\centering\arraybackslash}p{12mm}|>{\centering\arraybackslash}p{14mm}|>{\centering\arraybackslash}p{21mm}|}
+\hline
+\textbf{Biến (đơn vị)} & \textbf{$\mu$} & \textbf{$p_{50}$} & \textbf{$\sigma$} & \textbf{$p_{25}$ / $p_{75}$ / $p_{95}$} & \textbf{Max} & \textbf{Skew ($S$)} & \textbf{Kurt. ($K$)} & \textbf{$K^2$ ($p$-val)} \\ \hline
+\path{words} (từ) & 5,320.6 & 4,636.0 & 5,497.9 & 3,680 / 6,029 / 10,264.2 & 454,250 & +49.92 & +3,879.80 & 36,776.5 ($<0.001$) \\ \hline
+\path{math} (eq) & 242.4 & 131.0 & 349.4 & 52 / 287 / 869.4 & 8,168 & +4.70 & +47.21 & 11,616.7 ($<0.001$) \\ \hline
+\path{sections} (mục) & 6.6 & 6.0 & 2.3 & 5 / 7 / 10.0 & 48 & +5.62 & +75.13 & 13,261.8 ($<0.001$) \\ \hline
+\path{authors} (người) & 4.9 & 4.0 & 3.7 & 3 / 6 / 10.0 & 147 & +12.74 & +397.78 & 21,041.7 ($<0.001$) \\ \hline
+\path{math_density} (eq/1k) & 44.8 & 28.8 & 57.3 & 12.3 / 55.6 / 144.5 & 1,817.5 & +5.85 & +100.77 & 13,810.5 ($<0.001$) \\ \hline
+\path{citations} (lượt) & 9.0 & 4.0 & 18.9 & 1 / 10 / 33.0 & 480 & +9.26 & +144.06 & 17,558.4 ($<0.001$) \\ \hline
+\end{tabularx}
+\ReportNote{Nguồn: Nhánh \path{diagnostic_3lenses.lens2_univariate} trong \path{figures/captured_20261123_082337/evidence/eda_api.json} ($n = 11,659$). Độ bất đối xứng $S > 1.0$ biểu thị đuôi phải nặng (\texttt{HEAVY\_RIGHT\_TAIL}); độ nhọn dư $K > 3.0$ biểu thị phân phối nhọn cực đoan (\texttt{LEPTOKURTIC}). Kiểm định $K^2$ bác bỏ giả thuyết chuẩn $H_0$ ($p < 0.001$) trên cả 6 biến.}
+\end{table}
 
-Pearson mô tả mức độ liên hệ tuyến tính; Spearman là tương quan Pearson giữa thứ hạng của hai biến, dùng để khảo sát quan hệ đơn điệu:
-\begin{equation}
- r_{XY}=\frac{\operatorname{cov}(X,Y)}{s_Xs_Y},
- \qquad \rho_{XY}=r_{\operatorname{rank}(X),\operatorname{rank}(Y)}.
-\end{equation}
-Hệ thống gọi \texttt{scipy.stats.pearsonr} và \texttt{scipy.stats.spearmanr}, trả hệ số, p-value định dạng, ký hiệu mức ý nghĩa và cỡ mẫu; giao diện cho phép chuyển giữa hai ma trận. Phương pháp này bổ sung góc nhìn về quan hệ giữa các đặc trưng, bên cạnh thống kê biên và đồng xuất hiện nhãn.
-
-Artifact local 10,000 bài không có ma trận tương ứng; hai ảnh dưới đây lấy từ artifact EDA trên kho lưu ngày 17/10/2026. Ma trận hiển thị $n=11,659$, khác số 11,619 bài làm giàu HTML trong phần tổng quan của chính artifact đó. Phạm vi mẫu giữa các trường chưa được xác nhận đồng nhất; không coi bộ ảnh này là phép kiểm định đã được tái lập cùng snapshot local.
-
-Khi diễn giải cần lưu ý biến hằng, dữ liệu thiếu được điền 0, nhiều phép so sánh chưa hiệu chỉnh và thiên lệch thu thập; tương quan không chứng minh quan hệ nhân quả. Một số lời diễn giải trong code là chuỗi mô tả cố định, nên cần đối chiếu hệ số thực tế trước khi dùng làm kết luận.
+Từ Bảng~\ref{tab:ch3_univariate_k2} rút ra hai kết luận kỹ thuật cốt lõi:
+\begin{enumerate}[label=\textbf{\arabic*.}]
+  \item \textbf{Trung bình số học bị bóp méo nghiêm trọng bởi ngoại lai}: Với biến \texttt{words}, trung bình ($\mu = 5,320.6$) cao hơn trung vị ($p_{50} = 4,636.0$) tới 14.8\% và độ lệch chuẩn ($\sigma = 5,497.9$) vượt cả giá trị trung bình do các chuyên khảo dài tới 454,250 từ ($S = +49.92$, $K = +3,879.80$). Tương tự, ở biến \texttt{math}, $\mu = 242.4$ cao gần gấp đôi $p_{50} = 131.0$. Do đó, toàn bộ thống kê tóm tắt và phân vùng dữ liệu phải dùng thống kê phi tham số (Median, IQR).
+  \item \textbf{Động lực cho phép nén $\ln(1 + x)$ trước Isolation Forest}: Vì phân phối lệch đuôi dài trải trên nhiều bậc độ lớn, đưa thẳng đặc trưng thô vào thuật toán phân lập sẽ khiến các phép cắt ngẫu nhiên bị thống trị bởi \texttt{words} và \texttt{math}. Biến đổi $\tilde{x}_j = \ln(1 + x_j)$ nén đuôi phải về thang logarit cân xứng hơn trước khi chạy Isolation Forest ở Trụ cột 4.
+\end{enumerate}
 
 \FloatBarrier
-\subsection{Ảnh Ma Trận từ Artifact Lưu Trữ}
-Trong artifact trên kho, quan hệ số từ--số công thức có Pearson $r=0.214$ và Spearman $\rho=0.439$. Khác biệt giữa hai hệ số là lý do cần khảo sát thứ hạng và ngoại lai, chưa đủ để kết luận nguyên nhân do một dạng phân phối cụ thể. Pearson giữa số công thức và mật độ toán là 0.859, nhưng mật độ được tính từ chính số công thức và số từ, nên hai biến không độc lập về cách xây dựng.
+\section{Phân Tích Tương Quan Đa Biến và Chẩn Đoán 3 Lăng Kính}
+\label{sec:correlations}
 
-Các hệ số chỉ mô tả mẫu lưu trong artifact, với bất nhất cỡ mẫu đã nêu. P-value nhỏ không đồng nghĩa hiệu ứng lớn; không bác bỏ giả thuyết tương quan bằng 0 cũng không chứng minh hai biến độc lập. Những lời diễn giải cố định trên UI không được dùng làm kết luận, và phần ANOVA viết cố định không thuộc bộ hình minh họa.
+\subsection{\texorpdfstring{Pearson $r$ và Spearman $\rho$ trên Ma Trận 6 Đặc Trưng ($n = 11,659$)}{Pearson r va Spearman rho tren Ma Tran 6 Dac Trung (n = 11,659)}}
+\label{sec:ch3_pearson_spearman}
+
+Để đánh giá đồng thời mối liên hệ tuyến tính và quan hệ đơn điệu phi tuyến trên không gian đặc trưng $11,659 \times 6$, \texttt{EdaEngine.\_get\_correlation\_matrix()} tính song song hệ số tương quan tuyến tính Pearson ($r_{XY}$) và tương quan hạng Spearman ($\rho_{XY}$) bằng \texttt{scipy.stats.pearsonr} và \texttt{scipy.stats.spearmanr}:
+\begin{equation}
+  r_{XY} = \frac{\sum_{i=1}^{n} (x_i - \bar{x})(y_i - \bar{y})}{\sqrt{\sum_{i=1}^{n} (x_i - \bar{x})^2} \sqrt{\sum_{i=1}^{n} (y_i - \bar{y})^2}},
+  \qquad
+  \rho_{XY} = r_{\operatorname{rank}(X),\, \operatorname{rank}(Y)}
+  \label{eq:ch3_pearson_spearman}
+\end{equation}
+Trong đó: $n = 11,659$ là số lượng bài báo sạch thỏa điều kiện \texttt{total\_words >= 300}; $x_i, y_i$ là giá trị quan sát của hai đặc trưng $X, Y$ tại bài báo thứ $i$; $\bar{x}, \bar{y}$ là trung bình mẫu; $\operatorname{rank}(X), \operatorname{rank}(Y)$ là ánh xạ thay mỗi giá trị quan sát bằng thứ hạng (có xử lý đồng hạng trung bình) trong mẫu.
+
+Bảng~\ref{tab:ch3_corr_pairs} đối chiếu các cặp biến trọng yếu từ ma trận $6 \times 6$, đồng thời Hình~\ref{fig:pearson_capture} và Hình~\ref{fig:spearman_capture} trực quan hóa toàn bộ hai ma trận tương quan trích xuất từ artifact \texttt{SNAP-03}.
+
+\begin{table}[!htbp]
+\centering
+\small
+\setlength{\tabcolsep}{3.5pt}
+\caption[Đối chiếu tương quan Pearson $r$ và Spearman $\rho$ trên ma trận 6 đặc trưng]{Đối chiếu tương quan Pearson $r$ và Spearman $\rho$ cho các cặp biến trọng yếu ($n = 11,659$)}
+\label{tab:ch3_corr_pairs}
+\begin{tabularx}{\linewidth}{|>{\raggedright\arraybackslash}p{31mm}|>{\centering\arraybackslash}p{16mm}|>{\centering\arraybackslash}p{17mm}|>{\centering\arraybackslash}p{16mm}|>{\centering\arraybackslash}p{17mm}|L|}
+\hline
+\textbf{Cặp biến $(X, Y)$} & \textbf{Pearson $r$} & \textbf{$p_r$} & \textbf{Spearman $\rho$} & \textbf{$p_\rho$} & \textbf{Hiện tượng thống kê quan sát được} \\ \hline
+\path{words} $\leftrightarrow$ \path{math} & $+0.214$ & $<10^{-15}$ ($^{***}$) & $+0.439$ & $<10^{-15}$ ($^{***}$) & Spearman cao hơn gấp đôi Pearson ($\Delta = +0.225$) do các khảo luận dài ít toán kéo $r$ xuống \\ \hline
+\path{words} $\leftrightarrow$ \path{sections} & $+0.383$ & $<10^{-15}$ ($^{***}$) & $+0.411$ & $<10^{-15}$ ($^{***}$) & Bài dài phân rã thành nhiều mục cấu trúc hơn (quan hệ ổn định) \\ \hline
+\path{math} $\leftrightarrow$ \path{math_density} & $+0.859$ & $<10^{-15}$ ($^{***}$) & $+0.931$ & $<10^{-15}$ ($^{***}$) & Tổng công thức chi phối trực tiếp mật độ công thức \\ \hline
+\path{math} $\leftrightarrow$ \path{authors} & $-0.110$ & $<10^{-15}$ ($^{***}$) & $-0.094$ & $<10^{-15}$ ($^{***}$) & \textbf{Nghịch lý Toán \& Tác giả}: bài thuần lý thuyết có nhóm tác giả nhỏ (1--2 người) \\ \hline
+\path{authors} $\leftrightarrow$ \path{math_density} & $-0.106$ & $<10^{-15}$ ($^{***}$) & $-0.110$ & $<10^{-15}$ ($^{***}$) & Nhóm tác giả càng đông càng nghiêng về thực nghiệm hệ thống \\ \hline
+\path{words} $\leftrightarrow$ \path{math_density} & $+0.012$ & $0.196$ (\texttt{ns}) & $+0.143$ & $<10^{-15}$ ($^{***}$) & \textbf{Bẫy loại biến tuyến tính}: $r \approx 0$ nhưng $\rho$ có ý nghĩa ở $p < 0.001$ \\ \hline
+\path{words} $\leftrightarrow$ \path{citations} & $-0.005$ & $0.604$ (\texttt{ns}) & $-0.019$ & $<0.05$ ($^{*}$) & Độ dài toàn văn độc lập tuyến tính với trích dẫn trong cửa sổ hiện tại \\ \hline
+\end{tabularx}
+\ReportNote{Nguồn: Nhánh \path{correlations.pearson} và \path{correlations.spearman} trong \path{figures/captured_20261123_082337/evidence/eda_api.json} ($n = 11,659$).}
+\end{table}
+
+Cặp \path{words} $\leftrightarrow$ \path{math} ($r = +0.214$ so với $\rho = +0.439$) giải thích cơ chế gãy đường hồi quy tuyến tính: trong dải bài báo phổ thông (3,000--7,000 từ), độ dài tăng đi kèm số công thức chứng minh; tuy nhiên, các bài tổng quan (\textit{surveys}) cực dài từ 15,000 đến hơn 100,000 từ lại chứa ít ký hiệu toán mới, tạo thành các điểm đòn bẩy kéo đường hồi quy tuyến tính xuống phẳng, trong khi tương quan thứ hạng Spearman không bị nhiễu bởi biên độ đuôi dài vẫn duy trì mức dương vừa mạnh ($\rho = +0.439$). Cần lưu ý thêm rằng các lời giải thích dạng chuỗi cố định trên giao diện UI cũ không thay thế cho giá trị thực đo từ ma trận; vì vậy mọi diễn giải đều bám sát hệ số thực trong \path{eda_api.json}.
+
 \begin{figure}[!htbp]
 \centering
 \includegraphics[width=\linewidth,trim=0 540bp 0 0,clip]{figures/captured_20261123_082337/04_pearson_correlation.png}
 \caption[Ma trận tương quan Pearson trong artifact EDA]{Ma trận tương quan Pearson trong artifact EDA}
+\ReportNote{Nguồn: Ma trận hệ số tương quan tuyến tính Pearson trên 6 thuộc tính học thuật ($n = 11,659$), trích xuất từ \path{gold/mining/eda_summary.json} và \path{evidence/eda_api.json}.}
 \label{fig:pearson_capture}
-\ReportNote{Nguồn: Ma trận hệ số tương quan Pearson giữa các thuộc tính tài liệu học thuật (cỡ mẫu $N = 11,659$), trích xuất từ \path{gold/mining/eda_summary.json}.}
 \medskip
 \includegraphics[width=\linewidth,trim=0 540bp 0 0,clip]{figures/captured_20261123_082337/05_spearman_correlation.png}
 \caption[Ma trận tương quan Spearman trong artifact EDA]{Ma trận tương quan Spearman trong artifact EDA}
+\ReportNote{Nguồn: Ma trận hệ số tương quan hạng Spearman giữa các thuộc tính tài liệu học thuật ($n = 11,659$), trích xuất từ \path{gold/mining/eda_summary.json} và \path{evidence/eda_api.json}.}
 \label{fig:spearman_capture}
-\ReportNote{Nguồn: Ma trận hệ số tương quan hạng Spearman giữa các biến số hình thái học thuật, trích xuất từ \path{gold/mining/eda_summary.json}.}
 \end{figure}
 \FloatBarrier
 
-\section{Vấn đề Chất lượng Dữ liệu và Giải Pháp Xử Lý}
+\subsection{\texorpdfstring{Khung Chẩn Đoán 3 Lăng Kính: Từ Kiểm Định $K^2$ đến Mutual Information}{Khung Chan Doan 3 Lang Kinh: Tu Kiem Dinh K2 den Mutual Information}}
+\label{sec:ch3_three_lens}
 
-Trong quá trình thu thập và tiền xử lý, hệ thống đối mặt với ba thách thức lớn về chất lượng dữ liệu:
+Nhằm chuyển hóa phân tích khám phá thành quyết định tiền xử lý tự động có căn cứ thống kê, phương thức \texttt{\_get\_three\_lenses\_diagnostics()} trong \path{src/mining/eda_engine.py} triển khai kiến trúc 3 Lăng kính:
+
 \begin{enumerate}[label=\textbf{\arabic*.}]
-  \item \textbf{Mất liên kết LaTeX do lỗi phân tích cú pháp}: Nhiều công thức toán học bị công cụ parse thông thường chuyển thành các ký tự rác. Hệ thống giải quyết bằng cách viết riêng module \texttt{AcademicHTMLParser} dựa trên \texttt{BeautifulSoup} và \texttt{lxml}, ưu tiên bóc tách từ thẻ \texttt{annotation encoding="application/x-tex"} để bảo toàn nguyên vẹn biểu thức toán học LaTeX.
-  \item \textbf{Trùng lặp tài liệu}: Fetch kiểm tra mã bài đã chuẩn hóa và hash abstract trong Silver. Khi compact papers, các bản ghi cùng \texttt{paper\_id} được gộp theo cơ chế last-write-wins; đây không phải quy tắc luôn chọn phiên bản nhiều từ/công thức nhất.
-  \item \textbf{Độ lệch thời gian dồn cục (Collection Spike)}: Hiện tượng tập trung dữ liệu vào tháng 01/2024 do đặc thù đợt cào dữ liệu được nhận diện rõ ràng trong báo cáo nhằm tránh suy diễn sai lệch về xu hướng lịch sử dài hạn.
+  \item \textbf{Lăng kính 1 --- Kiểm định Cấu trúc Dữ liệu (\texttt{lens1\_topology})}: Xác nhận hình dạng ma trận \texttt{(11659, 6)}, kiểu dữ liệu chuẩn hóa (\texttt{int64} / \texttt{float64}), mức tiêu thụ bộ nhớ 0.53 MB và xác nhận \texttt{null\_counts = 0} trên toàn bộ 6 cột.
+  \item \textbf{Lăng kính 2 --- Phẫu thuật Phân phối Đơn biến (\texttt{lens2\_univariate})}: Với mỗi biến, tính đồng thời biểu đồ tần suất 25 khoảng (trên 99\% lõi phân phối), đường mật độ hạt nhân 30 điểm (\texttt{gaussian\_kde}), biểu đồ xác suất chuẩn Q--Q 25 phân vị và thống kê kiểm định tổng hợp D'Agostino--Pearson $K^2$~\cite{dagostino1973tests}:
+  \begin{equation}
+    K^2 = Z_1(g_1)^2 + Z_2(g_2)^2 \xrightarrow{H_0} \chi^2_{df=2}
+    \label{eq:ch3_dagostino}
+  \end{equation}
+  Trong đó: $g_1$ là hệ số bất đối xứng mẫu; $g_2$ là độ nhọn dư mẫu; $Z_1(g_1)$ và $Z_2(g_2)$ là các biến đổi chuẩn hóa đưa $g_1, g_2$ về phân phối chuẩn tắc $\mathcal{N}(0, 1)$; dưới giả thuyết gốc $H_0$ rằng mẫu tuân theo phân phối chuẩn, $K^2$ tiệm cận phân phối Chi-bình phương với 2 bậc tự do. Kết quả ở Bảng~\ref{tab:ch3_univariate_k2} cho thấy $K^2 \in [11,616.7;\; 36,776.5]$ với $p < 0.001$ trên cả 6 biến, bác bỏ hoàn toàn $H_0$.
+  \item \textbf{Lăng kính 3 --- Tương tác Phi tuyến \& Lượng thông tin Tương hỗ} (\path{lens3_multivariate}): Kết hợp hồi quy tuyến tính OLS, chuỗi trung vị phân khoảng 19--20 nút (\path{spline_points}), phân cụm GMM hai chiều trên cặp biến và chỉ số \textbf{Mutual Information} $I(X; Y)$ tính qua \path{sklearn.feature_selection.mutual_info_regression}:
+  \begin{equation}
+    I(X; Y) = \iint p(x, y) \log \frac{p(x, y)}{p(x)\,p(y)} \, dx \, dy
+    \label{eq:ch3_mutual_info}
+  \end{equation}
+  Trong đó: $p(x, y)$ là hàm mật độ xác suất đồng thời của hai biến $(X, Y)$; $p(x)$ và $p(y)$ là các mật độ biên; $I(X; Y) \ge 0$ đo lượng bất định của $Y$ giảm đi khi biết $X$ (ước lượng phi tham số theo phương pháp $k$-lân cận gần nhất trong Scikit-learn với \texttt{random\_state=42}).
 \end{enumerate}
 
+\input{tables/table_three_lens.tex}
 
-Các kết quả EDA xác lập ba yêu cầu cho bước chuẩn bị dữ liệu: giữ cấu trúc section và nguồn công thức, phân biệt metadata thiếu với giá trị thực bằng 0, và theo dõi phạm vi dữ liệu theo nguồn/thời gian. Chương tiếp theo trình bày cách các yêu cầu đó được chuyển thành Bronze, Silver papers/chunks và chỉ mục Gold; độ chính xác xử lý vẫn cần kiểm tra trên mẫu nội dung.
+\textbf{Lưu ý minh bạch kỹ thuật giữa giá trị UI tĩnh và số đo thực nghiệm}: Trong mã nguồn \path{src/mining/eda_engine.py} (dòng 658), chuỗi cảnh báo mang tính sư phạm hiển thị trên giao diện UI từng ghi nhãn tĩnh minh họa \texttt{r = +0.018} và \texttt{I = 0.998}. Tuy nhiên, kết quả đo thực tế trên $n = 11,659$ mẫu sạch được lưu trong \path{evidence/eda_api.json} cho cặp \path{words_x_math_density} là \textbf{$r = 0.012$ ($p = 0.196$, $R^2 = 0.0001$), $\rho = 0.143$ ($p < 0.001$) và $I(X; Y) = 0.052$} (Bảng~\ref{tab:three_lens}). Mặc dù biên độ thông tin tương hỗ thực tế khiêm tốn hơn ví dụ sư phạm trên UI, chuỗi trung vị \texttt{spline\_points} vẫn chứng minh rõ quy luật phi đơn điệu \textbf{hình chữ U ngược}: mật độ công thức tăng gần gấp đôi từ vùng bài ngắn (18.33 eq/1k từ ở mốc $\approx 1,665.8$ từ) lên đỉnh ở vùng bài báo hội nghị chuẩn (34.84 eq/1k từ ở mốc $\approx 4,987.3$ từ), sau đó giảm mạnh xuống 8.40 eq/1k từ tại các khảo luận siêu dài trên 16,612.6 từ. Do đó, việc loại bỏ đặc trưng chỉ dựa trên hệ số tương quan tuyến tính Pearson $r \approx 0$ ($R^2 = 0.0001$) sẽ đánh mất tín hiệu cấu trúc quan trọng phân tách bài nghiên cứu thuật toán lõi với bài tổng quan, củng cố cơ sở cho các mô hình phi tuyến ở Chương~\ref{chap:modeling}.

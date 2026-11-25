@@ -1,0 +1,32 @@
+\begin{table}[htbp]
+  \centering
+  \footnotesize
+  \caption[Đối sánh 3 chiều cuối cùng trên 150 truy vấn (EXP-05)]{Đối sánh 3 chiều cuối cùng trên 150 truy vấn (100 dương + 50 âm, ngày 09/11/2026)}
+  \label{tab:laya_3way_150}
+  \vspace{4pt}
+  \setlength{\tabcolsep}{2.5pt}
+  \begin{tabularx}{\linewidth}{|>{\raggedright\arraybackslash}p{41mm}|Y|Y|Y|>{\raggedright\arraybackslash}p{31mm}|}
+    \hline
+    \textbf{Chỉ số đánh giá} & \makecell{\textbf{Pure Vector}\\(\texttt{Nomic v1.5})} & \makecell{\textbf{Pretrained Laya}\\(\texttt{baseline})} & \makecell{\textbf{Fine-Tuned Laya}\\(\texttt{newModel})} & \textbf{Xu hướng cải thiện} \\
+    \hline
+    \textbf{MRR} (100 câu dương) & 0.8623 & 0.8853 & \textbf{0.8939} & +3.66\% vs Pure Vector \\
+    \hline
+    \textbf{Hit@1} (100 câu dương) & 0.79 (79\%) & 0.81 (81\%) & \textbf{0.82 (82\%)} & +3.0 đpt vs Vector \\
+    \hline
+    \textbf{Hit@3} (100 câu dương) & 0.92 (92\%) & \textbf{0.97 (97\%)} & 0.96 (96\%) & Vượt trội ở Top-3 \\
+    \hline
+    \textbf{Hit@5} (100 câu dương) & 0.96 (96\%) & 0.97 (97\%) & \textbf{0.98 (98\%)} & Phủ 98/100 truy vấn \\
+    \hline
+    \textbf{DeepEval Faithfulness} & 0.7956 & 0.7970 & \textbf{0.7977} & Ổn định $\approx 0.80$ ít ảo giác \\
+    \hline
+    \textbf{DeepEval Answer Relevancy} & 0.6159 & 0.6291 & \textbf{0.6341} & +0.0182 vs Pure Vector \\
+    \hline
+    \textbf{DeepEval Context Relevancy} & \textbf{0.3350} & 0.3100 & 0.3100 & Giới hạn độ dài 450 từ \\
+    \hline
+    \textbf{Negative Reject @0.5} (50 âm) & 0.92 (@0.6 = 1.0) & \textbf{1.00} & \textbf{1.00} & Lọc sạch 50/50 câu bẫy \\
+    \hline
+    \textbf{Độ trễ trung bình (ms)} & 4,686.8 ms & \textbf{2,312.2 ms} & 2,643.5 ms & Nhanh hơn 43.6\% vs Vector \\
+    \hline
+  \end{tabularx}
+  \ReportNote{Nguồn: Tập kiểm định cuối cùng ngày 09/11/2026 (\path{logs/benchmarks/vector_final_benchmark.json} và \path{logs/benchmarks/laya_ab_final_benchmark.json}) trên \texttt{RAG\_TS} với giám khảo \texttt{Qwen 2.5-7B-Instruct} cục bộ (100 câu dương + 50 câu âm tính). Với \texttt{Pure Vector}, độ tương đồng trung bình là \texttt{avgTargetCos = 0.6601} và \texttt{avgNegCos = 0.4497}.}
+\end{table}

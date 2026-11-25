@@ -1,32 +1,23 @@
-\begin{table}[htbp]
+\begin{table}[!htbp]
 \centering
 \small
-\caption[Phân bố chuyên ngành trong snapshot 10,000 bài]{Phân bố chuyên ngành trong snapshot 10,000 bài}
+\setlength{\tabcolsep}{3.5pt}
+\caption[Phân bố Top-10 chuyên ngành chính và mật độ công thức]{Phân bố Top-10 chuyên ngành chính (\texttt{primary\_category}) và mật độ công thức toán trên lát cắt kiểm toán 13,000 bài (\texttt{SNAP-03})}
 \label{tab:eda_categories}
-\begin{tabularx}{\textwidth}{|p{2.3cm}|L|L|L|L|L|}
+\begin{tabularx}{\linewidth}{|>{\centering\arraybackslash}p{9mm}|L|>{\centering\arraybackslash}p{14mm}|>{\centering\arraybackslash}p{14mm}|>{\centering\arraybackslash}p{23mm}|>{\centering\arraybackslash}p{15mm}|>{\centering\arraybackslash}p{18mm}|}
 \hline
-\textbf{Ngành} & \textbf{Số bài} & \textbf{Tỷ lệ} & \textbf{Công thức} & \textbf{CT/bài} & \textbf{Từ TB/bài} \\
-\hline
-cs.LG & 2,380 & 23.80\% & 886,955 & 372.7 & 5,099.7 \\
-\hline
-cs.CV & 2,271 & 22.71\% & 308,487 & 135.8 & 4,432.7 \\
-\hline
-cs.CL & 1,467 & 14.67\% & 149,869 & 102.2 & 4,315.5 \\
-\hline
-cs.RO & 682 & 6.82\% & 101,023 & 148.1 & 4,636.6 \\
-\hline
-cs.AI & 453 & 4.53\% & 94,302 & 208.2 & 5,383.9 \\
-\hline
-eess.IV & 294 & 2.94\% & 32,010 & 108.9 & 3,559.7 \\
-\hline
-cs.IR & 253 & 2.53\% & 32,976 & 130.3 & 4,706.7 \\
-\hline
-stat.ML & 222 & 2.22\% & 148,723 & 669.9 & 6,119.4 \\
-\hline
-Còn lại (suy từ tổng) & 1,978 & 19.78\% & 466,593 & 235.9 & -- \\
-\hline
-Toàn snapshot & 10,000 & 100.00\% & 2,220,938 & 222.1 & 4,778.3 \\
-\hline
+\textbf{Hạng} & \textbf{Chuyên ngành} & \textbf{Số bài} & \textbf{Tỷ trọng} & \textbf{Tổng công thức} & \makecell{\textbf{CT/bài}\\\textbf{($\mu_{\text{math}}$)}} & \makecell{\textbf{Từ TB/bài}\\\textbf{($\mu_{\text{words}}$)}} \\ \hline
+1 & \path{cs.LG} (Machine Learning) & 3,093 & 23.79\% & 1,120,932 & 362.4 & 5,085.3 \\ \hline
+2 & \path{cs.CV} (Computer Vision) & 3,021 & 23.24\% & 414,824 & 137.3 & 4,401.1 \\ \hline
+3 & \path{cs.CL} (Computation \& Language) & 1,858 & 14.29\% & 182,669 & 98.3 & 4,244.8 \\ \hline
+4 & \path{cs.RO} (Robotics) & 879 & 6.76\% & 127,192 & 144.7 & 4,589.3 \\ \hline
+5 & \path{cs.AI} (Artificial Intelligence) & 625 & 4.81\% & 124,862 & 199.8 & 5,342.7 \\ \hline
+6 & \path{eess.IV} (Image \& Video Proc.) & 390 & 3.00\% & 43,275 & 111.0 & 4,773.8 \\ \hline
+7 & \path{cs.IR} (Information Retrieval) & 310 & 2.38\% & 39,330 & 126.9 & 4,952.9 \\ \hline
+8 & \path{stat.ML} (Statistics ML) & 279 & 2.15\% & 191,664 & 687.0 & 6,120.3 \\ \hline
+9 & \path{cs.CR} (Cryptography \& Sec.) & 251 & 1.93\% & 40,980 & 163.3 & 5,384.9 \\ \hline
+10 & \path{cs.NE} (Neural \& Evol. Comp.) & 167 & 1.28\% & 35,039 & 209.8 & 4,595.2 \\ \hline
+\multicolumn{2}{|l|}{\textbf{Tổng lát cắt S3 (toàn bộ)}} & \textbf{13,000} & \textbf{100.00\%} & \textbf{2,825,871} & \textbf{217.4} & \textbf{4,791.4} \\ \hline
 \end{tabularx}
-\ReportNote{Nguồn: Thống kê mô tả phân bố chuyên ngành chính trên tập dữ liệu chuẩn 10,000 bài báo từ \path{data/gold/mining/eda_summary.json}.}
+\ReportNote{Nguồn: Trường \path{category_distribution} và \path{dataset_overview} trong \path{figures/captured_20261123_082337/evidence/eda_api.json} (lát cắt \texttt{SNAP-03}, 17/10/2026). Ba chuyên ngành đầu (\texttt{cs.LG}, \texttt{cs.CV}, \texttt{cs.CL}) chiếm 61.32\% tổng số bài (7,972/13,000).}
 \end{table}

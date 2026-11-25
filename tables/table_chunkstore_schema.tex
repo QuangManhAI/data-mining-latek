@@ -1,0 +1,41 @@
+\begin{table}[htbp]
+  \centering
+  \small
+  \caption[Lược đồ 14 cột của bảng phân đoạn ChunkStore]{Lược đồ chuẩn hóa 14 cột của bảng \texttt{silver/chunks/} (\texttt{ChunkStore.SCHEMA})}
+  \label{tab:chunkstore_schema}
+  \setlength{\tabcolsep}{3.5pt}
+  \begin{tabularx}{\linewidth}{|>{\centering\arraybackslash}p{8mm}|>{\raggedright\arraybackslash}p{28mm}|>{\raggedright\arraybackslash}p{24mm}|L|}
+    \hline
+    \textbf{STT} & \textbf{Tên cột} & \textbf{Kiểu Arrow} & \textbf{Ý nghĩa \& Vai trò thủy hóa / khai phá} \\
+    \hline
+    1 & \path{chunk_id} & \path{pa.string()} & Khóa chính phân đoạn (\texttt{\{pid\}\_abs}, \texttt{\{pid\}\_sec\{idx\}\_p\{part\}}), khóa sắp xếp \& thống kê Min/Max Row Group \\
+    \hline
+    2 & \path{paper_id} & \path{pa.string()} & Mã định danh bài báo gốc dùng nhóm phiên bản theo bài trong \path{latest_only()} \\
+    \hline
+    3 & \path{title} & \path{pa.string()} & Tiêu đề bài báo dùng ghép ngữ cảnh cho Cross-Encoder reranker và hiển thị citation \\
+    \hline
+    4 & \path{authors} & \path{pa.list_(pa.string())} & Danh sách tác giả truyền vào bộ khớp uy tín PageRank (\path{_match_authority}) \\
+    \hline
+    5 & \path{primary_category} & \path{pa.string()} & Nhãn chuyên ngành chính (đồng bộ với trường lọc Qdrant) \\
+    \hline
+    6 & \path{year} & \path{pa.int64()} & Năm công bố kiểu nguyên (trích qua \path{_parse_year}), hỗ trợ phân vùng và lọc thời gian \\
+    \hline
+    7 & \path{section_title} & \path{pa.string()} & Tên mục cụ thể (vd. \texttt{3. Methodology (Part 1)}), dùng cho gắn thẻ \texttt{[Paper: ID, Section: \ldots]} \\
+    \hline
+    8 & \path{section_type} & \path{pa.string()} & Nhãn chuẩn hóa 9 loại mục (\path{abstract}, \path{methodology}, \path{experiments}, \ldots) \\
+    \hline
+    9 & \path{text} & \path{pa.string()} & Toàn văn nội dung đoạn trích (không lặp tiền tố \texttt{Paper:} để trình bày sạch trên UI \& Prompt) \\
+    \hline
+    10 & \path{word_count} & \path{pa.int64()} & Số từ thực tế của đoạn trích (\path{len(words)}) \\
+    \hline
+    11 & \path{source} & \path{pa.string()} & Nguồn thu thập bài báo (\path{arxiv}, \path{cvf}, \path{semantic_scholar}, \ldots) \\
+    \hline
+    12 & \path{tier} & \path{pa.string()} & Tầng thu thập (\texttt{tier1}, \texttt{tier2}, \texttt{tier3}) \\
+    \hline
+    13 & \path{content_origin} & \path{pa.string()} & Nguồn gốc nội dung (\path{arxiv_html5}, \path{ar5iv_html5}, \path{open_access_pdf}, \path{abstract_fallback}) \\
+    \hline
+    14 & \path{indexed_at} & \path{pa.string()} & Dấu thời gian UTC ISO 8601 khi lập chỉ mục; phân giải xung đột ghi mới nhất khi \path{refresh=True} \\
+    \hline
+  \end{tabularx}
+  \ReportNote{Nguồn: Định nghĩa \texttt{ChunkStore.SCHEMA} và hàm \texttt{to\_table()} tại \path{src/storage/chunk_store.py} (kiểm chứng trên commit \texttt{f421707}/\texttt{aae74de}, ngày 25/11/2026); dùng cho thủy hóa văn bản phân đoạn và đối khớp PageRank tách khỏi payload Qdrant theo quyết định \texttt{D-058}.}
+\end{table}

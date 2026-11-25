@@ -1,32 +1,32 @@
 \begin{table}[htbp]
   \centering
   \footnotesize
-  \caption[Kết quả đánh giá Retrieval v1 và Evidence Gate (100 + 50 câu)]{Kết quả đánh giá Retrieval v1 và Evidence Gate (\path{logs/benchmarks/rag_eval/report_retrieval.json})}
+  \caption[Đánh giá 9 chế độ Retrieval v1 và Evidence Gate (EXP-05)]{Kết quả đối chứng 9 cấu hình Retrieval v1 trên tập 100 câu dương + 50 câu âm (\texttt{EXP-05})}
   \label{tab:retrieval_v1}
   \vspace{4pt}
-  \setlength{\tabcolsep}{2.2pt}
-  \begin{tabularx}{\linewidth}{|>{\raggedright\arraybackslash}p{32mm}|Y|Y|Y|Y|Y|Y|Y|}
+  \setlength{\tabcolsep}{2pt}
+  \begin{tabularx}{\linewidth}{|>{\raggedright\arraybackslash}p{44mm}|Y|Y|Y|Y|Y|Y|Y|}
     \hline
-    \textbf{Chế độ} & \textbf{Hit@1} & \textbf{Hit@5} & \textbf{Recall@5} & \textbf{MRR@10} & \textbf{nDCG@10} & \textbf{Gold@5} & \textbf{AUROC} \\
+    \textbf{Chế độ (\textit{Mode})} & \textbf{Hit@1} & \textbf{Hit@5} & \makecell{\textbf{Recall}\\\textbf{@5}} & \makecell{\textbf{MRR}\\\textbf{@10}} & \makecell{\textbf{nDCG}\\\textbf{@10}} & \makecell{\textbf{Gold}\\\textbf{@5}} & \textbf{AUROC} \\
     \hline
-    \texttt{vector} & 0.440 & 0.720 & 0.515 & 0.553 & 0.698 & 0.620 & -- \\
+    \texttt{vector} (Dense thuần túy) & 0.440 & 0.720 & 0.515 & 0.553 & 0.698 & 0.620 & -- \\
     \hline
-    \texttt{hybrid} & 0.530 & 0.910 & 0.691 & 0.690 & 0.810 & 0.780 & -- \\
+    \texttt{hybrid} (Vector + BM25 RRF) & 0.530 & 0.910 & 0.691 & 0.690 & 0.810 & 0.780 & -- \\
     \hline
-    \texttt{laya} & 0.480 & 0.730 & 0.530 & 0.593 & 0.705 & 0.620 & 0.823 \\
+    \texttt{laya} (Vector + Laya gốc) & 0.480 & 0.730 & 0.530 & 0.593 & 0.705 & 0.620 & 0.823 \\
     \hline
-    \texttt{laya\_hybrid} & 0.620 & 0.900 & 0.690 & 0.743 & 0.822 & 0.760 & 0.870 \\
+    \texttt{laya\_hybrid} (Hybrid + Laya gốc) & 0.620 & 0.900 & 0.690 & 0.743 & 0.822 & 0.760 & 0.870 \\
     \hline
-    \texttt{prod} & 0.440 & 0.690 & 0.485 & 0.561 & 0.652 & 0.560 & 0.838 \\
+    \texttt{prod} (Hybrid + MS-MARCO MiniLM) & 0.440 & 0.690 & 0.485 & 0.561 & 0.652 & 0.560 & 0.838 \\
     \hline
-    \texttt{laya\_ft} & 0.570 & 0.740 & 0.550 & 0.649 & 0.725 & 0.630 & 0.952 \\
+    \texttt{laya\_ft} (Vector + Laya FT 4-ep) & 0.570 & 0.740 & 0.550 & 0.649 & 0.725 & 0.630 & 0.952 \\
     \hline
-    \texttt{laya\_ft\_hybrid} & \textbf{0.740} & \textbf{0.940} & 0.744 & \textbf{0.827} & \textbf{0.852} & \textbf{0.830} & 0.978 \\
+    \texttt{laya\_ft\_hybrid} (Hybrid + FT 4-ep) & \textbf{0.740} & \textbf{0.940} & 0.744 & \textbf{0.827} & \textbf{0.852} & \textbf{0.830} & 0.978 \\
     \hline
-    \texttt{laya\_ft1} & 0.590 & 0.740 & 0.559 & 0.659 & 0.728 & 0.650 & 0.960 \\
+    \texttt{laya\_ft1} (Vector + Laya FT 1-ep) & 0.590 & 0.740 & 0.559 & 0.659 & 0.728 & 0.650 & 0.960 \\
     \hline
-    \texttt{laya\_ft1\_hybrid} & 0.730 & \textbf{0.940} & \textbf{0.754} & 0.824 & 0.850 & \textbf{0.830} & \textbf{0.986} \\
+    \texttt{laya\_ft1\_hybrid} (Hybrid + FT 1-ep) & 0.730 & \textbf{0.940} & \textbf{0.754} & 0.824 & 0.850 & \textbf{0.830} & \textbf{0.986} \\
     \hline
   \end{tabularx}
-  \ReportNote{Nguồn: \path{logs/benchmarks/rag_eval/report_retrieval.json} đo trên 100 câu có đáp án (Retrieval) và 50 câu không có đáp án (Evidence Gate AUROC). \texttt{laya\_ft1\_hybrid} chặn được 50/50 câu không có đáp án và giữ lại 86/100 câu có đáp án ở ngưỡng production 0.6.}
+  \ReportNote{Nguồn: Chạy chấm điểm ngày 08/11/2026 qua \path{benchmarks/rag_eval/score_retrieval.py} và \path{logs/benchmarks/rag_eval/report_retrieval.json} trên nhánh \texttt{RAG\_TS} (Qdrant + SQLite BM25, 100 câu có đáp án + 50 câu bẫy âm tính, ngưỡng $\theta = 0.6$). \texttt{laya\_ft1\_hybrid} chặn 50/50 câu âm tính (100\%) và giữ 86/100 câu dương với độ trễ TB 5,391 ms (so với 577 ms của \texttt{hybrid}).}
 \end{table}

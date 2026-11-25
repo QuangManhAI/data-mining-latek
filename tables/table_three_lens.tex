@@ -1,0 +1,16 @@
+\begin{table}[!htbp]
+\centering
+\small
+\setlength{\tabcolsep}{3.5pt}
+\caption[Đối chiếu 4 cặp biến qua khung chẩn đoán 3 Lăng kính]{Đối chiếu tương quan tuyến tính, đơn điệu và Mutual Information trên khung 3 Lăng kính (\texorpdfstring{$n = 11,659$}{n = 11,659})}
+\label{tab:three_lens}
+\begin{tabularx}{\linewidth}{|>{\raggedright\arraybackslash}p{31mm}|>{\centering\arraybackslash}p{19mm}|>{\centering\arraybackslash}p{21mm}|>{\centering\arraybackslash}p{14mm}|>{\centering\arraybackslash}p{15mm}|L|}
+\hline
+\textbf{Mã cặp biến} & \textbf{Pearson $r$ ($p$)} & \textbf{Spearman $\rho$ ($p$)} & \textbf{$R^2$ OLS} & \textbf{MI $I(X;Y)$} & \textbf{Xu hướng phi tuyến (\texttt{spline\_points})} \\ \hline
+\path{words_x_math} & $+0.214$ ($<0.001$) & $+0.439$ ($<0.001$) & $0.0459$ & $0.157$ & Tăng đồng thuận ở vùng lõi rồi phân tán khi gặp bài khảo luận siêu dài. \\ \hline
+\path{words_x_math_density} & $+0.012$ ($p=0.196$) & $+0.143$ ($<0.001$) & $0.0001$ & $0.052$ & Đường cong chữ U ngược: tăng từ 18.33 eq/1k ($\approx 1,666$ từ) lên đỉnh 34.84 eq/1k ($\approx 4,987$ từ) rồi giảm xuống 8.40 eq/1k ($\approx 16,613$ từ). \\ \hline
+\path{math_x_authors} & $-0.110$ ($<0.001$) & $-0.094$ ($<0.001$) & $0.0120$ & $0.034$ & Tương quan âm bền vững: bài thuần toán có nhóm đồng tác giả nhỏ hơn. \\ \hline
+\path{words_x_citations} & $-0.009$ ($p=0.330$) & $-0.009$ ($p=0.337$) & $0.0001$ & $0.000$ & Độc lập thống kê trên lát cắt hiện tại (cả tuyến tính lẫn phi tuyến). \\ \hline
+\end{tabularx}
+\ReportNote{Nguồn: Nhánh \path{diagnostic_3lenses} trong \path{figures/captured_20261123_082337/evidence/eda_api.json} ($n = 11,659$, lát cắt \texttt{SNAP-03}). Lăng kính 1 xác nhận ma trận \path{(11659, 6)} sạch hoàn toàn (\path{null_counts = 0}, 0.53 MB); Lăng kính 2 kiểm định D'Agostino $K^2$ bác bỏ giả thuyết chuẩn trên cả 6 biến ($p < 0.001$). Đối với \path{words_x_math_density}, chuỗi minh họa tĩnh trong giao diện từng ghi \path{r = +0.018}, \path{I = 0.998}, nhưng số đo thực nghiệm chuẩn xác là $r = 0.012$, $p = 0.196$, $\rho = 0.143$, $I = 0.052$.}
+\end{table}

@@ -1,27 +1,59 @@
-\chapter{Kết Luận và Hướng Phát Triển (Conclusion \& Future Work)}
+% ==============================================================================
+% CHƯƠNG 7: KẾT LUẬN, ĐE DỌA TÍNH HỢP LỆ VÀ HƯỚNG PHÁT TRIỂN
+% ==============================================================================
+
+\chapter{Kết Luận, Đe Dọa Tính Hợp Lệ và Hướng Phát Triển}
 \label{chap:conclusion}
-\section{Tổng Kết Kết Quả và Phạm Vi Xác Nhận}
-Báo cáo xem xét ba câu hỏi đặt ra ở Chương~\ref{chap:business_understanding}: tổ chức dữ liệu, khả năng khai phá corpus và mức chứng cứ đánh giá RAG. Kết quả được phân biệt theo chức năng đã triển khai và hiệu quả đã đo:
-\begin{enumerate}
-\item \textbf{Tổ chức và cập nhật}: Source tại commit \texttt{f421707} (09/11/2026) triển khai hai stage fetch/embed, Bronze và Silver papers/chunks, chỉ mục Qdrant cùng API phục vụ; dữ liệu thực tế mở rộng từ các snapshot EDA 10,000--13,000 bài (tháng 10/2026) lên 71,927 bài Silver (70,590 bài Qdrant, $\approx 1.04$ triệu chunks theo log 04--08/11/2026). Việc giữ text trong Silver tạo đường đối chiếu từ vector tới nội dung. Lịch thu thập hằng ngày từ arXiv, CVF và Semantic Scholar chưa chứng minh độ trễ cập nhật thời gian thực hoặc một cơ chế đối sánh với baseline cố định.
-\item \textbf{Khai phá corpus}: Phiên chạy toàn phần ngày 04/11/2026 trên 71,927 bài (1,043,594 vector Qdrant) hoàn thành trong 234.57 giây: FP-Growth khai phá 45 luật khử đối xứng từ 61,319 giao dịch (top lift 34.940); PCA 2D + GMM trên 70,539 vector bài báo đạt BIC 246,306.5 và Silhouette 0.0490; Isolation Forest gắn nhãn 1,000 bài dị biệt trên 48 nhánh xu hướng; graph sử dụng mạng đồng tác giả. Các kết quả này phản ánh cấu trúc quan sát trên corpus lớn, song vẫn cần đánh giá chuyên gia cho nhãn dị biệt và khớp tên tác giả.
-\item \textbf{Truy xuất và hỏi đáp}: PageRank điều chỉnh điểm retrieval/fusion trước bước cross-encoder; luật là annotation, còn clustering và anomaly phục vụ khám phá corpus. Luật, clustering và anomaly chưa được đưa vào prompt như một lớp ngữ cảnh mining riêng. Các thực nghiệm mới (\path{chunking_ab}, \path{rag_eval}, \path{laya_finetune}) ghi nhận cấu hình \texttt{B\_new\_pct15} cải thiện Recall@5 lên 0.7679 và \texttt{laya\_ft1\_hybrid} đạt MRR@10 0.824, nDCG@10 0.850 cùng Evidence Gate AUROC 0.986 (chặn 50/50 câu không có đáp án). Tuy nhiên, phần sinh câu trả lời end-to-end trên backend Python FastAPI + Qdrant/Silver chunks vẫn cần đánh giá DeepEval thống nhất (hiện chỉ có mốc LanceDB 05/10/2026 với Contextual Precision 0.860 và Faithfulness 0.699).
+
+\section{Tổng Kết Đóng Góp Khoa Học và Kỹ Thuật}
+\label{sec:ch7_contributions}
+
+Hệ thống \textbf{UTH Scientific Lakehouse, Data Mining \& Hybrid RAG} đã hoàn thành mục tiêu xây dựng một nền tảng hợp nhất từ thu hoạch tài liệu học thuật quy mô lớn đến suy luận hỏi đáp có kiểm soát trích dẫn, thể hiện qua bốn nhóm đóng góp cốt lõi:
+
+\begin{enumerate}[label=\textbf{\arabic*.}]
+  \item \textbf{Kiến trúc Lakehouse HTML-First và tách tầng lưu trữ hiệu năng cao}: Xây dựng thành công kho dữ liệu trên \textbf{71,927 bài báo phân biệt} (\textbf{1,043,594 vector} 768 chiều trên Qdrant tại ngày 04/11/2026), giữ tỷ lệ làm giàu HTML LaTeXML đạt \textbf{89.38\%} (2,825,871 công thức toán học ở lát cắt kiểm toán 13,000 bài), đồng thời cô lập văn bản dài khỏi bộ nhớ chỉ mục HNSW nhờ cặp \textbf{Qdrant 5-field payload} và \textbf{\texttt{ChunkStore} ZSTD Row-Group Min/Max} kèm bộ đệm LRU 20,000 đoạn (quyết định \texttt{D-058}).
+
+  \item \textbf{Định lượng bốn quy luật miền dữ liệu khoa học qua OLAP DuckDB không máy chủ}: Phẫu thuật ma trận $11,659 \times 6$ bằng kiểm định D'Agostino $K^2$ ($p < 0.001$)~\cite{dagostino1973tests} và khung 3 Lăng kính đã chứng minh tính lệch đuôi dài cực đoan (\textit{Heavy Right Tail}, \texttt{words} có $S = +49.92, K = +3,879.80$), độ chênh lệch $7.0\times$ mật độ công thức giữa \texttt{stat.ML} (687.0 eq/bài) và \texttt{cs.CL} (98.3 eq/bài), tính bất đối xứng đa nhãn ở \texttt{cs.AI} và quan hệ phi tuyến hình chữ U ngược của \texttt{words\_x\_math\_density} ($r = +0.012$ so với $\rho = +0.143^{***}$), làm cơ sở toán học cho chuẩn hóa $\ln(1+x)$, chia đoạn cân bằng và phân cụm mềm.
+
+  \item \textbf{Vận hành đồng bộ Bốn Trụ cột Khai phá Dữ liệu trong 234.57 giây toàn hồ}:
+  \begin{itemize}
+    \item \textit{Trụ cột 1}: Khai phá \textbf{45 luật kết hợp không trùng lặp} trên 61,319 giao dịch hợp lệ (\texttt{top lift = 34.940}) nhờ ngưỡng \texttt{min\_abs\_transactions = 25} và khử đối xứng \texttt{\_lift\_key}~\cite{han2000mining}.
+    \item \textit{Trụ cột 2}: Triển khai \textbf{EM GMM Full-Covariance} kèm elip $2\sigma$ trên không gian chiếu Centered PCA 2D, lý giải hiện tượng đa tạp ngữ nghĩa liên thông (\texttt{Silhouette = 0.0490} trên 70,539 vector bài báo so với 0.3528 và 25.62\% bài liên ngành trên lát cắt kiểm toán 800 bài)~\cite{dempster1977maximum,rousseeuw1987silhouettes}.
+    \item \textit{Trụ cột 3}: Hỗ trợ đồ thị chế độ kép (Citation DiGraph 8,892 nút / 86,295 cạnh so với mạng đồng tác giả trọng số phân đoạn $1/(N_p - 1)$) tính Damped PageRank ($\alpha = 0.85$) và phân cụm cộng đồng Louvain~\cite{page1999pagerank,blondel2008fast}.
+    \item \textit{Trụ cột 4}: Theo dõi 48 chuyên ngành qua động lượng thị phần $\Delta\text{Share}$ bằng \texttt{dense\_rank()} và cô lập 1,000 bài báo dị biệt cấu trúc bằng Isolation Forest 5 chiều trên thang $\ln(1+x)$ chỉ trong 2.89 giây~\cite{liu2008isolation}.
+  \end{itemize}
+
+  \item \textbf{Đường ống Hybrid RAG có gia cố PageRank và Cổng Chứng cứ Hiệu chỉnh}: Khảo nghiệm cắt bỏ trên $N=120$ truy vấn chứng minh hiệu ứng cộng hưởng khi kết hợp Vector + Laya + RRF ($k=60$) + PageRank ($\mathrm{MRR}$ tăng +6.13\% lên 0.6076 và $\mathrm{Hit}@1$ tăng lên 55.0\%)~\cite{cormack2009reciprocal}. Đặc biệt, tinh chỉnh \texttt{Laya} ONNX bằng hàm mất mát \texttt{Soft-CE} và Temperature Scaling ($T^* = 3.0627$) đã kéo sai số hiệu chỉnh $\mathrm{ECE}$ giảm $5.72\times$ ($0.1900 \rightarrow 0.0332$), cắt giảm tỷ lệ chấp nhận nhầm bịa đặt từ 57.4\% xuống 1.5\%, đạt \textbf{$\mathrm{AUROC} = 0.986$} (chặn 50/50 câu bẫy âm tính ở \texttt{Retrieval v1}) và \textbf{$\mathrm{Hit}@5 = 0.98$}, \textbf{$\mathrm{MRR} = 0.8939$} ở đối sánh 3 chiều 150 mẫu; đồng thời chuyển đổi suy luận sang CUDA \texttt{node-llama-cpp} đạt \textbf{46.33 tok/s} (3.39 s E2E, tăng tốc $11.0\times$) trên GPU RTX 4060 8 GB.
 \end{enumerate}
 
-\section{Đóng Góp và Giá Trị Ứng Dụng}
-Đóng góp của đồ án là kết nối xử lý tài liệu học thuật, khai phá nhiều góc nhìn và hỏi đáp có nguồn trong một nguyên mẫu có thể kiểm tra theo từng tầng dữ liệu. Hai stage tách công việc thu thập khỏi nhúng; Silver chunks tách vòng đời nội dung khỏi payload vector; dashboard cung cấp các đầu ra khai phá để người đọc khảo sát corpus. Những lựa chọn này tạo cơ sở cho thí nghiệm tiếp theo, chưa phải chứng cứ rằng hệ thống tiết kiệm một lượng thời gian cụ thể hoặc luôn trả lời đúng.
+\section{Đe Dọa Tính Hợp Lệ và Hạn Chế Hiện Tại}
+\label{sec:ch7_threats}
 
-Mạch phân tích từ EDA tới thiết kế chỉ ra ba ưu tiên: giữ section và công thức vì tài liệu có cấu trúc không đồng đều; giới hạn suy luận xu hướng vì corpus lệch thời gian; và kiểm tra chất lượng nội dung cùng đồng bộ chỉ mục trước khi đánh giá hiệu quả RAG. Vì vậy, đánh giá quy mô lưu trữ cần đi cùng đánh giá chất lượng dữ liệu và chất lượng câu trả lời.
+Nhằm bảo toàn tính trung thực khoa học, năm mối đe dọa tính hợp lệ (\textit{Threats to Validity}) và hạn chế kỹ thuật hiện hữu được nhận diện thẳng thắn:
 
-\section{Giới Hạn Còn Tồn Tại}
-\begin{enumerate}
-\item Corpus tập trung vào một số chuyên ngành và tháng công bố; các snapshot và cỡ mẫu khác nhau không tạo thành một thực nghiệm thống nhất. Nhãn làm giàu và số công thức chưa đo độ chính xác trích xuất.
-\item Luật có ít giao dịch hỗ trợ, profile cụm cũ có lỗi, Silhouette thấp và nhãn dị biệt chưa có ground truth. Điểm PageRank đồng tác giả không thay thế đánh giá ảnh hưởng bài báo; khớp tên tác giả còn nguy cơ nhập nhằng.
-\item Benchmark RAG có ít câu hỏi, số mẫu hợp lệ khác nhau theo metric và sử dụng LLM judge. Một số chỉ số giảm sau nâng cấp; các bất nhất trong case study và baseline hiệu năng cần raw trace để xác minh.
-\item Phiên bản mới chưa được đo lại đồng thời về chất lượng, độ trễ hydrate và độ bền vận hành. Chứng cứ hiện có chưa xác nhận lợi ích riêng của query expansion, authority hoặc từng thuật toán mining đối với retrieval.
+\begin{enumerate}[label=\textbf{\arabic*.}]
+  \item \textbf{Khoảng cách Serving giữa nhánh thử nghiệm \texttt{RAG\_TS} (\texttt{EXP-05}) và Backend FastAPI (\textit{Internal/External Validity})}: Các chỉ số đỉnh cao tại \texttt{EXP-05} ($\mathrm{AUROC} = 0.986$, $\mathrm{Hit}@5 = 0.94\text{--}0.98$, chặn 50/50 bẫy âm tính) được đo trên bộ chạy \texttt{RAG\_TS} sử dụng trọng số \texttt{Laya 0.4.27} ONNX tinh chỉnh, chỉ mục SQLite FTS5 BM25 độc lập và ngưỡng cứng Cổng Chứng cứ 0.6. Trong khi đó, dịch vụ sản xuất FastAPI hiện tại (\path{reranker_service.py}, \path{retrieval_service.py}) vẫn mặc định \path{cross-encoder/ms-marco-MiniLM-L-6-v2} (\texttt{max\_length = 256}), chấm điểm từ vựng nội tập thay vì BM25 toàn cục và chưa tự động từ chối ở ngưỡng 0.6 (cấu hình \texttt{prod} trên tập v1 chỉ đạt $\mathrm{MRR}@10 = 0.561$ so với 0.824 của \texttt{laya\_ft1\_hybrid}).
+
+  \item \textbf{Sự khác biệt công thức PageRank và RRF giữa \texttt{retrieval\_service.py} và \texttt{EXP-04}}: Dịch vụ FastAPI chuẩn hóa điểm RRF ($k=60$) về đoạn $[0.70, 0.95]$ rồi nhân hệ số uy tín tuyến tính $(1 + 0.25 \cdot \mathrm{norm\_pr})$ ở cả bước tiền RRF và hậu RRF (Mục~\ref{sec:authority_multiplier}). Ngược lại, kịch bản \texttt{EXP-04} (\path{evaluate_120_ranking_5_scenarios.py}) sử dụng Weighted RRF (0.65 Vector / 1.35 Laya) kết hợp cộng biên $+0.025$ từ điểm PageRank nén logarit. Hai biến thể này cần hợp nhất về một công thức tham số hóa thống nhất trước khi mở rộng benchmark quy mô lớn.
+
+  \item \textbf{Thiếu hụt Hydration trên một phần kho bài báo cũ (\textit{Construct Validity})}: Đánh giá DeepEval tại Mục~\ref{sec:ch5_stage_latency} cho thấy khi gộp thêm $\approx 38.9\%$ mẫu thiếu toàn văn ở tập $N=169$ (so với $N=105$ đã hydrate), \texttt{Context Recall} giảm từ 0.900 xuống 0.637. Cần hoàn tất chiến dịch bù đắp toàn văn trước khi đánh giá lại toàn hồ.
+
+  \item \textbf{Nút thắt thời gian Đồ thị và giới hạn Từ vựng Luật Kết hợp}: Thuật toán Louvain và PageRank thuần Python trên \texttt{NetworkX} tiêu tốn \textbf{116.39 giây} (49.6\% tổng thời gian \texttt{MiningEngine}) cho 71,927 bài; khi kho dữ liệu tăng lên 500,000 bài, chi phí đồ thị đơn luồng sẽ vượt quá cửa sổ bảo trì ngắn. Đồng thời, bộ phân tích FP-Growth dựa trên từ điển tĩnh 25 cụm từ khóa \texttt{KEYWORD\_VOCAB} chưa thể tự động bắt kịp các khái niệm mới nổi (như \textit{Test-Time Compute}, \textit{MoE Routing} hay \textit{State Space Models}) nếu không cập nhật thủ công.
+
+  \item \textbf{Tư thế bảo mật khóa fallback mặc định}: Dù \path{config.py} và \path{settings.py} dùng khóa đọc công khai cho Qdrant demo (\path{uth_guest_readonly_key_4b71a8e9d2c}), việc giữ chuỗi khóa fallback mặc định trong mã nguồn vẫn đòi hỏi quy trình tách biệt hoàn toàn cấu hình sản xuất và cấu hình trình diễn.
 \end{enumerate}
 
-\section{Hướng Phát Triển}
-Ưu tiên trước hết là tái lập một vòng đánh giá trên cùng commit, snapshot, model và cấu hình: kiểm tra dữ liệu đầu vào, tính nhất quán Silver/Qdrant, lưu raw traces và công bố số mẫu lỗi. Kiểm tra thủ công một mẫu công thức cùng nhãn dị biệt để bổ sung đánh giá chất lượng ngoài số lượng đầu ra.
+\section{Hướng Phát Triển Tương Lai}
+\label{sec:ch7_future_work}
 
-Tiếp theo, thực hiện ablation giữa dense retrieval, lexical/RRF, authority và reranker; nếu triển khai query expansion thực sự thì đánh giá riêng độ phủ và nhiễu truy xuất. Cụm cần được diễn giải bằng tài liệu đại diện và kiểm tra độ ổn định theo $K$; phân tích tương quan cần xác nhận mẫu và xử lý nhiều phép so sánh. Khi dữ liệu citation cùng phép đo nền đã đủ tin cậy, mới mở rộng graph tri thức, multi-hop RAG và nghiên cứu người dùng.
+Từ năm hạn chế thực tế trên, bốn hướng nâng cấp trực tiếp và khả thi cao được hoạch định cho giai đoạn tiếp theo:
+
+\begin{enumerate}[label=\textbf{\arabic*.}]
+  \item \textbf{Hợp nhất \texttt{Laya} ONNX tinh chỉnh ($T^* = 3.0627$) và Cổng Chứng cứ $\theta = 0.6$ vào FastAPI}: Tích hợp trực tiếp tệp ONNX tại \path{notebooks/laya_onnx_20261108-2053_seed0/} vào \texttt{RerankerService} qua \texttt{onnxruntime} (kèm tùy chọn GPU CUDA Execution Provider), phối hợp với chỉ mục BM25 toàn cục (SQLite FTS5 hoặc Qdrant Sparse Vectors) nhằm đưa dịch vụ FastAPI tiệm cận mốc \texttt{AUROC = 0.986} và $\mathrm{MRR}@10 = 0.827$ của \texttt{EXP-05}.
+
+  \item \textbf{Hoàn thiện Hydration toàn phần và đồng bộ hóa dữ liệu}: Kích hoạt định kỳ \path{scripts/backfill_missing_papers.py} và \path{dags/dag_tier3_pdf_backfill.py} để đẩy tỷ lệ bài báo có đầy đủ đoạn văn trong \texttt{ChunkStore} tiệm cận 100\%, triệt tiêu nguyên nhân sụt giảm \texttt{Context Recall}.
+
+  \item \textbf{Tăng tốc khai phá đồ thị và trích xuất khái niệm động}: Chuyển đổi lõi \texttt{ScientificGraphMiner} từ \texttt{NetworkX} thuần Python sang \texttt{python-igraph} (nền C) hoặc \texttt{cuGraph} (RAPIDS GPU) để nén thời gian tính PageRank và Louvain xuống dưới 5 giây; đồng thời nâng cấp \texttt{AssociationRuleMiner} từ \texttt{KEYWORD\_VOCAB} cố định sang trích xuất thuật ngữ học thuật động bằng KeyBERT hoặc LLM batch tagging định kỳ.
+
+  \item \textbf{Cơ chế từ chối minh bạch và suy luận đa bước (Agentic Multi-Hop RAG)}: Kết nối trực tiếp tín hiệu \texttt{Evidence Gate < 0.6} từ \texttt{RerankerService} vào \texttt{RagService} để kích hoạt luồng từ chối có cấu trúc (hiển thị các bài liên quan gần nhất kèm xác suất hiệu chỉnh thấp thay vì ép LLM suy đoán), đồng thời tận dụng các cạnh trích dẫn trong đồ thị cho suy luận tổng hợp qua hai bước (\textit{1-hop citation follow-up}) với các câu hỏi so sánh chuyên sâu.
+\end{enumerate}

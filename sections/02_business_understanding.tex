@@ -1,59 +1,125 @@
-\chapter{Hiểu Bài Toán (Business Understanding)}
+\chapter{Hiểu Bài Toán và Kiến Trúc Tổng Thể}
 \label{chap:business_understanding}
 
-\section{Bối cảnh Khai thác Dữ liệu Nghiên cứu Khoa học trong AI/DS}
-Tài liệu nghiên cứu AI/DS được phân bố trên arXiv, kho hội nghị và các dịch vụ siêu dữ liệu. Khi khảo cứu một chủ đề, người đọc cần tìm đúng công trình, hiểu các khái niệm và kiểm tra công thức cùng tài liệu dẫn nguồn. Bài toán của đồ án là tổ chức quá trình này thành một luồng dữ liệu có thể cập nhật, khai phá và truy xuất lại theo nguồn gốc.
+\section{Bối Cảnh và Động Lực Bài Toán}
+\label{sec:ch1_context}
 
-Hệ thống hướng tới hỗ trợ khảo cứu trong một corpus được thu thập có giới hạn. Các thống kê của corpus không đại diện cho toàn bộ công bố AI/DS; hiệu quả hỗ trợ người dùng cũng cần được đánh giá riêng với khả năng chạy của phần mềm.
-
-\section{Vấn đề Phân tán Dữ liệu và Rủi ro Ảo giác Học thuật}
-Ba yêu cầu định hướng thiết kế gồm:
+Trong nghiên cứu Trí tuệ Nhân tạo và Khoa học Dữ liệu (AI/DS), quá trình khảo cứu tổng quan tài liệu (\textit{literature review}) thường xuyên đối mặt với bốn rào cản cấu trúc liên hoàn:
 \begin{enumerate}[label=\textbf{\arabic*.}]
-\item \textbf{Giữ cấu trúc tài liệu}: Văn bản học thuật chứa section, ký hiệu và công thức. Đồ án ưu tiên HTML có annotation LaTeX để trích xuất các thành phần này; số công thức thu được chưa đủ xác nhận độ chính xác của từng công thức.
-\item \textbf{Cho phép kiểm tra câu trả lời}: Mô hình sinh có thể đưa ra nội dung không được ngữ cảnh hỗ trợ. Câu trả lời cần kèm đoạn trích và định danh bài để người đọc đối chiếu; có dẫn nguồn không tự bảo đảm nội dung đúng.
-\item \textbf{Kết hợp nhiều góc nhìn về corpus}: Nhãn chuyên ngành, ngữ nghĩa tóm tắt, quan hệ tác giả và đặc trưng cấu trúc cung cấp các thông tin khác nhau. Khai phá chúng phục vụ khám phá dữ liệu và tạo tín hiệu bổ sung cho truy xuất, với mức tích hợp được kiểm tra riêng cho từng thuật toán.
+  \item \textbf{Phân mảnh nguồn dữ liệu và trùng lặp đa phiên bản}: Công trình khoa học cùng một ý tưởng xuất hiện song song dưới dạng bản tiền ấn phẩm (\textit{preprint}) trên arXiv (nhiều phiên bản \texttt{v1}, \texttt{v2}, \texttt{v3}), bản kỷ yếu chính thức trên CVF Open Access (CVPR, ICCV, WACV), và bản chỉ mục trích dẫn trên Semantic Scholar. Việc thu thập thiếu kiểm soát tạo ra bản sao trùng lặp, làm sai lệch thống kê tần suất chủ đề và gây lãng phí ngân sách nhúng vector.
+  \item \textbf{Suy thoái cấu trúc học thuật và công thức toán học}: Đường ống xử lý PDF truyền thống thường phá vỡ thứ tự đọc hai cột, cắt ngang các phân mục (\textit{section}), hoặc chuyển đổi ký hiệu toán học thành chuỗi ký tự vô nghĩa. Điều này làm mất năng lực truy xuất chính xác đối với các câu hỏi đòi hỏi công thức định lượng (như hàm mất mát DPO~\cite{rafailov2023direct}, định luật tỷ lệ, hay cơ chế FlashAttention~\cite{dao2022flashattention}).
+  \item \textbf{Ảo giác học thuật và thiếu cơ chế từ chối có kiểm chứng (\textit{Evidence Gate})}: Khi sử dụng mô hình ngôn ngữ lớn (LLM) thuần túy hoặc hệ thống RAG chỉ dựa trên độ tương đồng cosine thô, các đoạn văn tổng quan (\textit{survey}) dễ chiếm chỗ của bài báo gốc tại Top-1, đồng thời mô hình sinh vẫn có xu hướng bịa đặt dẫn chứng cho các khái niệm không tồn tại trong kho tri thức (\textit{negative queries}).
+  \item \textbf{Đứt gãy giữa Khai phá Dữ liệu (\textit{Data Mining}) và Truy xuất Thông tin (\textit{Retrieval})}: Các công cụ khai phá dữ liệu (luật kết hợp, phân cụm chủ đề, đồ thị mạng lưới, phát hiện dị biệt) thường tồn tại dưới dạng báo cáo tĩnh tách rời khỏi hệ thống hỏi đáp thời gian thực, không cung cấp tín hiệu uy tín hay ngữ cảnh khám phá trực tiếp cho người nghiên cứu.
 \end{enumerate}
 
-\section{Nền Tảng Tiếp Cận và Đóng Góp của Đồ Án}
-RAG kết hợp truy xuất từ bộ nhớ tài liệu với mô hình sinh~\cite{lewis2020retrieval}. Đồ án vận dụng hướng tiếp cận này cho tài liệu khoa học bằng cách lưu nội dung có cấu trúc, truy xuất các đoạn liên quan và cung cấp nguồn để kiểm tra câu trả lời. Hệ thống sử dụng mô hình nhúng có sẵn thuộc họ Nomic Embed~\cite{nussbaum2024nomic}; các thuật toán FP-Growth, KMeans, PageRank, Louvain và Isolation Forest được áp dụng cho những nhiệm vụ khác nhau trong cùng corpus.
+Xuất phát từ các yêu cầu thực tiễn này, đồ án đặt mục tiêu xây dựng một \textbf{nguyên mẫu thống nhất} kết hợp chặt chẽ \textbf{Kỹ thuật Hồ dữ liệu thời gian thực} (\textit{Real-Time Medallion Lakehouse}), \textbf{Bốn trụ cột Khai phá Dữ liệu}, và \textbf{Hệ thống Hybrid RAG có dẫn nguồn} trên cùng một nền tảng lưu trữ và phục vụ. Đồng thời, báo cáo duy trì nguyên tắc minh bạch: mọi thống kê chỉ phản ánh đúng corpus thu thập được trong giới hạn ngân sách lưu trữ, không đại diện cho toàn bộ sản lượng xuất bản khoa học toàn cầu.
 
-Đóng góp chính là thiết kế và tích hợp pipeline dữ liệu học thuật: tách thu thập khỏi nhúng, quản lý text trong Silver và vector trong Qdrant, xuất các sản phẩm khai phá và phục vụ chúng qua API/dashboard. Báo cáo không đề xuất thuật toán khai phá mới. Giá trị của việc tích hợp được xem xét qua khả năng truy vết dữ liệu, kết quả khai phá có thể diễn giải và chứng cứ đánh giá RAG; mức cải thiện do từng thành phần cần phép đo đối chứng.
+\section{Kiến Trúc Tổng Thể Medallion Lakehouse kết hợp Khai Phá và RAG}
+\label{sec:ch1_architecture}
 
-\section{Mục tiêu Nghiên cứu và Thiết kế Hệ thống}
-\subsection{Mục tiêu tổng thể}
-Xây dựng một nguyên mẫu tích hợp thu thập, chuẩn hóa, khai phá và hỏi đáp có dẫn nguồn cho corpus AI/DS. Ba câu hỏi xuyên suốt báo cáo là: dữ liệu được tổ chức và cập nhật như thế nào; các phương pháp khai phá mô tả được đặc điểm gì của corpus; và chứng cứ hiện có cho phép kết luận đến đâu về chất lượng cùng độ trễ RAG.
+Kiến trúc tổng thể của hệ thống được thiết kế theo nguyên lý tách rời tầng tính toán (\textit{Compute}) khỏi tầng lưu trữ đối tượng (\textit{Object Storage} --- MinIO S3~\cite{minio2023storage}), xử lý phi đĩa cục bộ (\textit{Zero Local Disk footprint}) và tách pha thu thập mạng khỏi pha suy luận GPU. Hình~\ref{fig:system_architecture} minh họa toàn bộ luồng dữ liệu từ tầng thu thập 3 cấp đến tầng phục vụ tương tác.
 
-\subsection{Mục tiêu cụ thể}
+\begin{figure}[htbp]
+  \centering
+  \DrawSystemArchitecture
+  \caption[Kiến trúc tổng thể Medallion Lakehouse kết hợp Khai phá và Hybrid RAG]{Kiến trúc tổng thể Medallion Lakehouse kết hợp Khai phá Dữ liệu và Hybrid RAG}
+  \ReportNote{Nguồn: Tổng hợp từ kiến trúc điều phối Airflow (\path{dags/}), hàng đợi hai pha RabbitMQ (\path{src/ingestion/queue_consumer.py}), hồ MinIO S3, chỉ mục Qdrant (\texttt{D-058}), bộ máy khai phá 4 trụ cột (\path{src/mining/}) và dịch vụ phục vụ FastAPI/React.}
+  \label{fig:system_architecture}
+\end{figure}
+
+Điểm cốt lõi của kiến trúc này nằm ở sự phân tách rõ ràng trách nhiệm của từng tầng dữ liệu trong mô hình Medallion:
 \begin{itemize}
-\item \textbf{Kỹ thuật dữ liệu}: Tổ chức Bronze, Silver papers/chunks và Gold vectors/artifacts; dùng hai worker fetch/embed để tách các bước xử lý. Tier 1 RSS được lập lịch lúc 19:00 ICT, Tier 2 CVF/arXiv lúc 19:10 ICT theo ngân sách lưu trữ 20 GB; Tier 3 landmark chạy thủ công. Hồ dữ liệu tích lũy đến 71,927 bài báo phân biệt trong Silver và 1,043,594 vector trong Qdrant (log 04/11/2026), được \texttt{dag\_recompute\_mining} tính toán lại định kỳ toàn bộ EDA và 4 trụ cột khai phá để cập nhật phân phối cụm, mạng tác giả và độ lệch xu hướng ($\Delta\text{Share}$).
-\item \textbf{Khai phá dữ liệu}: FP-Growth tìm liên hệ giữa nhãn và khái niệm; KMeans cùng PCA/GMM hỗ trợ khảo sát cấu trúc ngữ nghĩa; PageRank/Louvain phân tích đồ thị; động lượng thị phần và Isolation Forest hỗ trợ nhận diện biến động cùng tài liệu khác biệt về cấu trúc.
-\item \textbf{Truy xuất và khám phá}: Kết hợp dense retrieval, điểm từ vựng, RRF và cross-encoder; thử nghiệm uy tín tác giả như một tín hiệu xếp hạng. Luật hiện được trả về để tham khảo, chưa mở rộng query ở bước nhúng. Clustering và anomaly phục vụ dashboard. Tác động của từng thành phần lên RAG là câu hỏi đánh giá, không suy ra từ việc đã có module.
-\item \textbf{Đánh giá}: Phân biệt quy mô dữ liệu, chỉ dấu chất lượng xử lý, chất lượng câu trả lời và hiệu năng. Đối chiếu kết quả lưu trữ với phương pháp đã dùng; chỉ ra những kết luận cần tái lập trên cùng phiên bản và snapshot.
+  \item \textbf{Bronze Zone}: Kho lưu trữ nguyên bản bất biến (\textit{Immutable Source of Truth}), nén \texttt{gzip} cấp 6 đối với HTML5 (tỷ lệ nén khoảng 6--8 lần) và gắn mã băm SHA-256 trên metadata đối tượng S3, cho phép tái xử lý toàn bộ kho khi nâng cấp bộ bóc tách.
+  \item \textbf{Silver Zone (Hai bảng cộng sinh)}: Tách riêng bảng tài liệu (\path{silver/papers/year=YYYY/}, 23 cột) phục vụ phân tích OLAP qua DuckDB~\cite{raasveldt2019duckdb}/PyArrow và bảng phân đoạn (\path{silver/chunks/year=YYYY/}, 14 cột theo quyết định \texttt{D-058}) làm nguồn chân lý cho nội dung văn bản chunk.
+  \item \textbf{Gold Zone}: Lưu song song chỉ mục tìm kiếm lân cận gần đúng \textbf{Qdrant HNSW}~\cite{qdrant2023vector,malkov2018efficient} (768-D, Cosine) chỉ chứa vector và 5 trường lọc tối thiểu, cùng các sản phẩm tri thức JSON cô đọng tại \path{gold/mining/} được tái tính toán định kỳ qua \path{dags/dag_recompute_mining.py}.
 \end{itemize}
 
-\section{Đối tượng Sử dụng và Các Trường hợp Sử dụng (Use Cases)}
-Các tình huống dưới đây mô tả mục đích sử dụng của nguyên mẫu, chưa phải kết quả nghiên cứu người dùng:
-\begin{enumerate}[label=\textbf{\arabic*.}]
-\item \textbf{Sinh viên AI/DS và CNTT}: Tra cứu khái niệm như Self-Attention, DPO hoặc LoRA; xem đoạn trích, công thức và bài gốc để tự kiểm tra nội dung trả lời.
-\item \textbf{Học viên cao học và nghiên cứu sinh}: Khám phá phân bố chuyên ngành, liên hệ đa nhãn, cụm ngữ nghĩa và mạng lưới tác giả để chọn tài liệu đọc tiếp. Điểm PageRank phản ánh vị trí trong đồ thị quan sát; chưa được kiểm chứng như bộ nhận diện bài landmark.
-\item \textbf{Giảng viên và người đánh giá}: Kiểm tra nguồn câu trả lời, cách xây dựng corpus và các trường hợp tài liệu khác biệt về cấu trúc. Nhãn dị biệt hoặc thứ hạng tác giả là gợi ý phân tích, không thay thế thẩm định học thuật.
-\end{enumerate}
+\section{Nền Tảng Tiếp Cận và Năm Đóng Góp Kỹ Thuật}
+\label{sec:ch1_contributions}
 
-\clearpage
-\section{Bảng Chỉ số Hiệu năng Đo lường (KPI Matrix)}
-Bảng~\ref{tab:system_kpis} gắn ba nhóm mục tiêu với phương pháp đo lường: chất lượng RAG, độ trễ và tài nguyên tính toán, và sản phẩm xử lý dữ liệu. Cột thực nghiệm ghi nhận kết quả đo lường thực tế tương ứng với từng giai đoạn kiểm thử có lưu trữ hồ sơ đo lường.
+Hệ thống kế thừa các thuật toán nền tảng đã được kiểm chứng trong học thuật: mô hình RAG của Lewis và cộng sự~\cite{lewis2020retrieval}, họ mô hình nhúng ngữ cảnh dài \textbf{Nomic Embed} (\texttt{nomic-embed-text-v1.5}, mã hóa vị trí quay RoPE 8,192 tokens)~\cite{nussbaum2024nomic,nomicmodelcard2024}, \textbf{FP-Growth}~\cite{han2000mining} cho khai phá tập mục phổ biến, \textbf{MiniBatchKMeans}~\cite{macqueen1967some} / \textbf{GMM}~\cite{dempster1977maximum} / \textbf{DBSCAN}~\cite{ester1996density} cho phân tích mật độ và cụm ngữ nghĩa, \textbf{PageRank}~\cite{page1999pagerank} / \textbf{Louvain}~\cite{blondel2008fast} cho cấu trúc mạng học thuật, và \textbf{Isolation Forest}~\cite{liu2008isolation} cho phát hiện ngoại lai đa biến. Đồ án không đề xuất thuật toán học máy mới về mặt lý thuyết, mà tập trung \textbf{đóng góp ở cấp độ kỹ thuật hệ thống (\textit{systems engineering}) và tích hợp pipeline dữ liệu} qua 5 trụ cột thực thi tại Bảng~\ref{tab:ch1_contributions}.
 
-Các mốc chứng cứ được trình bày tập trung ở Chương~\ref{chap:evaluation}; Bảng~\ref{tab:snapshot_sources} phân biệt nguồn dữ liệu của bảng và ảnh. Chỉ dấu làm giàu và số công thức cần được đọc theo định nghĩa tính toán, tách khỏi độ chính xác trích xuất.
+\begin{table}[htbp]
+  \centering
+  \small
+  \caption[Năm đóng góp kỹ thuật cốt lõi của hệ thống]{Năm đóng góp kỹ thuật cốt lõi của hệ thống từ tầng thu thập đến đánh giá}
+  \label{tab:ch1_contributions}
+  \setlength{\tabcolsep}{3.5pt}
+  \begin{tabularx}{\linewidth}{|>{\centering\arraybackslash}p{8mm}|>{\raggedright\arraybackslash}p{40mm}|>{\raggedright\arraybackslash}p{45mm}|L|}
+    \hline
+    \textbf{STT} & \textbf{Đóng góp kỹ thuật} & \textbf{Vấn đề gốc cần giải quyết} & \textbf{Hiện thực hóa trong mã nguồn} \\
+    \hline
+    \textbf{1} & \textbf{Thu thập 3 tầng tự động kèm Water-Filling \& Tách pha RabbitMQ} & Cào tuần tự bị nghẽn mạng làm đói GPU; mất cân đối chuyên ngành (\path{cs.CV} / \path{cs.LG}) và tràn đĩa & \path{dags/dag_tier1_realtime_stream.py}, \path{dag_tier2_near_past_harvest.py}, \path{dag_tier3_landmark_harvest.py}, \path{src/ingestion/queue_consumer.py} (\texttt{--stage fetch/embed}, \texttt{EMBED\_QUEUE\_MAX=500}) \\
+    \hline
+    \textbf{2} & \textbf{Hồ cột Zero-Disk \& Thủy hóa Byte-Range \texttt{ChunkStore} (\texttt{D-058})} & Lưu toàn văn chunk trong payload Qdrant làm phình RAM; ghi đè Parquet theo năm gây chậm $O(N)$ & \path{src/storage/lakehouse_io.py}, \path{src/transformation/silver_writer.py}, \path{src/storage/chunk_store.py} (\texttt{ROW\_GROUP\_SIZE=512}, 16 luồng), \path{dags/dag_compact_silver.py} \\
+    \hline
+    \textbf{3} & \textbf{Bộ giải mã Thác nước HTML-First \& Chống lỗi Thực thi} & OCR PDF chậm và hỏng công thức; ký tự UTF-16 \textit{lone surrogate} làm sập tokenizer Rust (\texttt{BUG-01}) & \path{src/transformation/unified_content_resolver.py}, \path{html_parser.py}, \path{src/indexing/embedder.py}, \path{src/utils/hasher.py} \\
+    \hline
+    \textbf{4} & \textbf{Tích hợp 4 Trụ cột Khai phá vào Truy xuất \& Dashboard} & Khai phá dữ liệu bị cô lập khỏi truy xuất; cần tín hiệu uy tín đồ thị và luật liên kết kiểm chứng & \path{src/mining/mining_engine.py}, \path{backend/app/services/retrieval_service.py} (PageRank $\beta=0.25$, \path{rule_expansions}), React 19 UI \\
+    \hline
+    \textbf{5} & \textbf{Đánh giá Thực nghiệm Đa tầng \& Kiểm soát Ảo giác (\textit{Evidence Gate})} & Chưa định lượng tách bạch phân đoạn, reranking, chặn câu hỏi ngoài phạm vi và tốc độ sinh cục bộ & \path{benchmarks/chunking_ab.py}, \path{evaluate_120_ranking_5_scenarios.py}, \path{run_deepeval_vector_judge.py}, \path{tests/performance/test_rag_llm_performance.py} \\
+    \hline
+  \end{tabularx}
+  \ReportNote{Nguồn: Đối chiếu trực tiếp kiến trúc triển khai trên mã nguồn commit \texttt{f421707} và \texttt{aae74de} (cập nhật 25/11/2026).}
+\end{table}
+
+\section{Mục Tiêu Kỹ Thuật và Ma Trận Chỉ Số Hiệu Năng (KPI)}
+\label{sec:ch1_kpis}
+
+Hệ thống được định lượng qua 4 nhóm chỉ số mục tiêu: (1) Quy mô Hồ dữ liệu và Khai phá (\textit{Lakehouse \& Mining}), (2) Phân đoạn, Truy xuất và Cổng Bằng chứng (\textit{Chunking, Retrieval \& Evidence Gate}), (3) Chất lượng Sinh câu trả lời (\textit{DeepEval Generation}~\cite{deepeval2024confident}), và (4) Hiệu năng Phần cứng và Độ trễ (\textit{Hardware \& Latency}). Bảng~\ref{tab:system_kpis} tổng hợp đầy đủ 14 chỉ số KPI đối chiếu giữa ngưỡng thiết kế và kết quả đo thực tế theo từng mốc kiểm chứng độc lập (chi tiết lịch sử các mốc xem Bảng~\ref{tab:snapshot_sources} và Chương~\ref{chap:evaluation}).
+
 \input{tables/table_kpi.tex}
 
-\section{Phạm vi, Giả định và Giới hạn Kỹ thuật}
-\subsection{Phạm vi nghiên cứu (Scope)}
-Corpus tập trung vào các nhánh AI/DS như \texttt{cs.LG}, \texttt{cs.CV}, \texttt{cs.CL}, \texttt{cs.RO}, \texttt{cs.AI}, \texttt{eess.IV} và \texttt{stat.ML}. HTML học thuật được ưu tiên để khai thác section và biểu diễn công thức khi nguồn có dữ liệu phù hợp. Phạm vi triển khai được đối chiếu tại commit \texttt{f421707}, ngày 09/11/2026; số liệu đánh giá được ghi theo phiên bản và ngữ cảnh của từng phép đo.
+Để chuẩn hóa cách tính tỷ lệ cải thiện tương đối giữa cấu hình nâng cấp và nền cơ sở xuyên suốt các chương đánh giá, hệ thống sử dụng công thức chuẩn:
+\begin{equation}
+  \Delta_{\text{rel}}(\%) = \frac{M_{\text{upgraded}} - M_{\text{baseline}}}{M_{\text{baseline}}} \times 100\%
+  \label{eq:ch1_rel_delta}
+\end{equation}
+\noindent Trong đó: $M_{\text{upgraded}}$ là giá trị chỉ số đánh giá của cấu hình mục tiêu, $M_{\text{baseline}}$ là giá trị của cấu hình đối chứng trên cùng tập mẫu và cùng điều kiện đo, và $\Delta_{\text{rel}}(\%)$ là mức tăng trưởng tương đối tính theo phần trăm.
 
-\subsection{Giả định hệ thống (Assumptions)}
-Metadata và nội dung từ các kho đầu vào được xem là dữ liệu cần kiểm tra, không phải chứng nhận tính đúng đắn khoa học. Khi thiếu tệp citation, hệ thống phân tích đồ thị đồng tác giả. Hai loại đồ thị có đơn vị nút và ý nghĩa thứ hạng khác nhau, không dùng thay thế kết luận cho nhau.
+\section{Phạm Vi, Đối Tượng Sử Dụng và Các Đánh Đổi Thiết Kế}
+\label{sec:ch1_scope_tradeoffs}
 
-\subsection{Các giới hạn đã xác định (Limitations)}
-Snapshot local tập trung nhiều vào tháng 01--02/2024 và không đại diện cho toàn miền AI/DS. Đây là nguồn thống kê lịch sử; chưa có quy trình xác nhận nó là tập đối chứng cố định cho luồng dữ liệu mới. Các artifact và benchmark thuộc nhiều mốc phiên bản, nên chưa hình thành một đánh giá end-to-end thống nhất cho kiến trúc mới. Cấu hình phần cứng đo được là RTX 4060 Laptop 8 GB; nhu cầu VRAM thực tế phụ thuộc lượng tử hóa, độ dài ngữ cảnh và số phiên đồng thời, không được quy thành một mức tối thiểu phổ quát.
+\subsection{Phạm Vi Dữ Liệu và Đối Tượng Sử Dụng}
+\label{sec:ch1_scope}
 
-Từ phạm vi trên, Chương~\ref{chap:data_understanding} xác định các đặc điểm dữ liệu cần xử lý; Chương~\ref{chap:data_preparation} giải thích lựa chọn lưu trữ và phân đoạn; Chương~\ref{chap:modeling} trình bày khai phá và truy xuất. Chương~\ref{chap:evaluation} đối chiếu kết quả với mục tiêu, trước khi xem xét vận hành và hướng phát triển.
+\begin{itemize}
+  \item \textbf{Phạm vi chuyên ngành và ngân sách lưu trữ}: Corpus tập trung vào hệ sinh thái AI/DS gồm các nhánh nòng cốt \texttt{cs.LG}, \texttt{cs.CV}, \texttt{cs.CL}, \texttt{cs.AI}, \texttt{cs.RO}, \texttt{cs.IR}, \texttt{cs.NE}, \texttt{cs.MA}, \texttt{cs.SD}, \texttt{eess.IV}, \texttt{eess.AS}, và \texttt{stat.ML} (được nhóm thành 7 cụm cân bằng tải tại \path{dags/dag_tier2_near_past_harvest.py}). Hệ thống lưu trữ dữ liệu có kiểm soát trong ngân sách \texttt{LAKEHOUSE\_BUDGET\_GB = 20.0 GB} (xem \path{backend/app/core/config.py}), do đó không đại diện cho toàn bộ sản lượng xuất bản khoa học toàn cầu.
+  \item \textbf{Ba nhóm đối tượng và trường hợp sử dụng (Use Cases)}:
+    \begin{enumerate}[label=\textbf{\arabic*.}]
+      \item \textit{Sinh viên AI/DS và CNTT}: Tra cứu nhanh cơ chế kỹ thuật (như FlashAttention~\cite{dao2022flashattention}, DPO~\cite{rafailov2023direct}, QLoRA~\cite{dettmers2024qlora}, RoPE), kiểm chứng công thức LaTeX KaTeX và đối chiếu trực tiếp tới thẻ trích dẫn \texttt{[Paper: ID, Section: \ldots]}.
+      \item \textit{Học viên cao học và Nghiên cứu sinh}: Khảo sát mật độ đa ngành, luật kết hợp khái niệm, cụm ngữ nghĩa GMM 2D và mạng lưới hợp tác PageRank để xác định các tác giả trung tâm và xu hướng đang bùng nổ (\texttt{SURGING}). Điểm PageRank phản ánh vị trí trong đồ thị đồng tác giả quan sát được, không mặc nhiên thay thế đánh giá ảnh hưởng học thuật.
+      \item \textit{Giảng viên và Người thẩm định}: Kiểm tra tính minh bạch nguồn gốc (\textit{Bronze $\rightarrow$ Silver $\rightarrow$ Gold lineage}), các trường hợp dị biệt cấu trúc và mức độ từ chối câu hỏi thiếu bằng chứng của Evidence Gate.
+    \end{enumerate}
+\end{itemize}
+
+\subsection{Các Đánh Đổi Thiết Kế Trọng Yếu}
+\label{sec:ch1_tradeoffs}
+
+Mỗi quyết định kiến trúc trong hệ thống đều giải quyết một nút thắt cổ chai thực tế đi kèm đánh đổi minh bạch, được tổng hợp trong Bảng~\ref{tab:ch1_tradeoffs}.
+
+\begin{table}[htbp]
+  \centering
+  \small
+  \caption[Tổng hợp các đánh đổi kiến trúc trọng yếu]{Tổng hợp các đánh đổi thiết kế kiến trúc (\textit{Architectural Trade-offs}) của hệ thống}
+  \label{tab:ch1_tradeoffs}
+  \setlength{\tabcolsep}{3.5pt}
+  \begin{tabularx}{\linewidth}{|>{\raggedright\arraybackslash}p{31mm}|>{\raggedright\arraybackslash}p{36mm}|>{\raggedright\arraybackslash}p{32mm}|L|}
+    \hline
+    \textbf{Quyết định kiến trúc} & \textbf{Lựa chọn áp dụng} & \textbf{Phương án bị từ chối} & \textbf{Lý do \& Hệ quả đánh đổi} \\
+    \hline
+    \textbf{Tách payload Qdrant (\texttt{D-058})} & Qdrant chỉ lưu vector 768-D + \texttt{5} trường lọc; văn bản nằm trong \path{silver/chunks/} (\texttt{ChunkStore}) & Nhồi toàn bộ \path{text}, \path{authors}, \path{title} vào payload Qdrant & Giảm mạnh RAM/đĩa của Qdrant và loại bỏ trùng lặp văn bản; đổi lại phát sinh độ trễ thủy hóa S3 Byte-Range ($\sim 15$--$40\text{ ms}$ khi cold cache) và đòi hỏi bất biến ghi Silver trước Qdrant. \\
+    \hline
+    \textbf{Ưu tiên HTML5 trước PDF} & \path{arxiv.org/html} $\rightarrow$ \path{ar5iv} $\rightarrow$ PyMuPDF (chỉ Tier 3 ngoài arXiv) $\rightarrow$ Abstract & Chạy OCR neural (\texttt{Marker}) cho 100\% bài báo & Giảm thời gian bóc tách từ $4$--$10\text{ s/bài}$ GPU xuống $0.3$--$1.5\text{ s/bài}$ CPU và lấy trực tiếp TeX gốc; đổi lại bài preprint mới chưa render HTML5 hoặc PDF-only ngoài Tier 3 dừng ở mức Abstract. \\
+    \hline
+    \textbf{Tách pha RabbitMQ (\texttt{fetch}/\texttt{embed})} & 2 hàng đợi nối tiếp có backpressure \path{EMBED_QUEUE_MAX=500} & 1 worker đơn xử lý tuần tự fetch + embed & Ngăn mạng chậm làm GPU nhàn rỗi và ngăn fetch tràn hàng đợi làm đầy RAM; đổi lại cần quản trị 2 worker và 2 hàng đợi DLQ riêng biệt. \\
+    \hline
+    \textbf{Không lọc cứng Retrieval bằng Cụm/Luật} & PageRank điều chỉnh điểm xếp hạng; FP-Growth làm annotation; GMM/Anomalies phục vụ Dashboard & Lọc cứng vector search theo nhãn cụm GMM hoặc nối từ khóa luật vào query & Bảo toàn độ phủ ngữ nghĩa (\textit{Recall}) cho bài báo liên ngành; chấp nhận luật kết hợp chưa trực tiếp tăng độ phủ truy xuất tự động. \\
+    \hline
+    \textbf{Cân bằng cửa sổ \texttt{AcademicChunker}} & Cửa sổ cân bằng + overlap \texttt{15\%} + gộp đuôi $< 40\%$ + bám ranh giới câu & Cắt trượt cố định \texttt{450} từ / \texttt{50} từ overlap & Loại bỏ chunk đuôi vụn ($p_{10}$ tăng từ \texttt{103} lên \texttt{166} từ, Recall@5 đạt \texttt{0.7679}); chấp nhận số chunk trên một bài thay đổi nhẹ khi tái lập chỉ mục. \\
+    \hline
+  \end{tabularx}
+  \ReportNote{Nguồn: Tổng hợp từ quyết định kiến trúc \texttt{D-058} (\path{src/storage/chunk_store.py}), \path{unified_content_resolver.py}, \path{queue_consumer.py}, \path{retrieval_service.py} và \path{chunker.py}.}
+\end{table}
+
+Từ phạm vi và các đánh đổi thiết kế trên, Chương~\ref{chap:data_preparation} trình bày chi tiết đường ống kỹ thuật dữ liệu Medallion Lakehouse (\textit{Collect $\rightarrow$ Integrate $\rightarrow$ Clean $\rightarrow$ Transform}); Chương~\ref{chap:data_understanding} phân tích khám phá EDA trên tập dữ liệu đã chuẩn hóa; Chương~\ref{chap:modeling} triển khai 4 trụ cột khai phá và kiến trúc Hybrid RAG; Chương~\ref{chap:evaluation} đối chứng thực nghiệm đa tầng; trước khi Chương~\ref{chap:deployment} và Chương~\ref{chap:conclusion} tổng kết vận hành và hướng phát triển.

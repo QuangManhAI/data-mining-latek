@@ -1,0 +1,22 @@
+\begin{table}[htbp]
+  \centering
+  \scriptsize
+  \caption[Kết quả tinh chỉnh Laya Soft-CE và hiệu chỉnh Temperature Scaling]{Kết quả trước và sau tinh chỉnh Laya Cross-Encoder ONNX với \texttt{Soft-CE} và Temperature Scaling (\texttt{EXP-05})}
+  \label{tab:laya_calibration}
+  \vspace{4pt}
+  \setlength{\tabcolsep}{2pt}
+  \begin{tabularx}{\linewidth}{|>{\raggedright\arraybackslash}p{27mm}|>{\centering\arraybackslash}p{14mm}|>{\centering\arraybackslash}p{10.5mm}|>{\centering\arraybackslash}p{10.5mm}|>{\centering\arraybackslash}p{10.5mm}|>{\centering\arraybackslash}p{10.5mm}|>{\centering\arraybackslash}p{10.5mm}|>{\centering\arraybackslash}p{11.5mm}|L|}
+    \hline
+    \textbf{Tập thử \& Cấu hình} & \textbf{Giai đoạn} & \textbf{AUC} & \textbf{MRR} & \textbf{Acc.} & \makecell{\textbf{ECE}\\($\downarrow$)} & \makecell{\textbf{Brier}\\($\downarrow$)} & \makecell{\textbf{Fab.}\\\textbf{@0.6} ($\downarrow$)} & \textbf{Ghi chú nhóm lỗi (@0.6) \& ONNX} \\
+    \hline
+    \multirow{2}{27mm}{\path{report_seed0.json} (4 ep, $T=3.0627$, \texttt{eval=820})} & Baseline & 0.6685 & 0.7615 & 0.5012 & 0.1900 & 0.5758 & 0.574 & Lệch xác suất nặng trước hiệu chỉnh \\
+    \cline{2-9}
+    & \textbf{Fine-tuned} & \textbf{0.9085} & \textbf{0.9590} & \textbf{0.8768} & \textbf{0.0332} & \textbf{0.1951} & \textbf{0.015} & Giảm 97.4\% chấp nhận bịa đặt; \texttt{onnx\_gap = 5.14e-6} \\
+    \hline
+    \multirow{2}{27mm}{\path{RUN_INFO.json} (1 ep \texttt{soft-ce}, $T=1.0$, 175 nhóm)} & Baseline & 0.6848 & 0.7070 & -- & -- & -- & 0.588 & \texttt{missing\_detail = 0.497}, \texttt{irrelevant = 0.424} \\
+    \cline{2-9}
+    & \textbf{Fine-tuned} & \textbf{0.8928} & \textbf{0.9546} & -- & -- & -- & \textbf{0.023} & \texttt{answerable = 0.730} (giữ nguyên), \texttt{missing = 0.051}, \texttt{irrelevant = 0.030}, \texttt{gap = 1.41e-5} \\
+    \hline
+  \end{tabularx}
+  \ReportNote{Nguồn: Đánh giá ngoại tuyến ngày 08/11/2026 (\texttt{20261108-2053\_seed0}) từ \path{notebooks/laya_finetune/report_seed0.json} (3,432 train / 381 calib / 820 eval thuộc 130 nhóm MRR) và \path{notebooks/laya_onnx_20261108-2053_seed0/RUN_INFO.json} (6,161 train / 175 nhóm dev). Phép hiệu chỉnh nhiệt độ $T^* = 3.0627$ giảm sai số hiệu chỉnh ECE 5.72$\times$.}
+\end{table}

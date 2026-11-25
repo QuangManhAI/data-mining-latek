@@ -1,128 +1,231 @@
 % ==============================================================================
-% CHƯƠNG 6: TRIỂN KHAI VÀ VẬN HÀNH HỆ THỐNG (DEPLOYMENT)
+% CHƯƠNG 6: TRIỂN KHAI, BẢO MẬT VÀ VẬN HÀNH HỆ THỐNG
 % ==============================================================================
 
-\chapter{Triển Khai và Vận Hành Hệ Thống (Deployment)}
+\chapter{Triển Khai, Bảo Mật và Vận Hành Hệ Thống}
 \label{chap:deployment}
 
-Kết quả đánh giá cho thấy cần phân biệt cấu hình phần mềm, phép đo lịch sử và trạng thái dịch vụ tại một thời điểm. Chương này mô tả các thành phần vận hành và cách kiểm tra chúng, đặc biệt là đường đi từ nội dung Silver tới kết quả Qdrant. Ảnh giao diện giúp nhận diện chức năng; độ sẵn sàng và chất lượng câu trả lời cần phép kiểm tra riêng.
+Một hệ thống khai phá tri thức và hỏi đáp khoa học quy mô hơn 71,927 bài báo không thể dừng ở kịch bản chạy thử rời rạc trên sổ tay Jupyter mà phải được đóng gói thành kiến trúc vi dịch vụ ổn định. Chương này trình bày thiết kế triển khai sản xuất dựa trên sơ đồ kiến trúc tổng quan tại Hình~\ref{fig:system_architecture} (Chương~\ref{chap:business_understanding}), đi sâu vào vòng đời dịch vụ FastAPI và giao diện React 19 hai nhịp độ SSE, điều phối thu thập phân tầng qua Apache Airflow và RabbitMQ hai pha có áp suất ngược, cơ chế bảo mật cấu hình fail-fast / bất biến SHA-256 / rào chắn phần cứng \texttt{pytest}, cùng quy trình kiểm soát ngân sách lưu trữ 20.0 GB và vận hành phục hồi.
 
+\section{Kiến Trúc Dịch Vụ FastAPI, Kênh SSE và Giao Diện React 19}
+\label{sec:ch6_backend_frontend}
 
-\section{Kiến Trúc Vận Hành Phân Tán (Distributed Infrastructure)}
+\subsection{Vòng Đời Khởi Động Lifespan và Bề Mặt API Hợp Nhất}
+\label{sec:ch6_lifespan_api}
 
-Hệ thống được thiết kế theo mô hình vi dịch vụ phân tán (\textit{Distributed Microservices Architecture}), sử dụng các dịch vụ hạ tầng độc lập; backend, frontend và worker có thể chạy ngoài container theo môi trường triển khai. Repository này không kèm toàn bộ Docker Compose của hạ tầng:
-
-\begin{figure}[htbp]
-  \centering
-  \DrawSystemArchitecture
-  \caption[Kiến trúc thu thập, lưu trữ và phục vụ RAG]{Kiến trúc thu thập, lưu trữ và phục vụ RAG}
-  \ReportNote{Nguồn: Sơ đồ kiến trúc phân tầng tích hợp đường ống thu thập, lưu trữ Medallion Lakehouse và hệ thống phục vụ truy xuất RAG.}
-  \label{fig:system_architecture}
-\end{figure}
-
-Các thành phần hạ tầng cốt lõi bao gồm:
-
+Lõi ứng dụng Backend xây dựng trên nền \textbf{FastAPI} lắng nghe tại cổng \texttt{:8000} (\path{backend/app/main.py}). Khi khởi động thông qua hàm bất đồng bộ \texttt{lifespan}, máy chủ thực hiện làm nóng (\textit{pre-warm}) tuần tự bốn thành phần nặng nhằm triệt tiêu độ trễ nguội (\textit{cold-start penalty}) cho truy vấn đầu tiên:
 \begin{enumerate}[label=\textbf{\arabic*.}]
-  \item \textbf{Tầng Điều phối Tự động (Orchestration - Apache Airflow 2.10)}:
-    Được cấu hình vận hành theo múi giờ chuẩn Việt Nam (\path{Asia/Ho_Chi_Minh - ICT}). Các DAG liên quan gồm:
-    \begin{itemize}
-      \item \texttt{dag\_tier1\_realtime\_stream}: Kích hoạt lúc 19:00 ICT hàng ngày quét RSS mới nhất.
-      \item \texttt{dag\_tier2\_near\_past\_harvest}: Kích hoạt lúc 19:10 ICT hàng ngày, luân phiên CVF/arXiv theo ngân sách.
-      \item \texttt{dag\_recompute\_mining}: Dùng cron 0 0 * * 0; giờ thực tế theo timezone Airflow vì DAG này chưa đặt timezone tường minh, gọi endpoint nội bộ \path{/api/mining/trigger} để tính toán lại toàn bộ EDA và 4 Trụ cột Khai phá trên dữ liệu mới tích lũy.
-      \item \texttt{dag\_compact\_silver}: Chạy mỗi 3 giờ, gộp part của cả Silver papers và Silver chunks.
-    \end{itemize}
-  \item \textbf{Tầng Hàng đợi Thông điệp (Message Broker - RabbitMQ)}:
-    Sử dụng giao thức chuẩn AMQP 0-9-1. Hàng đợi \texttt{scientific\_paper\_ingest} được cấu hình chế độ bền vững (\textit{Durable Queue}) kết hợp cơ chế lấy theo lô nhỏ (\textit{Prefetch micro-batch}). Hệ thống tích hợp hàng đợi thư chết (\textit{Dead Letter Queue - DLQ}) với giới hạn tối đa 3 lần thử lại (\textit{max 3 retries}), ghi nhận lỗi vượt giới hạn vào DLQ để xử lý lại. Worker fetch và embed dùng hai hàng đợi \texttt{scientific\_paper\_ingest} và \texttt{scientific\_chunk\_embed}, mỗi hàng đợi có DLQ riêng; ACK khi đầu ra stage đã bền vững.
-  \item \textbf{Tầng Lưu trữ Đối tượng (Object Storage - MinIO S3)}:
-    Đóng vai trò là trung tâm của hồ dữ liệu (Lakehouse) với bucket chuẩn \texttt{uth-scientific-lakehouse}. Toàn bộ các tầng Medallion (Bronze, Silver Parquet, Gold Mining Artifacts) đều được lưu trữ tại đây, cung cấp giao diện tương thích chuẩn AWS S3 API cho DuckDB và PyArrow.
-  \item \textbf{Tầng Quản trị Vector (Vector Database - Qdrant)}:
-    Hệ thống vector engine hiệu năng cao viết bằng ngôn ngữ Rust, lưu trữ bộ sưu tập \texttt{scientific\_papers\_gold} chứa vector 768 chiều; số điểm live chưa được đo trong bản cập nhật này. Qdrant sử dụng cấu trúc đồ thị HNSW và chỉ mục tải trọng (Payload Indexing) cho phép lọc dữ liệu thời gian thực theo chuyên ngành và năm xuất bản và hydrate nội dung từ Silver chunks. Độ trễ benchmark lịch sử được trình bày ở Chương~\ref{chap:evaluation}, không phải ngưỡng bảo đảm.
-  \item \textbf{Tầng Dịch vụ API Backend (FastAPI)}:
-    Lắng nghe tại cổng \texttt{:8000}, cung cấp các RESTful API cho phép tìm kiếm lai (RRF Hybrid Search), phân tích khai phá dữ liệu (\path{/api/mining/*}), và truyền câu trả lời sinh tự hồi quy qua Server-Sent Events (SSE).
-  \item \textbf{Tầng Giao diện Người dùng (Frontend Dashboard - React 19)}:
-    Lắng nghe tại cổng \texttt{:5173}, xây dựng trên nền tảng React 19, TypeScript 6, Vite 8, KaTeX và hệ thống CSS design tokens tùy biến (\path{frontend/src/theme/}). Dashboard tích hợp canvas đường ống dữ liệu, thanh giám sát trạng thái pipeline thời gian thực, bảng phân tích 4 Trụ cột Khai phá tương tác, và giao diện hỏi đáp RAG hỗ trợ hiển thị công thức toán học KaTeX.
-  \item \textbf{Tầng Mô hình Ngôn ngữ \& Reranker (Local LLM \& Cross-Encoder)}:
-    Khởi chạy mô hình \texttt{Qwen2.5-7B-Instruct} (GGUF Q4\_K\_M) thông qua \texttt{llama-cpp-python} (hỗ trợ tăng tốc Apple Silicon Metal hoặc CUDA), \texttt{llama-server}, \texttt{node-llama-cpp} tại cổng \texttt{:9001}, Ollama (:11434) hoặc dự phòng Groq API (\path{backend/app/services/llm_client.py}). Tầng reranker trên backend FastAPI sử dụng \path{cross-encoder/ms-marco-MiniLM-L-6-v2} (fallback \path{BAAI/bge-reranker-base}); ngoài ra nhánh thử nghiệm \texttt{RAG\_TS} sử dụng mô hình Laya v0.4.27 fine-tune xuất ONNX (\path{notebooks/laya_onnx_20261108-2053_seed0/}). Cấu hình \texttt{LLM\_CONTEXT\_WINDOW} mặc định ở backend là 16,384 (trong khi benchmark phần cứng 19/10/2026 chạy ở 4,096).
+  \item Nạp trước mô hình ngôn ngữ cục bộ (\texttt{llm\_client.preload()}) khi cấu hình \texttt{LLM\_PRELOAD = True}.
+  \item Nạp trước trọng số Bi-Encoder \path{nomic-embed-text-v1.5} (\path{embedder_service.warmup()}) và Cross-Encoder (\path{reranker_service.warmup()}).
+  \item Tải từ điển uy tín PageRank và danh sách luật kết hợp FP-Growth từ tầng Gold MinIO S3 vào RAM thông qua \path{retrieval_service._ensure_graph_and_rules()}.
+  \item Kích hoạt luồng giám sát nền \texttt{streaming\_service.start\_monitor()}.
 \end{enumerate}
 
-\FloatBarrier
-\section{Ảnh Giao Diện Pipeline và Trạng Thái Phiên Chụp}
-Sơ đồ TikZ ở Hình~\ref{fig:system_architecture} giải thích luồng dữ liệu. Hình~\ref{fig:pipeline_capture} minh họa giao diện giám sát tổng quan đường ống dữ liệu (Pipeline Monitor) trên bảng điều khiển quản trị hệ thống.
+Toàn bộ các điểm cuối nghiệp vụ được gắn dưới tiền tố \path{/api} thông qua \path{backend/app/api/router.py}, kết hợp điểm kiểm tra sức khỏe độc lập \path{/health} (\path{backend/app/api/endpoints/health.py}) trả về trạng thái tổng hợp \texttt{"ok"} hoặc \texttt{"degraded"} kèm ba cờ xác minh vật lý: \texttt{qdrant\_ready}, \texttt{vector\_store\_ready} và \texttt{parquet\_ready}. Bảng~\ref{tab:ch6_api_surface} tổng hợp hợp đồng bề mặt API hiện hành.
+
+\begin{table}[htbp]
+  \centering
+  \footnotesize
+  \caption[Tổng hợp bề mặt API REST và SSE của hệ thống FastAPI]{Tổng hợp bề mặt API vận hành (REST và Server-Sent Events) trên máy chủ FastAPI}
+  \label{tab:ch6_api_surface}
+  \vspace{4pt}
+  \setlength{\tabcolsep}{2.5pt}
+  \begin{tabularx}{\linewidth}{|>{\raggedright\arraybackslash}p{42mm}|>{\centering\arraybackslash}p{22mm}|L|>{\raggedright\arraybackslash}p{30mm}|}
+    \hline
+    \textbf{Nhóm Điểm cuối (\textit{Endpoints})} & \textbf{Giao thức} & \textbf{Trách nhiệm \& Cơ chế an toàn} & \textbf{Tệp định nghĩa} \\
+    \hline
+    \path{/health} & \texttt{GET} & Trả \texttt{"ok"}/\texttt{"degraded"}, \path{qdrant_ready}, \path{vector_store_ready}, \path{parquet_ready}. & \path{endpoints/health.py} \\
+    \hline
+    \path{/api/chat}, \path{/api/search} & \texttt{POST} (REST+SSE) & Truy hồi Hybrid/Vector/Graph + Rerank + truyền dòng câu trả lời và trích dẫn. & \path{chat.py}, \path{search.py} \\
+    \hline
+    \path{/api/mining/eda}, \path{/pillars/*}, \path{/manifest} & \texttt{GET} & Phục vụ các tệp JSON Gold cho Dashboard EDA và 4 Trụ cột khai phá. & \path{endpoints/mining.py} \\
+    \hline
+    \path{/api/mining/trigger}, \path{/status}, \path{/telemetry/stream} & \texttt{POST}/\texttt{GET} (SSE) & Kích hoạt thực thi lại \texttt{MiningEngine} và phát nhật ký tiến độ thời gian thực. & \path{endpoints/mining.py} \\
+    \hline
+    \path{/api/ingestion/status} (\texttt{start}, \texttt{stop}, \texttt{reset}) & \texttt{GET}/\texttt{POST} & Điều khiển luồng thu hoạch tương tác và đặt lại bộ đếm phiên. & \path{endpoints/ingestion.py} \\
+    \hline
+    \path{/api/ingestion/compact-silver} & \texttt{POST} & Hợp nhất phân mảnh Parquet Silver; khóa mutex \path{_compact_lock} trả \textbf{\texttt{409 Conflict}} nếu bận. & \path{endpoints/ingestion.py} \\
+    \hline
+    \path{/api/ingestion/stream} (\texttt{broadcast}, \texttt{pipeline-logs}) & \texttt{GET}/\texttt{POST} (SSE) & Phát sự kiện \texttt{SNAPSHOT}, \texttt{LOG}, \texttt{PAPER\_INGESTED} tới trình duyệt khách. & \path{endpoints/ingestion.py} \\
+    \hline
+  \end{tabularx}
+  \ReportNote{Nguồn: Mã nguồn định tuyến API tại \path{backend/app/api/router.py} và các mô-đun trong \path{backend/app/api/endpoints/}. Cơ chế khóa \path{_compact_lock} ngăn xung đột ghi khi nhiều DAG hoặc người dùng gọi hợp nhất Silver đồng thời.}
+\end{table}
+
+\subsection{Cơ Chế Đồng Bộ StreamingService Hai Nhịp Độ và Lưu Vết MinIO}
+\label{sec:ch6_streaming}
+
+Để giao diện quản trị cập nhật mượt mà theo thời gian thực mà không làm quá tải cụm MinIO S3 và Qdrant Cloud bằng các lệnh quét đếm nặng liên tục, \texttt{StreamingService} (\path{backend/app/services/streaming_service.py}) phân tách chu kỳ lấy mẫu thành \textbf{hai nhịp độ độc lập}:
+\begin{itemize}
+  \item \textbf{Nhịp nhanh mỗi 3 giây (\textit{Fast Poll})}: Kiểm tra độ sâu hai hàng đợi RabbitMQ (\path{scientific_paper_ingest}, \path{scientific_chunk_embed}), thu thập chỉ số tiến trình thu hoạch tức thời và đẩy dòng log mới từ bộ đệm vòng \texttt{LOG\_BUFFER\_SIZE = 1,000} qua các sự kiện SSE (\texttt{SNAPSHOT}, \texttt{LOG}, \texttt{PAPER\_INGESTED}).
+  \item \textbf{Nhịp chậm mỗi 30 giây (\textit{Slow Poll})}: Tính lại tổng dung lượng trên các tiền tố lưu trữ MinIO (\path{raw/}, \path{silver/}, \path{gold/}) và đếm số vector hiện hữu trên Qdrant thông qua \path{storage_service.py}. Trạng thái phiên thu hoạch được lưu bền vững lên MinIO tại đường dẫn \path{state/session_state.json} giúp khôi phục chính xác bộ đếm ngay cả khi container Backend khởi động lại.
+\end{itemize}
+
+\subsection{Giao Diện Người Dùng 6 Màn Hình Chuyên Biệt (React 19 + KaTeX)}
+\label{sec:ch6_frontend}
+
+Tầng giao diện Web (\path{frontend/package.json}, cổng \texttt{:5173}) xây dựng trên ngăn xếp \texttt{react \textasciicircum{}19.2.8}, \texttt{vite \textasciicircum{}8.3.0}, \texttt{typescript \textasciitilde{}6.0.2}, \texttt{katex \textasciicircum{}0.19.0} (kết xuất tức thời công thức toán học LaTeX trong câu trả lời RAG và mô tả cụm) cùng trình kiểm chuẩn \texttt{oxlint \textasciicircum{}1.81.0}. Giao diện tổ chức thành sáu màn hình chuyên biệt dưới thư mục \path{frontend/src/screens/}:
+\begin{enumerate}[label=\textbf{\arabic*.}]
+  \item \path{schematic.screen.tsx}: Sơ đồ kiến trúc sống động minh họa luồng Bronze $\rightarrow$ Silver $\rightarrow$ Gold và trạng thái hàng đợi.
+  \item \path{eda.screen.tsx}: Trình diễn trực quan phân bố chuyên ngành và khung chẩn đoán 3 Lăng kính (Histogram/KDE/Q-Q, ma trận Pearson vs Spearman, Mutual Information).
+  \item \path{pillars.screen.tsx}: Giao diện tương tác cho 4 Trụ cột khai phá (mạng luật FP-Growth, elip $2\sigma$ GMM trên mặt phẳng PCA 2D, đồ thị cộng đồng Louvain \& PageRank, biểu đồ động lượng thị phần và danh sách dị biệt Isolation Forest).
+  \item \path{explorer.screen.tsx}: Trình khám phá trực tiếp kho bài báo, lọc theo chuyên ngành, năm công bố và tra cứu metadata.
+  \item \path{rag.screen.tsx}: Hỏi đáp Hybrid RAG qua luồng SSE thời gian thực, hỗ trợ chọn chế độ (\texttt{hybrid}/\texttt{vector}/\texttt{graph}), bật tắt gia cố PageRank, kết xuất KaTeX và mở thẻ nguồn \texttt{[Paper, Section]}.
+  \item \path{logs.screen.tsx}: Bảng giám sát vận hành thu hoạch, hàng đợi RabbitMQ, ngân sách 20.0 GB và dòng log trực tiếp.
+\end{enumerate}
+
+Hình~\ref{fig:pipeline_capture} ghi lại giao diện giám sát tổng quan đường ống dữ liệu trên bảng điều khiển quản trị, đối chiếu trực quan với mô hình kiến trúc tại Hình~\ref{fig:system_architecture} (Chương~\ref{chap:business_understanding}).
+
 \begin{figure}[!htbp]
-\centering
-\includegraphics[width=\linewidth,height=0.68\textheight,keepaspectratio]{figures/captured_20261123_082337/01_pipeline_ui.png}
-\caption[Giao diện giám sát luồng dữ liệu Pipeline]{Giao diện giám sát luồng dữ liệu Pipeline}
-\label{fig:pipeline_capture}
-\ReportNote{Nguồn: Giao diện giám sát luồng dữ liệu (Data Pipeline Monitor) trên bảng điều khiển quản trị hệ thống.}
+  \centering
+  \includegraphics[width=\linewidth,height=0.62\textheight,keepaspectratio]{figures/captured_20261123_082337/01_pipeline_ui.png}
+  \caption[Giao diện giám sát luồng dữ liệu Pipeline Monitor]{Giao diện giám sát tổng quan luồng dữ liệu (\textit{Pipeline Monitor}) trên bảng điều khiển React 19}
+  \ReportNote{Nguồn: Ảnh chụp giao diện quản trị đường ống thu thập và lưu trữ tại \path{figures/captured_20261123_082337/01_pipeline_ui.png} (ngày 23/11/2026). Ảnh minh họa bố cục hiển thị màn hình \path{schematic.screen.tsx}; các nhãn cố định trên giao diện minh họa cấu trúc không thay thế phép đo benchmark định lượng tại Chương~\ref{chap:evaluation}.}
+  \label{fig:pipeline_capture}
 \end{figure}
 \FloatBarrier
 
-\section{Bảo Mật và Phân Quyền Truy Cập (Zero Trust \& Role-Based Access)}
+\section{Điều Phối Thu Thập Bền Vững: RabbitMQ Hai Tầng và 6 DAG Airflow}
+\label{sec:ch6_orchestration}
 
-Để phục vụ chia sẻ tài nguyên cho sinh viên và đồng môn trong lớp học nghiên cứu và giới hạn quyền ghi, tài liệu triển khai mô tả cơ chế \textbf{Zero Trust Access} thông qua Cloudflare Tunnel:
+\subsection{Hàng Đợi AMQP Tách Tầng và Kiểm Soát Áp Suất Ngược}
+\label{sec:ch6_rabbitmq}
 
-Các chính sách sau là cấu hình hạ tầng được tài liệu hóa, chưa được kiểm thử live trong lần đối chiếu. Các hành vi từ chối ghi/xóa là kỳ vọng cần kiểm thử bằng tài khoản tương ứng. Cloudflare Tunnel không tự xác nhận đã bật đầy đủ chính sách Zero Trust Access.
-\subsection{Phân quyền MinIO Object Storage}
+Ở quy mô thu thập hàng chục nghìn bài báo, bước tải văn bản từ arXiv/OpenAlex (\texttt{fetch}, giới hạn bởi băng thông mạng I/O) và bước nhúng vector 768 chiều (\texttt{embed}, giới hạn bởi GPU) có đặc tính tài nguyên hoàn toàn đối nghịch. Kiến trúc \path{src/ingestion/queue_consumer.py} giải quyết xung đột này qua hàng đợi AMQP 0-9-1 RabbitMQ hai tầng có kiểm soát áp suất ngược (\textit{Backpressure Control}):
 \begin{itemize}
-  \item \textbf{Tài khoản Quản trị (Admin)}: Toàn quyền ghi dữ liệu hồ, cập nhật Parquet và cấu hình bucket.
-  \item \textbf{Tài khoản Sinh viên / Khách (\texttt{guest\_student})}: Được gán chính sách phân quyền nghiêm ngặt \lstinline{student_readonly} (chỉ cho phép các hành động \texttt{s3:ListBucket} và \texttt{s3:GetObject}). Sinh viên có thể duyệt cây thư mục và tải dữ liệu Parquet về phân tích nghiên cứu, nhưng mọi hành động tải lên, ghi đè hoặc xóa tài liệu theo chính sách phải bị từ chối với mã lỗi \texttt{AccessDenied}.
+  \item \textbf{Tầng 1 (\path{scientific_paper_ingest} + \path{.dead})}: Worker \texttt{--stage fetch} tiêu thụ thông điệp bài báo, tải toàn văn HTML-first (LaTeXML), băm kiểm tra bất biến, tách cấu trúc mục và ghi bản ghi vào vùng đệm chuẩn Silver.
+  \item \textbf{Tầng 2 (\path{scientific_chunk_embed} + \path{.dead})}: Chỉ nhận việc sau khi hồ sơ Silver đã an toàn. Trước khi worker \texttt{fetch} đẩy thêm việc sang tầng nhúng, hệ thống kiểm tra độ sâu hàng đợi qua RabbitMQ Management API: nếu số lượng thông điệp chờ chạm ngưỡng \texttt{EMBED\_QUEUE\_MAX = 500}, tiến trình \texttt{fetch} tự động tạm nghỉ điều tiết lưu lượng thay vì làm tràn bộ nhớ RabbitMQ.
+  \item \textbf{Bảo vệ thứ tự ghi và Heartbeat dài}: Worker sử dụng \texttt{HEARTBEAT\_SECONDS = 600} (10 phút) để tránh ngắt kết nối AMQP khi GPU xử lý các lô bài dài. Thứ tự ghi luôn tuân thủ bất biến \texttt{chunk\_store.append\_part()} \textbf{trước} \texttt{qdrant.insert\_chunks()}: vector chỉ được công bố lên Qdrant sau khi toàn văn phân đoạn đã lưu bền vững trên MinIO S3, triệt tiêu lỗi \textit{dangling vector} không thể hydrate. Thông điệp lỗi quá \texttt{RABBITMQ\_MAX\_RETRIES = 3} lần tự động chuyển vào hàng đợi thư chết (\texttt{.dead} DLQ) để hậu kiểm.
 \end{itemize}
 
-\subsection{Phân quyền Qdrant Vector Database}
+\subsection{Lịch Trình 6 DAG Apache Airflow Chuẩn Múi Giờ ICT}
+\label{sec:ch6_airflow}
+
+Apache Airflow điều phối toàn bộ vòng đời thu thập, hợp nhất phân mảnh và tái khai phá trong thư mục \path{dags/} theo múi giờ chuẩn Việt Nam (\texttt{ICT} / \path{Asia/Ho_Chi_Minh}, cấu hình dùng chung tại \path{dags/_common.py}). Thuật toán \textit{water-filling} (\texttt{HARVEST\_BATCH = 1000}, \texttt{HARVEST\_LOW\_WATER = 200}) giúp điều tiết hạn mức nguồn và tuân thủ header \texttt{retry\_after} của OAI-PMH. Bảng~\ref{tab:ch6_airflow_dags} liệt kê đầy đủ 6 DAG phân tầng hiện đại cùng 1 DAG thu hoạch ngày kế thừa.
+
+\begin{table}[htbp]
+  \centering
+  \footnotesize
+  \caption[Danh mục và lịch trình các DAG Apache Airflow vận hành Lakehouse]{Danh mục các DAG Apache Airflow vận hành Lakehouse theo múi giờ ICT (\texttt{UTC+7})}
+  \label{tab:ch6_airflow_dags}
+  \vspace{4pt}
+  \setlength{\tabcolsep}{2.5pt}
+  \begin{tabularx}{\linewidth}{|>{\raggedright\arraybackslash}p{30mm}|>{\raggedright\arraybackslash}p{36mm}|>{\centering\arraybackslash}p{25mm}|L|}
+    \hline
+    \textbf{Tên DAG} & \textbf{Tệp nguồn} & \textbf{Lịch chạy (\texttt{ICT})} & \textbf{Chức năng \& Cơ chế vận hành} \\
+    \hline
+    \textbf{Tier 1: Realtime Stream} & \path{dags/dag_tier1_realtime_stream.py} & \texttt{0 19 * * *} (19:00 hàng ngày) & Thu hoạch tiền ấn phẩm arXiv OAI-PMH mới trong ngày kết hợp phân phối ngân sách \textit{water-filling} (\path{HARVEST_BATCH=1000}). \\
+    \hline
+    \textbf{Tier 2: Near-Past Harvest} & \path{dags/dag_tier2_near_past_harvest.py} & \texttt{10 19 * * *} (19:10 hàng ngày) & Thu hoạch bổ sung giai đoạn cận hiện tại (HTML-first + OpenReview/CVF), chạy lệch 10 phút sau Tier 1 tránh nghẽn băng thông. \\
+    \hline
+    \textbf{Silver Compaction} & \path{dags/dag_compact_silver.py} & \texttt{0 */3 * * *} (Mỗi 3 giờ) & Gửi lệnh \path{POST /api/ingestion/compact-silver} gom các tệp Parquet nhỏ thành khối ZSTD tối ưu cho DuckDB. \\
+    \hline
+    \textbf{Recompute Mining} & \path{dags/dag_recompute_mining.py} & \texttt{0 0 * * 0} (00:00 Chủ nhật) & Kích hoạt tái chạy toàn bộ \texttt{MiningEngine} (EDA + 4 trụ cột) hàng tuần, cập nhật luật và từ điển PageRank cho RAG. \\
+    \hline
+    \textbf{Tier 3: Landmark Harvest} & \path{dags/dag_tier3_landmark_harvest.py} & Thủ công (\path{schedule=None}) & Thu thập các công trình kinh điển nền tảng có lượt trích dẫn cao qua OpenAlex. \\
+    \hline
+    \textbf{Tier 3: PDF Backfill} & \path{dags/dag_tier3_pdf_backfill.py} & Thủ công (\path{schedule=None}) & Bổ sung trích xuất PDF cho các bài báo cũ không có bản HTML trên arXiv. \\
+    \hline
+    \textit{(Kế thừa)} Daily arXiv & \path{dags/dag_daily_arxiv_harvest.py} & \texttt{0 1 * * *} (01:00 hàng ngày) & Pipeline thu hoạch arXiv thế hệ đầu giữ lại bảo đảm tương thích ngược. \\
+    \hline
+  \end{tabularx}
+  \ReportNote{Nguồn: Thư mục điều phối \path{dags/} và các hằng số dùng chung trong \path{dags/_common.py}. Các lịch chạy định kỳ sử dụng múi giờ \path{Asia/Ho_Chi_Minh}.}
+\end{table}
+
+\section{Bảo Mật Dữ Liệu, Bất Biến SHA-256 và Rào Chắn Kiểm Thử}
+\label{sec:ch6_security}
+
+\subsection{Quản Lý Bí Mật Fail-Fast và Phân Quyền Zero Trust}
+\label{sec:ch6_secrets_rbac}
+
+Lớp cấu hình tập trung tại \path{src/config/settings.py} và \path{backend/app/core/config.py} áp dụng nguyên tắc kiểm tra sớm (\textit{Fail-Fast Validation}): mọi khóa bí mật và thông số kết nối (\path{MINIO_ENDPOINT_URL}, \path{MINIO_ACCESS_KEY_ID}, \path{MINIO_SECRET_ACCESS_KEY}, \path{RABBITMQ_USER}, \path{RABBITMQ_PASSWORD}) đều nạp từ biến môi trường \path{.env} và kiểm tra qua hàm \texttt{\_require(name)}. Nếu thiếu bất kỳ thông số bắt buộc nào, hệ thống từ chối khởi động ngay lập tức với ngoại lệ tường minh thay vì âm thầm chạy bằng mật khẩu mặc định. Bộ validator đồng thời hỗ trợ bí danh tương thích giữa MinIO tự chủ và Cloudflare R2 (\path{MINIO_*} / \path{R2_*}).
+
+Để phục vụ chia sẻ tài nguyên nghiên cứu qua đường hầm bảo mật \textbf{Cloudflare Zero-Trust Tunnel} mà vẫn ngăn ngừa phá hoại dữ liệu, kiến trúc phân tách chặt chẽ quyền đọc và ghi trên hai kho lõi:
 \begin{itemize}
-  \item \textbf{Admin Master Key}: Dành riêng cho Backend và Ingestion Consumer để tạo collection và nạp (upsert) vector.
-  \item \textbf{Read-Only API Key (\texttt{uth\_guest\_readonly\_key\_...})}: Cung cấp cho sinh viên thực hiện các truy vấn tìm kiếm ngữ nghĩa (\texttt{search}, \texttt{scroll}, \texttt{get points}). Mọi yêu cầu ghi/xóa (\path{POST /points/delete}, \path{DELETE /collections}) theo phân quyền phải bị từ chối với mã lỗi \textbf{\texttt{403 Forbidden}}.
+  \item \textbf{MinIO S3 (\texttt{student\_readonly})}: Tài khoản quản trị nắm toàn quyền ghi tầng Bronze/Silver/Gold; tài khoản khách/sinh viên chỉ được cấp chính sách \texttt{student\_readonly} cho phép \texttt{s3:ListBucket} và \texttt{s3:GetObject}, từ chối mọi thao tác ghi đè hoặc xóa đối tượng bằng mã lỗi \texttt{AccessDenied}.
+  \item \textbf{Qdrant RBAC}: Trong \path{config.py} và \path{settings.py}, giá trị fallback mặc định \path{QDRANT_API_KEY = "uth_guest_readonly_key_4b71a8e9d2c"} là khóa chỉ đọc công khai phục vụ chế độ trình diễn và truy vấn thử nghiệm (\texttt{search}, \texttt{scroll}); mọi yêu cầu xóa hoặc chỉnh sửa collection phải bị từ chối với mã \texttt{403 Forbidden}. Khi vận hành nạp/xóa vector (\path{qdrant_manager.py}) trong môi trường sản xuất, quản trị viên bắt buộc ghi đè \path{QDRANT_API_KEY} trong \path{.env} bằng khóa ghi riêng biệt.
 \end{itemize}
 
-\section{Quy Trình Khởi Chạy và Kiểm Thử Hệ Thống (Deployment SOP)}
+\subsection{Bất Biến Dữ Liệu Thô Qua Băm SHA-256}
+\label{sec:ch6_sha256}
 
-Hệ thống cung cấp quy trình khởi chạy chuẩn hóa thông qua kịch bản tự động hoặc từng phân hệ độc lập:
+Nhằm bảo vệ nguyên tắc bất biến dữ liệu thô (\textit{Immutable Raw Invariant}) và khử trùng lặp nhất quán giữa arXiv, OpenAlex, CVF và OpenReview, mô-đun \path{src/utils/hasher.py} cung cấp hai hàm băm mật mã SHA-256 chuẩn hóa:
+\begin{enumerate}[label=\textbf{\arabic*.}]
+  \item \texttt{compute\_sha256(data)}: Đọc luồng tệp theo khối 64 KB (65,536 byte) hoặc chuỗi UTF-8 để gắn chữ ký toàn vẹn SHA-256 vào siêu dữ liệu đối tượng tải lên MinIO qua \texttt{MinIOClient} (\path{src/storage/minio_client.py}).
+  \item \path{compute_abstract_hash(abstract)}: Tiền xử lý phần tóm tắt qua \path{normalize_abstract_text()} theo năm bước tất định (chuẩn hóa Unicode NFKC $\rightarrow$ chuyển chữ thường $\rightarrow$ loại bỏ thẻ HTML \texttt{<[\textasciicircum{}>]+>} $\rightarrow$ loại bỏ dấu câu $\rightarrow$ gộp khoảng trắng thừa) trước khi sinh chuỗi hex 64 ký tự SHA-256. Nhờ vậy, cùng một bài báo xuất hiện đồng thời trên arXiv và OpenReview có sai khác nhỏ về dấu câu hoặc khoảng trắng vẫn bị nhận diện trùng lặp chính xác.
+\end{enumerate}
 
-\begin{enumerate}[label=\textbf{Bước \arabic*.}]
-  \item \textbf{Khởi động Hạ tầng Docker}:
-  \begin{lstlisting}[language=bash]
-# Run in the external infrastructure Compose directory
+\subsection{Rào Chắn Bảo Vệ GPU và Kiểm Thử Phân Tầng}
+\label{sec:ch6_pytest_guard}
+
+Bộ kiểm thử tự động trong \path{tests/conftest.py} phân tách bốn cấp độ (\texttt{unit}, \texttt{integration}, \texttt{system}, \texttt{e2e}) kèm hai lớp rào chắn bảo vệ tài nguyên nhằm ngăn các lệnh chạy CI vô tình tải hàng gigabyte trọng số mô hình mạng nơ-ron, ghi rác lên bucket S3 thật, hoặc chạy nhầm bài kiểm thử GPU trên máy chỉ có CPU. Đoạn mã~\ref{lst:ch6_conftest_guard} minh họa cấu trúc rào chắn này.
+
+\begin{lstlisting}[language=Python, caption={Rao chan chi phi S3 va bao ve phan cung GPU trong tests/conftest.py}, label={lst:ch6_conftest_guard}]
+# Hardware & cost safeguards in tests/conftest.py (ASCII comments only)
+def pytest_collection_modifyitems(config, items):
+    # Skip expensive live S3 storage and heavy neural weights unless opted in
+    run_live_storage = config.getoption("--run-live-storage", default=False)
+    run_heavy_models = config.getoption("--run-heavy-models", default=False)
+    for item in items:
+        if ("live_r2" in item.keywords or "live_storage" in item.keywords) and not run_live_storage:
+            item.add_marker(skip_live_storage)
+        if "heavy_model" in item.keywords and not run_heavy_models:
+            item.add_marker(skip_heavy_models)
+
+def pytest_runtest_setup(item):
+    # Enforce hard failure if a GPU-marked test attempts to run on CPU-only host
+    if "gpu" in item.keywords:
+        ...
+\end{lstlisting}
+
+\section{Giám Sát Ngân Sách 20 GB và Quy Trình Vận Hành Chuẩn (SOP)}
+\label{sec:ch6_budget_sop}
+
+Với giới hạn hạ tầng lưu trữ đối tượng tự triển khai được ấn định qua tham số \texttt{LAKEHOUSE\_BUDGET\_GB = 20.0} (\path{backend/app/core/config.py}), \texttt{StorageService} (\path{backend/app/services/storage_service.py}) theo dõi liên tục phân bổ dung lượng trên từng tiền tố (\path{raw/}, \path{silver/}, \path{gold/chunks/}, \path{gold/mining/}) cùng trạng thái Qdrant, đồng thời khóa mutex \path{_compact_lock} bảo vệ tính nhất quán khi hợp nhất Parquet Silver. Để duy trì vòng đời vận hành bền bỉ qua nhiều đợt thu hoạch và nâng cấp chỉ mục, kho công cụ \path{scripts/} cung cấp năm kịch bản chuẩn hóa tại Bảng~\ref{tab:ch6_ops_scripts}.
+
+\begin{table}[htbp]
+  \centering
+  \footnotesize
+  \caption[Danh mục công cụ vận hành và phục hồi dữ liệu trong thư mục scripts/]{Danh mục kịch bản vận hành, di trú và phục hồi dữ liệu trong thư mục \texttt{scripts/}}
+  \label{tab:ch6_ops_scripts}
+  \vspace{4pt}
+  \setlength{\tabcolsep}{3pt}
+  \begin{tabularx}{\linewidth}{|>{\raggedright\arraybackslash}p{36mm}|>{\raggedright\arraybackslash}p{44mm}|L|}
+    \hline
+    \textbf{Tác vụ vận hành} & \textbf{Đường dẫn kịch bản} & \textbf{Vai trò trong vòng đời sản xuất} \\
+    \hline
+    Khởi chạy cụm dịch vụ & \path{scripts/start_app.sh} & Khởi động đồng thời Backend FastAPI (\texttt{uvicorn}), kiểm tra kết nối và Frontend Vite. \\
+    \hline
+    Di trú ChunkStore lên Silver & \path{scripts/migrate_chunks_to_silver.py} & Hợp nhất phân mảnh \texttt{ChunkStore} và chuẩn hóa siêu dữ liệu sang cấu trúc Silver ZSTD. \\
+    \hline
+    Bù đắp toàn văn còn thiếu & \path{scripts/backfill_missing_papers.py} & Quét các bài báo có metadata/vector nhưng khuyết toàn văn để khôi phục Hydration. \\
+    \hline
+    Tái lập chỉ mục Qdrant & \path{scripts/reindex_qdrant.py} & Tái sinh vector 768 chiều từ \texttt{ChunkStore} hoặc Silver khi đổi chunker hay mô hình nhúng. \\
+    \hline
+    Bù đắp trường \texttt{year} Qdrant & \path{scripts/backfill_qdrant_year.py} & Bổ sung trường lọc \texttt{year} vào 5 trường payload bất biến trên Qdrant mà không nhúng lại vector. \\
+    \hline
+  \end{tabularx}
+  \ReportNote{Nguồn: Thư mục kịch bản tác nghiệp \path{scripts/} tại nhánh chính của dự án. Các công cụ hỗ trợ chế độ kiểm thử trước (\texttt{--dry-run}) nhằm tránh rủi ro ghi đè.}
+\end{table}
+
+Đoạn mã~\ref{lst:ch6_deployment_sop} chuẩn hóa trình tự khởi chạy hệ thống sản xuất từng bước theo quy trình vận hành chuẩn (Deployment SOP):
+
+\begin{lstlisting}[language=bash, caption={Quy trinh khoi chay ha tang, worker hai pha va may chu API/LLM (Deployment SOP)}, label={lst:ch6_deployment_sop}]
+# 1. Start core storage and queue infrastructure (Docker Compose)
 docker compose up -d minio qdrant rabbitmq
 cd airflow && docker compose up -d
-  \end{lstlisting}
-  \item \textbf{Cấu hình Biến Môi trường}:
-  Sao chép tệp cấu hình mẫu và điền các thông số kết nối:
-  \begin{lstlisting}[language=bash]
-Copy-Item .env_example .env
-  \end{lstlisting}
-  \item \textbf{Khởi chạy Workers Xử lý Hàng đợi (RabbitMQ Consumers)}:
-  Mở 2 tiến trình worker nền độc lập:
-  \begin{lstlisting}[language=bash]
-# Worker 1: Fetch -> Bronze + Silver papers -> embed queue
+
+# 2. Configure environment variables (fail-fast secrets validation)
+cp .env_example .env
+
+# 3. Launch two-stage RabbitMQ consumers (fetch IO vs GPU embed)
 python -m src.ingestion.queue_consumer --stage fetch
-
-# Worker 2: Embed -> Silver chunks -> Qdrant
 python -m src.ingestion.queue_consumer --stage embed
-  \end{lstlisting}
-  \item \textbf{Khởi chạy Mô hình Ngôn ngữ LLM Cục bộ}:
-  \begin{lstlisting}[language=bash]
-# Chay Qwen2.5-7B Instruct qua llama-server (CUDA/Metal)
+
+# 4. Start local Qwen2.5-7B-Instruct inference server (CUDA / Metal)
 ./llama-server -m models/qwen2.5-7b-instruct-q4_k_m/qwen2.5-7b-instruct-q4_k_m.gguf --port 9001 --ctx-size 16384 -ngl -1
-  \end{lstlisting}
-  \item \textbf{Khởi chạy Backend FastAPI và Frontend React}:
-  \begin{lstlisting}[language=bash]
-# Backend
-python -m uvicorn backend.app.main:app --host 0.0.0.0 --port 8000 --reload
 
-# Frontend
+# 5. Start FastAPI backend (:8000) and React 19 frontend (:5173)
+python -m uvicorn backend.app.main:app --host 0.0.0.0 --port 8000
 cd frontend && npm run dev
-  \end{lstlisting}
-\end{enumerate}
-
-\section{Kế Hoạch Giám Sát và Khắc Phục Sự Cố (Monitoring \& Operations)}
-
-\begin{itemize}
-\item \textbf{Health}: \path{/api/health} trả readiness từ retrieval và kiểm tra tồn tại Silver primary key, kèm version/timestamp. Endpoint này không kiểm tra toàn diện RabbitMQ/LLM và không tự lập lịch mỗi 30 giây. Telemetry và trạng thái các phân hệ được cung cấp riêng.
-\item \textbf{Ngân sách}: \texttt{LAKEHOUSE\_BUDGET\_GB} mặc định 20 GB. DAG ước lượng MinIO, Qdrant và dữ liệu đang chờ, tính số bài còn chỗ; dừng khi hết ngân sách ước lượng. Code không có quy tắc dừng tại 90\% như mô tả cũ.
-\item \textbf{Backpressure}: Fetch chờ khi embed queue đạt ngưỡng 500 mặc định; Tier 2 phát lô và chờ ingest queue giảm, đồng thời cập nhật ngân sách.
-\item \textbf{Khôi phục}: ACK thủ công sau ghi bền vững, thử lại riêng từng stage và DLQ khi quá giới hạn. Cơ chế upsert theo ID và dedup giảm tác động redelivery; vẫn cần theo dõi DLQ và bài đã có Silver nhưng thiếu vector.
-\item \textbf{Bảo trì}: \path{scripts/migrate_chunks_to_silver.py} hỗ trợ di chuyển payload cũ; \path{scripts/backfill_missing_papers.py} hỗ trợ bổ sung bài thiếu Qdrant, có dry-run. Cần xác định chế độ chunking và backup trước khi chạy migration thực tế.
-\end{itemize}
-
-
-Các thao tác vận hành trên tạo điều kiện để kiểm tra ba lớp: dữ liệu có đọc và hydrate được hay không, dịch vụ có hoàn thành tác vụ hay không, và kết quả có đạt tiêu chí chất lượng hay không. Chỉ khi các lớp này được đo trên cùng phiên bản mới có thể kết luận độ sẵn sàng của nguyên mẫu và đánh giá giá trị ứng dụng ở chương cuối.
+\end{lstlisting}
