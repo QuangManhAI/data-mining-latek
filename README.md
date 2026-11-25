@@ -120,3 +120,51 @@ Trang bìa (`sections/00_cover.tex`) được thiết kế bám sát 100% mẫu 
 ## Bản cập nhật ảnh ngày 23/11/2026
 
 Đã chèn 7 ảnh chụp tự động trong `figures/captured_20261123_082337/`, kèm chú thích nguồn và bảng phân biệt snapshot. PDF được biên dịch bằng Tectonic portable 0.17.0 và kiểm tra bố cục. `BUILD_VALIDATION.json` ghi số trang, vị trí ảnh và kết quả kiểm tra. Không chạy lại mining hoặc benchmark.
+
+
+## Bản biên tập nội dung ngày 23/11/2026
+
+`main.pdf` hiện có 66 trang. Bản này sửa mạch lập luận, định nghĩa chỉ số và diễn giải kết quả; giữ cấu hình format của bản trước. Các số đo gốc được giữ theo nguồn, các phép tính bổ sung được ghi rõ là suy từ số đã lưu. Bộ source gồm đầy đủ 7 ảnh, 9 tài liệu được trích dẫn và hai file kiểm tra `BUILD_VALIDATION.json`, `CONTENT_VALIDATION.json`. Xem `UPDATE_NOTES.md` để biết các phần đã biên tập. Không có lượt chạy mining/benchmark mới.
+
+
+## Bản sửa sơ đồ trang 33 và 41
+
+Hai hình được vẽ lại trong `figures/diagrams.tex`. Để cập nhật trên Overleaf, tải file này lên đúng thư mục `figures` và chọn ghi đè file cũ, sau đó Recompile với XeLaTeX. Các macro `DrawRagPipelineDiagram` và `DrawSystemArchitecture` giữ nguyên tên nên không cần sửa các chương. PDF vẫn 66 trang; trang in 33/41 tương ứng trang PDF 43/51. Xem `DIAGRAM_VALIDATION.json` để đối chiếu kết quả kiểm tra.
+
+PDF sửa hai hình được lưu riêng thành `main_fixed_diagrams_20261123.pdf` vì `main.pdf` đang được ứng dụng khác mở và khóa. Trên Overleaf, biên dịch source mới sẽ tạo `main.pdf` với hai hình đã sửa.
+
+
+## Bản hoàn thiện nội dung theo phản biện học thuật (23/11/2026)
+
+`main.pdf` đã được biên dịch hoàn chỉnh (70 trang). Bản này bổ sung biện giải kiến trúc phân tầng (Tiered Separation of Concerns) cho 4 trụ cột Mining và RAG, thêm bảng kiểm định mẫu 100 tài liệu bóc tách công thức toán (Bảng 3.1), làm rõ ranh giới giữa 10k bài baseline và luồng real-time Airflow/RabbitMQ, đồng thời giải thích chuẩn xác mối quan hệ giữa benchmark LanceDB và hạ tầng Qdrant mới. Giữ nguyên 7 ảnh chụp thực tế và toàn bộ sơ đồ TikZ đã căn chỉnh.
+
+
+## Bản chuẩn hóa định dạng Header 14pt theo quy chế UTH (23/11/2026)
+
+`main.pdf` đã được biên dịch hoàn tất với định dạng chuẩn UTH (68 trang): Running Header đạt cỡ chữ 14pt, Section cấp 1 đạt 14pt in đậm, Subsection cấp 2 đạt 13pt in đậm, chiều cao `headheight=22pt`, kích hoạt chống dòng mồ côi, và khử lỗi font tiếng Việt trong code listings. Toàn bộ 7 ảnh minh chứng và bảng kiểm định mẫu 3.1 đều được bảo toàn.
+
+
+## Bản chuẩn hóa vị trí số trang và khoảng cách Header (23/11/2026)
+
+Đã hoàn thiện hiệu chỉnh:
+1. Số trang từ Mục lục trở lên: Đặt ở TRÊN CHÍNH GIỮA (La Mã thường).
+2. Số trang từ sau Mục lục đến hết báo cáo: Đặt ở DƯỚI CHÍNH GIỮA (Số Ả Rập).
+3. Thu gọn khoảng cách giữa Header và thân bài (`headsep=12pt`), loại bỏ khoảng trống thừa.
+
+
+## Bản chuẩn hóa vị trí số trang và khoảng cách Header (23/11/2026)
+
+Đã hoàn thiện hiệu chỉnh:
+1. Số trang từ Mục lục trở lên: Đặt ở TRÊN CHÍNH GIỮA (La Mã thường, 14pt).
+2. Số trang từ sau Mục lục đến hết báo cáo: Đặt ở DƯỚI CHÍNH GIỮA (Số Ả Rập, 14pt).
+3. Thu gọn khoảng cách giữa Header và thân bài (`headsep=12pt`), loại bỏ khoảng trống thừa.
+
+
+## Bản sửa nội dung và chứng cứ
+
+PDF mới là `main_content_corrected_20261123.pdf` (68 trang). Đã rút kết quả kiểm định mẫu chưa có hồ sơ và sửa các khẳng định về baseline, mining/RAG, hiệu năng cùng Faithfulness. Format và hai sơ đồ được giữ nguyên. `main.pdf` cũng được cập nhật khi không bị ứng dụng khác khóa. Để cập nhật Overleaf, sử dụng source trong ZIP `main_source_evidence_corrected_20261123.zip` và biên dịch bằng XeLaTeX; tránh chép đè những chỉnh sửa riêng chưa lưu trong dự án của bạn. Chi tiết kiểm tra nằm ở `BUILD_VALIDATION.json` và `CONTENT_VALIDATION.json`.
+
+
+## Bản chỉnh bố cục mới nhất
+
+`main_formatted_20261123.pdf` có 66 trang: dùng `frame_transparent.png`, đồng bộ vị trí tiêu đề, thu gọn khoảng cách mục lục, xếp hai ma trận chung một trang, thêm GitHub vào Tóm tắt và bỏ Abstract tiếng Anh. `main.pdf` được thay cùng bản này nếu không bị ứng dụng khác khóa. Source đầy đủ nằm trong `main_source_layout_updated_20261123.zip`; khi đưa lên Overleaf cần giữ file `frame_transparent.png` ở thư mục gốc và biên dịch bằng XeLaTeX. Nội dung chuyên môn và hai sơ đồ giữ nguyên; thay đổi chỉ bao gồm những phần bố cục đã yêu cầu.

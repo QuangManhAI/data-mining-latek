@@ -60,15 +60,20 @@
   bottom=25mm,
   left=30mm,
   right=20mm,
-  headheight=18pt,
+  headheight=20pt,
+  headsep=12pt,
   footskip=12mm
 ]{geometry}
 
 % --- Giãn dòng và thụt đầu dòng ---
 \usepackage{setspace}
+\usepackage{indentfirst} % Thụt đầu dòng đoạn đầu tiên sau tiêu đề mục chuẩn UTH
 \setstretch{1.3} % Giãn dòng 1.3 chuẩn bài tập lớn UTH
 \setlength{\parindent}{1.0cm}
 \setlength{\parskip}{4pt plus 2pt minus 1pt}
+\hyphenation{abstract introduction chunks}
+\widowpenalty=10000
+\clubpenalty=10000
 
 % --- Toán học nâng cao & Ký hiệu ---
 \usepackage{amsmath,amssymb,amsfonts,mathtools,amsthm}
@@ -147,38 +152,70 @@
 
 % Tiêu đề chương có đánh số: CHƯƠNG X (dòng 1), TÊN CHƯƠNG (dòng 2) - IN HOA, MÀU ĐEN, IN ĐẬM, CĂN GIỮA
 \titleformat{\chapter}[display]
-  {\normalfont\bfseries\Large\color{black}\centering}
+  {\normalfont\bfseries\fontsize{16pt}{20pt}\selectfont\color{black}\centering}
   {\MakeUppercase{\chaptertitlename\ \thechapter}}
   {0.6ex}
   {\MakeUppercase}
-\titlespacing*{\chapter}{0pt}{-10pt}{20pt}
+\titlespacing*{\chapter}{0pt}{-40pt}{18pt}
 
 % Tiêu đề chương không đánh số (Tóm tắt, Abstract, Mục lục...): IN HOA, MÀU ĐEN, IN ĐẬM, CĂN GIỮA
 \titleformat{name=\chapter,numberless}[block]
-  {\normalfont\bfseries\Large\color{black}\centering}
+  {\normalfont\bfseries\fontsize{16pt}{20pt}\selectfont\color{black}\centering}
   {}
   {0pt}
   {\MakeUppercase}
-\titlespacing*{name=\chapter,numberless}{0pt}{-10pt}{20pt}
+\titlespacing*{name=\chapter,numberless}{0pt}{-40pt}{18pt}
 
+% Tiêu đề Section cấp 1: cỡ chữ 14pt in đậm theo chuẩn UTH Rule 4.2 (giảm khoảng cách cách trên)
 \titleformat{\section}
-  {\normalfont\bfseries\large\color{black}}
+  {\normalfont\bfseries\fontsize{14pt}{18pt}\selectfont\color{black}}
   {\thesection}{1em}{}
-\titlespacing*{\section}{0pt}{14pt}{6pt}
+\titlespacing*{\section}{0pt}{10pt}{4pt}
 
+% Tiêu đề Subsection cấp 2: cỡ chữ 13pt in đậm theo chuẩn UTH Rule 4.2
 \titleformat{\subsection}
-  {\normalfont\bfseries\normalsize\color{black}}
+  {\normalfont\bfseries\fontsize{13pt}{16pt}\selectfont\color{black}}
   {\thesubsection}{1em}{}
-\titlespacing*{\subsection}{0pt}{10pt}{4pt}
+\titlespacing*{\subsection}{0pt}{8pt}{3pt}
 
-% --- Header & Footer ---
+% Tiêu đề Subsubsection cấp 3: cỡ chữ 13pt in nghiêng theo chuẩn UTH Rule 4.2
+\titleformat{\subsubsection}
+  {\normalfont\itshape\fontsize{13pt}{16pt}\selectfont\color{black}}
+  {\thesubsubsection}{1em}{}
+\titlespacing*{\subsubsection}{0pt}{6pt}{2pt}
+
+% --- Header & Footer (Cấu hình phân vùng Trang Chuẩn UTH) ---
 \usepackage{fancyhdr}
-\pagestyle{fancy}
-\fancyhf{}
-\fancyhead[L]{\small\itshape Khai thác Dữ liệu Khoa học \& Hệ thống RAG (UTH)}
-\fancyhead[R]{\small\thepage}
-\renewcommand{\headrulewidth}{0.4pt}
-\renewcommand{\footrulewidth}{0pt}
+
+% 1. Style cho Phần đầu (Front Matter - Từ Mục lục trở lên): Số trang TRÊN và CHÍNH GIỮA (14pt)
+\fancypagestyle{frontmatterstyle}{%
+  \fancyhf{}%
+  \fancyhead[C]{\fontsize{14pt}{17pt}\selectfont\thepage}%
+  \fancyhead[L]{}%
+  \fancyhead[R]{}%
+  \fancyfoot{}%
+  \renewcommand{\headrulewidth}{0pt}%
+  \renewcommand{\footrulewidth}{0pt}%
+}
+
+% 2. Style cho Nội dung chính (Main Matter - Từ dưới Mục lục xuống): Số trang DƯỚI và CHÍNH GIỮA (14pt), Header TRÊN BÊN TRÁI (14pt)
+\fancypagestyle{mainmatterstyle}{%
+  \fancyhf{}%
+  \fancyhead[L]{\fontsize{14pt}{17pt}\selectfont\itshape Khai thác Dữ liệu Khoa học \& Hệ thống RAG (UTH)}%
+  \fancyhead[C]{}%
+  \fancyhead[R]{}%
+  \fancyfoot[C]{\fontsize{14pt}{17pt}\selectfont\thepage}%
+  \renewcommand{\headrulewidth}{0.4pt}%
+  \renewcommand{\footrulewidth}{0pt}%
+}
+
+% 3. Style Plain mặc định
+\fancypagestyle{plain}{%
+  \fancyhf{}%
+  \fancyfoot[C]{\fontsize{14pt}{17pt}\selectfont\thepage}%
+  \renewcommand{\headrulewidth}{0pt}%
+  \renewcommand{\footrulewidth}{0pt}%
+}
 
 % --- Hỗ trợ ngắt dòng đường dẫn và URL tự động ---
 \usepackage{xurl}
@@ -219,9 +256,16 @@
 \setlist{itemsep=2pt,topsep=2pt,parsep=0pt}
 
 % --- Cấu hình Mục lục (TOC), Danh mục hình ảnh (LOF), Danh mục bảng biểu (LOT) ---
-\usepackage{tocloft}
+\usepackage[titles]{tocloft}
+% Cùng cơ chế chapter* cho mọi tiêu đề; số mục nằm gần nội dung.
+\cftsetindents{chapter}{0em}{1.2em}
+\cftsetindents{section}{1.2em}{2.0em}
+\cftsetindents{subsection}{3.2em}{2.8em}
+\cftsetindents{subsubsection}{6.0em}{3.6em}
+\setlength{\cftfignumwidth}{2.2em}
+\setlength{\cfttabnumwidth}{2.2em}
+
 \renewcommand{\contentsname}{MỤC LỤC}
-\renewcommand{\cfttoctitlefont}{\hfill\bfseries\Large\color{black}}
 \renewcommand{\cftaftertoctitle}{\hfill}
 
 % Thu nhỏ kích thước dấu chấm nối dòng và khoảng cách trong Mục lục & Danh mục
@@ -242,14 +286,21 @@
 
 % Đồng bộ Danh mục hình vẽ
 \renewcommand{\listfigurename}{DANH MỤC HÌNH VẼ}
-\renewcommand{\cftloftitlefont}{\hfill\bfseries\Large\color{black}}
 \renewcommand{\cftafterloftitle}{\hfill}
 \renewcommand{\cftfigleader}{\cftdotfill{\cftfigdotsep}}
 
 % Đồng bộ Danh mục bảng biểu
 \renewcommand{\listtablename}{DANH MỤC BẢNG BIỂU}
-\renewcommand{\cftlottitlefont}{\hfill\bfseries\Large\color{black}}
 \renewcommand{\cftafterlottitle}{\hfill}
 \renewcommand{\cfttableader}{\cftdotfill{\cfttabdotsep}}
 
 \usepackage{tocbibind} % Đưa mục tài liệu tham khảo vào TOC
+
+
+% Không kéo giãn dọc trang hoặc căn giữa các trang chỉ có hình.
+\raggedbottom
+\makeatletter
+\setlength{\@fptop}{0pt}
+\setlength{\@fpsep}{12pt}
+\setlength{\@fpbot}{0pt plus 1fil}
+\makeatother

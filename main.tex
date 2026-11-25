@@ -25,15 +25,22 @@
 \hypersetup{pageanchor=false}
 \input{sections/00_cover.tex}
 
-% --- PHẦN ĐẦU (FRONT MATTER): ĐÁNH SỐ LA MÃ TỪ TRANG 2 (TRANG i) ---
+% --- PHẦN ĐẦU (FRONT MATTER): ĐÁNH SỐ LA MÃ TRÊN CHÍNH GIỮA ---
 \pagenumbering{roman}
 \hypersetup{pageanchor=true}
 \setcounter{page}{1}
+\pagestyle{frontmatterstyle}
+\fancypagestyle{plain}{%
+  \fancyhf{}%
+  \fancyhead[C]{\fontsize{14pt}{17pt}\selectfont\thepage}%
+  \renewcommand{\headrulewidth}{0pt}%
+  \renewcommand{\footrulewidth}{0pt}%
+}
 
 % --- TRANG DANH SÁCH THÀNH VIÊN NHÓM & BẢNG PHÂN CÔNG NHIỆM VỤ ---
 \input{sections/00_team_members.tex}
 
-% Tóm tắt nội dung (Tiếng Việt & Abstract Tiếng Anh)
+% Tóm tắt nội dung tiếng Việt và liên kết mã nguồn
 \input{sections/01_abstract.tex}
 \clearpage
 
@@ -49,9 +56,16 @@
 \clearpage
 \end{spacing}
 
-% --- NỘI DUNG CHÍNH (MAIN MATTER) ---
+% --- NỘI DUNG CHÍNH (MAIN MATTER): SỐ TRANG DƯỚI CHÍNH GIỮA ---
 \pagenumbering{arabic}
 \setcounter{page}{1}
+\pagestyle{mainmatterstyle}
+\fancypagestyle{plain}{%
+  \fancyhf{}%
+  \fancyfoot[C]{\fontsize{14pt}{17pt}\selectfont\thepage}%
+  \renewcommand{\headrulewidth}{0pt}%
+  \renewcommand{\footrulewidth}{0pt}%
+}
 
 % Chương 1: Hiểu bài toán (Business Understanding)
 \input{sections/02_business_understanding.tex}

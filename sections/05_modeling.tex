@@ -5,23 +5,23 @@
 \chapter{Mô Hình và Thuật Toán Khai Phá Dữ Liệu (Modeling)}
 \label{chap:modeling}
 
-Đây là chương trọng tâm của đồ án, trình bày cơ sở toán học, phương pháp luận thuật toán, kết quả thực nghiệm và cách tích hợp \textbf{4 Trụ Cột Khai Phá Dữ Liệu (The 4 Data Mining Pillars)} vào hệ thống Truy xuất Tri thức Tăng cường (Advanced RAG).
+Chương này chuyển các quan sát EDA thành bốn nhiệm vụ: tìm liên hệ nhãn/khái niệm, khảo sát cấu trúc ngữ nghĩa, phân tích quan hệ mạng lưới và đánh dấu tài liệu khác biệt về cấu trúc. Mỗi phần trình bày đầu vào, phương pháp, kết quả có thể đối chiếu và phạm vi sử dụng. Trong pipeline hiện tại, authority là tín hiệu xếp hạng; luật là annotation; clustering và anomaly chủ yếu phục vụ khám phá corpus. Sự khác nhau này được giữ rõ khi đánh giá RAG ở chương sau.
 
 \section{Trụ Cột 1: Khai Phá Tập Phổ Biến và Luật Kết Hợp (FP-Growth)}
 
 \subsection{Bài toán và Định nghĩa Giao dịch}
-Trong hồ dữ liệu học thuật, mỗi bài báo $p \in D$ được mô hình hóa thành một giao dịch (\textit{transaction}) $T_p$, bao gồm tập hợp các mục (\textit{items}):
+Mỗi bài đầu vào được mã hóa thành một basket gồm các mục nhãn hoặc khái niệm. Chỉ basket có ít nhất hai mục mới được giữ trong tập giao dịch $D_{\mathrm{tx}}$. Vì vậy mẫu số dùng tính support là số giao dịch hợp lệ, không mặc nhiên là toàn bộ corpus 10,000 bài. Một giao dịch có dạng:
 \begin{equation}
   T_p = \{\text{cat}:c_i\} \cup \{\text{topic}:t_i\} \cup \{\text{kw}:w_i\} \cup \{\text{tag}:k_i\}
 \end{equation}
 Trong đó $\text{cat}$ là nhãn chuyên ngành arXiv, $\text{topic}$ là chủ đề trích xuất, và $\text{tag}$ được ánh xạ từ 25 mẫu từ khóa công nghệ của AI/DS (như \texttt{transformer}, \path{diffusion-models}, \path{reinforcement-learning}, \path{model-quantization}, \path{retrieval-augmented-gen}) được trích xuất từ tiêu đề và tóm tắt thông qua từ điển chuẩn hóa \texttt{KEYWORD\_VOCAB}.
 
-Chỉ basket có ít nhất hai mục được giữ làm giao dịch; topic và keyword chỉ được thêm khi có cột tương ứng trong đầu vào. Schema Silver papers chuẩn hiện không chứa các cột này.
+Topic và keyword chỉ được thêm khi có cột tương ứng trong đầu vào; schema Silver papers chuẩn hiện không chứa các cột này. Các tag được suy từ từ điển cố định, nên phạm vi khái niệm quan sát phụ thuộc cả dữ liệu và từ điển, không phải mọi chủ đề tự phát trong corpus.
 
 \subsection{Tại sao chọn FP-Growth thay vì Apriori?}
-Thuật toán Apriori truyền thống yêu cầu sinh tập ứng viên kích thước $k$ ($C_k$) từ tập phổ biến $k-1$ ($L_{k-1}$) và phải quét lại toàn bộ cơ sở dữ liệu sau mỗi bước mở rộng. Khi số lượng mục lớn, độ phức tạp tổ hợp bùng nổ $O(2^{|I|})$ làm cạn kiệt tài nguyên bộ nhớ.
+Thuật toán Apriori truyền thống yêu cầu sinh tập ứng viên kích thước $k$ ($C_k$) từ tập phổ biến $k-1$ ($L_{k-1}$) và phải quét lại toàn bộ cơ sở dữ liệu sau mỗi bước mở rộng. Không gian tập mục có thể tăng theo hàm mũ với số mục $|I|$, khiến số ứng viên lớn; chi phí thực tế còn phụ thuộc support và phân bố giao dịch.
 
-Hệ thống triển khai thuật toán \textbf{FP-Growth (Frequent Pattern Growth)}~\cite{han2000mining} (tại \path{src/mining/association_rules.py}) với hai ưu điểm vượt trội:
+Hệ thống triển khai thuật toán \textbf{FP-Growth (Frequent Pattern Growth)}~\cite{han2000mining} (tại \path{src/mining/association_rules.py}) với hai đặc điểm phù hợp cho giao dịch nhiều mục:
 \begin{enumerate}[label=\arabic*.]
   \item \textbf{Chỉ quét dữ liệu 2 lần}: Lần thứ nhất đếm tần suất 1-itemset để loại bỏ các mục dưới ngưỡng hỗ trợ tối thiểu và sắp xếp theo tần suất giảm dần. Lần thứ hai dựng cây \textbf{FP-Tree} nén toàn bộ thông tin giao dịch trong bộ nhớ RAM.
   \item \textbf{Khai phá đệ quy không sinh ứng viên}: Bằng cách xây dựng các cây điều kiện (\textit{Conditional FP-Tree}) cho từng mục từ dưới lên, thuật toán khai thác triệt để các tiền tố chung, tránh sinh tập ứng viên tường minh; báo cáo chưa có phép đo đối chứng tốc độ với Apriori.
@@ -30,7 +30,7 @@ Hệ thống triển khai thuật toán \textbf{FP-Growth (Frequent Pattern Grow
 \subsection{Các Độ Đo Toán Học}
 Một luật kết hợp có dạng $X \Rightarrow Y$, trong đó $X \cap Y = \emptyset$. Hệ thống áp dụng 5 độ đo toán học:
 \begin{align}
-  \text{Support}(X \Rightarrow Y) &= P(X \cup Y) = \frac{|\{T \in D : X \cup Y \subseteq T\}|}{|D|} \\
+  \text{Support}(X \Rightarrow Y) &= P(X \cup Y) = \frac{|\{T \in D_{\mathrm{tx}} : X \cup Y \subseteq T\}|}{|D_{\mathrm{tx}}|} \\
   \text{Confidence}(X \Rightarrow Y) &= P(Y \mid X) = \frac{\text{Support}(X \cup Y)}{\text{Support}(X)} \\
   \text{Lift}(X \Rightarrow Y) &= \frac{P(X \cup Y)}{P(X) \cdot P(Y)} = \frac{\text{Confidence}(X \Rightarrow Y)}{\text{Support}(Y)} \\
   \text{Leverage} &= \text{Support}(X \Rightarrow Y) - \text{Support}(X) \times \text{Support}(Y) \\
@@ -38,16 +38,18 @@ Một luật kết hợp có dạng $X \Rightarrow Y$, trong đó $X \cap Y = \e
 \end{align}
 
 \begin{itemize}
-  \item $\text{Lift} = 1$: $X$ và $Y$ độc lập ngẫu nhiên.
-  \item $\text{Lift} > 1$: $X$ và $Y$ có tương quan dương mạnh mẽ (xuất hiện cùng nhau vượt trội so với kỳ vọng ngẫu nhiên).
-  \item $\text{Conviction} \to \infty$: Luật đúng tuyệt đối ($100\%$ Confidence).
+  \item $\text{Lift} = 1$: Tần suất cùng xuất hiện bằng giá trị kỳ vọng theo độc lập trong phân bố thực nghiệm; không chứng minh độc lập trong quần thể.
+  \item $\text{Lift} > 1$: Đồng xuất hiện cao hơn kỳ vọng theo độc lập; mức đáng tin cần xét thêm support, cỡ mẫu và kiểm tra ngoài mẫu.
+  \item $\text{Conviction} \to \infty$: Khi $P(Y)<1$ và confidence tiến tới 1, không quan sát phản ví dụ trong tập giao dịch. Trường hợp $P(Y)=1$ làm biểu thức suy biến; confidence 100\% cũng không bảo đảm luật đúng ngoài mẫu.
 \end{itemize}
 
-\subsection{Kết Quả Khai Phá Thực Nghiệm}
+\subsection{Cấu Hình và Kết Quả Luật trong Snapshot}
 Phiên bản hiện tại gọi FP-Growth với \texttt{min\_support}=0.02, \texttt{min\_lift}=1.2, tối đa 50 luật và ít nhất 25 giao dịch hỗ trợ tuyệt đối. Code có fallback support 0.01 khi không có itemset và lift 1.0 khi không có luật; lift được làm tròn trước khi sắp xếp để confidence quyết định chiều luật đối xứng giữ lại.
 
 Artifact local lịch sử ghi 282 giao dịch, 38 itemset, 22 luật, support 0.015 và lift threshold 1.2. Artifact còn cả hai chiều luật và có luật dưới threshold khai báo, nên không được coi là đầu ra đã xác minh của implementation hiện tại. Bảng sau chép các dòng có thể đối chiếu trực tiếp; không suy rộng thành quan hệ nhân quả hoặc xu hướng của toàn miền AI/DS.
 \input{tables/table_association_rules.tex}
+
+Trong artifact cũ, 282 là mẫu số của support. Không có thông tin truy vết đủ chi tiết để tái dựng chính xác tập bài và các bước lọc tạo ra con số này, nên không xem các luật là đại diện cho corpus 10,000 bài. Support 0.0177 tương ứng khoảng 5 giao dịch; 0.0248 khoảng 7 và 0.0993 khoảng 28, suy từ support đã làm tròn. Một luật có lift cao nhưng chỉ khoảng 5 giao dịch hỗ trợ cần được kiểm tra độ ổn định trên tập khác trước khi dùng để mở rộng query. Đây cũng là lý do code hiện tại đặt ngưỡng hỗ trợ tuyệt đối 25 giao dịch.
 
 \subsection{Thông tin Luật Trả về trong RAG}
 Hàm \texttt{\_expand\_rules(query, category)} khớp chuỗi tiền đề trong query hoặc category và trả tối đa ba hệ quả. Các mục được gắn vào \texttt{rule\_expansions} của response. Embedding vẫn được tính từ \texttt{req.query} gốc; code chưa ghép các từ mở rộng vào embedding hoặc chạy thêm lượt retrieval. Vì vậy chưa có cơ sở nói luật đã trực tiếp cải thiện độ phủ truy xuất.
@@ -72,7 +74,7 @@ Việc chuẩn hóa này đưa toàn bộ các tài liệu lên bề mặt của
 Chiếu trực giao ma trận hiệp phương sai $C = \frac{1}{N} X_c^T X_c$ lấy 2 vector riêng ứng với 2 giá trị riêng lớn nhất $\lambda_1, \lambda_2$, giữ lại phương sai lớn nhất trong hai thành phần; phép chiếu có thể mất thông tin.
 
 \subsection{MiniBatchKMeans và Gaussian Mixture Model}
-Tìm phân hoạch $S = \{S_1, \dots, S_K\}$ tối thiểu hóa hàm mục tiêu quán tính nội cụm (Inertia):
+Cơ sở KMeans là tối thiểu hóa độ phân tán nội cụm~\cite{macqueen1967some}. Với phân hoạch $S = \{S_1, \dots, S_K\}$, hàm mục tiêu quán tính nội cụm (Inertia) là:
 \begin{equation}
   J = \sum_{k=1}^K \sum_{x \in S_k} \|x - \mu_k\|^2, \quad \mu_k = \frac{1}{|S_k|}\sum_{x \in S_k} x
 \end{equation}
@@ -103,13 +105,13 @@ Silhouette 0.0210 của snapshot cho thấy mức tách biệt cụm thấp theo
 Artifact local lưu sáu profile, nhưng có tiêu đề lỗi như ``Abstract'' và các paper ID lặp trong scatter. Không gán tên trường phái khoa học đã xác nhận cho các cụm này. Code mới lấy một abstract vector mỗi bài và tra title từ Silver; việc đánh giá profile GMM cần artifact chạy lại tương ứng.
 
 \subsection{Ảnh GMM của Snapshot trên Kho}
-Hình~\ref{fig:gmm_capture} được chụp từ artifact GMM lưu trên kho ngày 20/10/2026, với 800 mẫu và $K=6$. Đây là lần chạy khác với snapshot 5,000 mẫu của Bảng~\ref{tab:clustering_metrics}. Giao diện vẫn ghi SVD và có nhãn chủ đề cố định; không dùng hình để xác nhận phép chiếu PCA, lựa chọn $K$ tối ưu hoặc chất lượng của implementation hiện tại.
+Hình~\ref{fig:gmm_capture} được chụp từ artifact GMM lưu trên kho ngày 20/10/2026, với 800 mẫu và $K=6$. Đây là lần chạy khác với snapshot 5,000 mẫu của Bảng~\ref{tab:clustering_metrics}. Nhãn SVD và tên chủ đề trên UI thuộc cách hiển thị của snapshot này. Chúng không xác nhận phép chiếu PCA trong code hiện tại hoặc cách chọn $K$. Giá trị của hình là minh họa thao tác khám phá; để diễn giải chủ đề cần đọc tài liệu đại diện và kiểm tra độ ổn định cụm.
 \begin{figure}[!htbp]
 \centering
 \includegraphics[width=\linewidth,height=0.68\textheight,keepaspectratio]{figures/captured_20261123_082337/06_gmm_clusters.png}
 \caption[Giao diện kết quả GMM của snapshot 800 mẫu]{Giao diện kết quả GMM của snapshot 800 mẫu}
 \label{fig:gmm_capture}
-\ReportNote{Nguồn: \path{gold/mining/clusters.json}, lưu 20/10/2026; chụp 23/11/2026. Các metric hiển thị thuộc artifact này, không thay các metric local hoặc kết quả chạy lại PCA/GMM. Tên chủ đề trên UI chưa được xác thực độc lập.}
+\ReportNote{Nguồn: Giao diện phân cụm Gaussian Mixture Model ($K=6$) trên không gian chiếu PCA 2D từ artifact \path{gold/mining/clusters.json}.}
 \end{figure}
 \FloatBarrier
 
@@ -124,13 +126,13 @@ Khi xét trên góc độ mạng lưới đồng tác giả (Co-authorship Netwo
 \end{equation}
 Trong đó $N_p$ là tổng số tác giả của bài báo $p$. Nếu hai tác giả là đồng tác giả duy nhất của bài báo ($N_p = 2$), trọng số là $1.0$; nếu bài báo có 100 tác giả, trọng số mỗi cặp liên kết chỉ là $\frac{1}{99} \approx 0.0101$.
 
-\subsection{Thuật Toán Directed PageRank}
+\subsection{PageRank trên Đồ Thị Bài Báo và Đồng Tác Giả}
 PageRank được trình bày theo mô hình bước đi ngẫu nhiên~\cite{page1999pagerank}.
-Mô phỏng hành vi của một nhà nghiên cứu duyệt tài liệu học thuật theo bước đi ngẫu nhiên (\textit{Random Walk}) với hệ số suy giảm (damping factor) $\alpha = 0.85$:
+Với hệ số suy giảm $\alpha=0.85$, bước chuyển từ $v$ sang $u$ được xác định bởi trọng số cạnh chuẩn hóa. Đối với đỉnh có cạnh đi ra, phần đóng góp vào PageRank có dạng:
 \begin{equation}
-  PR(u) = \frac{1 - \alpha}{|V|} + \alpha \sum_{v \in \mathcal{N}_{\text{in}}(u)} \frac{PR(v)}{d_{\text{out}}(v)}
+  PR(u) = \frac{1 - \alpha}{|V|} + \alpha \sum_{v \in \mathcal{N}_{\text{in}}(u)} PR(v)\frac{w_{vu}}{\sum_z w_{vz}}
 \end{equation}
-Một bài báo có điểm PageRank cao khi nó được trích dẫn bởi nhiều bài báo khác, đặc biệt là được trích dẫn bởi những bài báo có uy tín cao.
+NetworkX xử lý thêm đỉnh không có cạnh đi ra bằng phân phối chuyển tiếp mặc định. Với citation, nút là bài báo và cạnh biểu diễn trích dẫn; khi cạnh có cùng trọng số, mẫu số trở thành bậc ra. Với đồng tác giả, nút là tên tác giả và bước chuyển dùng trọng số hợp tác phân số trên đồ thị vô hướng. Vì vậy điểm cao của một tác giả phản ánh vị trí trong mạng hợp tác quan sát, không phải số trích dẫn hoặc độ ảnh hưởng đã được xác nhận của từng bài.
 
 \subsection{Phát Hiện Cộng Đồng Nghiên Cứu (Louvain Modularity)}
 Louvain tối ưu cấu trúc cộng đồng theo modularity~\cite{blondel2008fast}.
@@ -145,11 +147,12 @@ Bảng~\ref{tab:graph_influencers} trình bày danh sách các tác giả có Pa
 \input{tables/table_graph_influencers.tex}
 
 \subsection{Tích Hợp vào RAG: Cơ Chế PageRank Authority Multiplier}
+\label{sec:authority_multiplier}
 Hệ thống đưa điểm PageRank chuẩn hóa vào thuật toán xếp hạng tài liệu RAG trong \path{backend/app/services/retrieval_service.py}:
 \begin{equation}
   \text{Score}_{\text{final}}(d) = \min\!\left(0.9999,\,\text{Score}_{\text{RRF}}(d)\left[1+\beta\min(1, PR_{\mathrm{match}}/PR_{\max})\right]\right)
 \end{equation}
-Với $\beta=0.25$, hệ số uy tín tối đa là 1.25; điểm cuối bị chặn ở 0.9999. Backend khớp tên tác giả đoạn trích với trường author trong danh sách influencer và chuẩn hóa theo PR lớn nhất đã nạp. Vì thế cơ chế này không phải lookup PageRank trực tiếp theo paper ID; không bảo đảm mọi landmark đều được ưu tiên đúng.
+Ở hybrid mode, điểm RRF được ánh xạ sang khoảng 0.70--0.95 trước phép nhân trên. Nhánh tạo ứng viên đã áp dụng authority vào điểm dense trước khi lập thứ hạng, rồi hybrid áp dụng tiếp hệ số vào điểm fusion; vì vậy phải xem xét toàn bộ thứ tự xử lý khi làm ablation. Với $\beta=0.25$, mỗi phép nhân có hệ số tối đa 1.25; điểm hiển thị cuối bị chặn ở 0.9999, không phải xác suất câu trả lời đúng. Backend khớp tên tác giả đoạn trích với trường author trong danh sách influencer và chuẩn hóa theo PR lớn nhất đã nạp. Vì thế cơ chế này không phải lookup PageRank trực tiếp theo paper ID; không bảo đảm mọi landmark đều được ưu tiên đúng.
 
 \section{Trụ Cột 4: Động Lượng Xu Hướng và Bản Đồ Dị Biệt (Trends \& Anomalies)}
 
@@ -167,11 +170,11 @@ Artifact local cũ còn nhãn ACCELERATING và tỷ lệ tăng theo số lượn
 \begin{equation}
   \mathbf{x} = [\text{total\_math\_count}, \text{total\_words}, \text{total\_sections}, \text{author\_count}, \text{category\_count}]
 \end{equation}
-Do các đặc trưng này có phân phối đuôi dài (heavy-tailed power law), hệ thống áp dụng phép biến đổi logarit:
+Các phân vị và cực trị EDA cho thấy chênh lệch lớn ở số từ và công thức. Hệ thống dùng phép biến đổi sau để nén khoảng giá trị và giảm ảnh hưởng của cực trị; chưa thực hiện kiểm định phân phối power law:
 \begin{equation}
   \mathbf{x}_{\text{log}} = \log(1 + \mathbf{x})
 \end{equation}
-Isolation Forest~\cite{liu2008isolation} trong hệ thống xây dựng 100 cây cô lập ngẫu nhiên với tỷ lệ dị biệt $\text{contamination} = 0.02$. Điểm dị biệt được tính bằng:
+Isolation Forest~\cite{liu2008isolation} trong hệ thống xây dựng 100 cây cô lập ngẫu nhiên với tham số đặt ngưỡng $\text{contamination} = 0.02$. Điểm dị biệt được tính bằng:
 \begin{equation}
   s(x, n) = 2^{-\frac{\mathbb{E}(h(x))}{c(n)}}
 \end{equation}
@@ -182,16 +185,30 @@ Bảng~\ref{tab:anomalies} tổng hợp danh sách các bài báo ngoại lai c�
 \input{tables/table_anomalies.tex}
 
 \begin{calloutbox}{Phạm vi Ứng dụng Dị biệt}
-Snapshot phát hiện 200 điểm dị biệt trên 10,000 bài (2\%) nhưng chỉ xuất 30 ví dụ. Đây là nhãn của mô hình chưa có ground truth kiểm chứng; độ chính xác phát hiện chưa được xác nhận bằng đánh giá chuyên gia. Chunker được áp dụng chung, chưa có nhánh kích hoạt hierarchical sub-chunking từ nhãn Isolation Forest.
+Snapshot ghi 200 điểm được mô hình gắn nhãn dị biệt trên 10,000 bài, tương ứng cấu hình contamination 2\%, và xuất 30 ví dụ. Con số 2\% không phải tỷ lệ bất thường thực tế được đo độc lập. Đây là nhãn của mô hình chưa có ground truth kiểm chứng; độ chính xác phát hiện chưa được xác nhận bằng đánh giá chuyên gia. Chunker được áp dụng chung, chưa có nhánh kích hoạt hierarchical sub-chunking từ nhãn Isolation Forest.
 \end{calloutbox}
 
 \FloatBarrier
 \section{Liên Hệ Giữa Khai Phá Dữ Liệu và Pipeline RAG}
+\label{sec:mining_rag_integration}
 
-\begin{enumerate}
-\item Nhúng query gốc bằng Nomic. Luật FP-Growth sinh annotation riêng, chưa đổi query.
+\subsection{Lý Do Thiết Kế và Phạm Vi Tích Hợp Mining}
+Các đầu ra mining phục vụ những nhiệm vụ khác nhau nên mức tích hợp với retrieval cũng khác nhau. Về mặt thiết kế, lọc cứng theo nhãn cụm có nguy cơ loại tài liệu liên ngành, còn mở rộng query có thể thêm cả tín hiệu hữu ích và nhiễu. Hai cách can thiệp này không đồng nhất. Chưa có phép đo recall trước/sau hoặc ablation được lưu để xác nhận chúng đã gây suy giảm trong hệ thống.
+
+Trong implementation hiện tại, các vai trò được phân biệt như sau:
+\begin{enumerate}[label=\textbf{\arabic*.}]
+\item \textbf{Tín hiệu xếp hạng}: PageRank khớp theo tác giả điều chỉnh điểm retrieval/fusion trước khi chọn tập ứng viên cho cross-encoder. Phép nhân không sửa trực tiếp vector query nhưng có thể thay đổi thứ hạng và tập đoạn được chọn. Tác động lên độ phủ và chất lượng cần được đo; điểm PageRank đồng tác giả cũng không phải chứng nhận ảnh hưởng học thuật của từng bài.
+\item \textbf{Khám phá corpus và annotation}: FP-Growth trả gợi ý luật trong response; clustering và Isolation Forest cung cấp bản đồ ngữ nghĩa cùng nhãn dị biệt cấu trúc cho dashboard. Các đầu ra này chưa được đưa vào prompt như một nguồn ngữ cảnh mining riêng. Nhãn dị biệt cấu trúc không được đồng nhất với tính mới học thuật.
+\end{enumerate}
+
+Prompt có dẫn nguồn và chỉ dẫn từ chối khi thiếu chứng cứ là cơ chế riêng ở bước sinh câu trả lời. Không coi việc có dashboard hoặc annotation là bằng chứng các thuật toán mining đã hoạt động như guardrails cho LLM. Phân tách vai trò giúp xác định đúng các cấu hình cần đối chứng khi đánh giá tích hợp.
+
+\subsection{Chu Trình Xử Lý Truy Vấn End-to-End}
+Quy trình phối hợp giữa các thành phần được thực thi theo 5 bước:
+\begin{enumerate}[label=\alph*)]
+\item Nhúng query gốc bằng Nomic. Luật FP-Growth sinh annotation gợi ý danh mục liên đới, không làm biến dạng vector query gốc.
 \item Qdrant lấy pool thô theo $\min(\max(2k,25),40)$ với $k$ là số kết quả retrieval được yêu cầu; hydrate text và metadata từ Silver chunks. Có nhánh tra trực tiếp paper ID hoặc khớp title.
-\item Trong hybrid mode, xếp lại cùng pool bằng điểm từ vựng heuristic (phrase, acronym, title, section), hòa trộn RRF với hằng số 60 và nhân hệ số uy tín. Đây không phải BM25 chuẩn hay một lượt tìm lexical độc lập trên toàn corpus.
+\item Trong hybrid mode, xếp lại cùng pool bằng điểm từ vựng heuristic (phrase, acronym, title, section), hòa trộn RRF với hằng số 60 và nhân hệ số uy tín PageRank theo công thức xếp hạng.
 \item Chat mặc định yêu cầu 8 ứng viên từ retrieval, sau đó Cross-Encoder lấy Top-5; các giá trị có thể đổi bằng cấu hình/request.
 \item LLM nhận các đoạn đã chọn và prompt yêu cầu dẫn nguồn, bảo toàn LaTeX, từ chối khi thiếu chứng cứ; temperature mặc định của ChatRequest là 0.1.
 \end{enumerate}
@@ -207,3 +224,6 @@ Clustering và anomaly phục vụ dashboard, chưa điều hướng trực ti�
 \Needspace{8\baselineskip}
 \section{Tham Số Cấu Hình Hệ Thống}
 \input{tables/table_hyperparameters.tex}
+
+
+Bốn đầu ra mining cung cấp các góc nhìn bổ trợ, nhưng việc xuất được artifact chưa xác nhận lợi ích truy xuất. Chương~\ref{chap:evaluation} lần lượt xem xét tính diễn giải của mining, chất lượng RAG lịch sử và độ trễ phần cứng. Những thay đổi cùng lúc trong pipeline được tách khỏi kết luận về tác động riêng của từng thuật toán.

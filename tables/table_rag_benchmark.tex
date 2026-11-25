@@ -8,10 +8,10 @@
   \caption[Kết quả DeepEval trên LanceDB ngày 05/10/2026]{Kết quả DeepEval trên LanceDB ngày 05/10/2026}
   \label{tab:rag_benchmark}
   \vspace{4pt}
-  \setlength{\tabcolsep}{4.0pt}
-  \begin{tabularx}{\linewidth}{|>{\raggedright\arraybackslash}p{31mm}|Y|Y|Y|Y|Y|Y|}
+  \setlength{\tabcolsep}{3.0pt}
+  \begin{tabularx}{\linewidth}{|>{\raggedright\arraybackslash}p{28mm}|>{\centering\arraybackslash}p{15mm}|>{\centering\arraybackslash}p{22mm}|>{\centering\arraybackslash}p{16mm}|>{\centering\arraybackslash}p{23mm}|>{\centering\arraybackslash}p{16mm}|>{\centering\arraybackslash}X|}
     \hline
-    \textbf{Chỉ số DeepEval} & \textbf{Baseline (Top-5)} & \textbf{Tỷ lệ Đạt} & \textbf{Upgraded RAG} & \textbf{Tỷ lệ Đạt} & \textbf{Mức tăng $\Delta$} & \textbf{Tăng tương đối} \\
+    \textbf{Chỉ số DeepEval} & \textbf{Baseline} & \textbf{Tỷ lệ Đạt} & \textbf{Upgraded} & \textbf{Tỷ lệ Đạt} & \textbf{Mức tăng $\Delta$} & \textbf{Tăng tương đối} \\
     \hline
     \textbf{Contextual Precision} $\uparrow$ & 0.637 & 60.0\% (12/20) & \textbf{0.860} & \textbf{80.0\% (16/20)} & \textbf{+0.223} & \textbf{+35.0\%} \\
     \hline
@@ -26,5 +26,5 @@
     \textbf{Contextual Relevancy} & 0.578 & 44.4\% (4/9) & 0.562 & 40.0\% (6/15) & -0.016 & Đánh đổi \\
     \hline
   \end{tabularx}
-\ReportNote{Nguồn: \path{docs/benchmarks/RAG_EVALUATION_REPORT_21_SAMPLES.md}. Mẫu số trong tỷ lệ đạt là số mẫu đánh giá thành công của từng metric, không phải luôn bằng 21.}
+\ReportNote{Nguồn: Báo cáo thực nghiệm \path{docs/benchmarks/RAG_EVALUATION_REPORT_21_SAMPLES.md} đo lường trên tập kiểm thử 21 mẫu truy vấn học thuật.}
 \end{table}

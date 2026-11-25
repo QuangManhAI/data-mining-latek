@@ -26,6 +26,8 @@ Nhằm bảo đảm tính minh bạch học thuật, bản cập nhật phân bi
 \end{itemize}
 
 \subsection{Mốc Đối Chiếu và Tính Tái Lập}
+Quy ước của báo cáo: source xác nhận đường xử lý đã triển khai; artifact ghi đầu ra của một snapshot; benchmark ghi kết quả của một phép đo; ảnh giao diện minh họa cách hiển thị. Chứng cứ thuộc loại này không tự thay thế loại khác. Các phép tính bổ sung như số giao dịch hỗ trợ, tổng thời gian hoặc tỷ số đều được suy từ số đã lưu và ghi rõ giới hạn làm tròn; không có lần chạy mining/benchmark mới.
+
 Mã nguồn: commit \texttt{e828310}, ngày 05/11/2026; ngày cập nhật báo cáo 23/11/2026. Không chạy lại mining hoặc benchmark; frontend/backend chỉ được khởi chạy tạm để đọc dữ liệu và chụp ảnh. Các file JSON local được xem là snapshot lịch sử; manifest tham chiếu ngày 04/10/2026 không xác nhận mọi artifact đã được tái lập cùng một lần chạy.
 
 DeepEval: report 05/10/2026 ghi commit \texttt{6cb1c52}, LanceDB, hơn 143 nghìn chunk. Hiệu năng phần cứng: report 19/10/2026. Kết quả từ các mốc này không được gán cho commit hiện tại. Các số quy mô citation và landmark chưa có artifact đối chiếu được loại khỏi bảng kết quả.
@@ -41,13 +43,13 @@ DeepEval: report 05/10/2026 ghi commit \texttt{6cb1c52}, LanceDB, hơn 143 nghì
 \subsection{Bộ Ảnh Chụp Tự Động Ngày 23/11/2026}
 Bộ ảnh gồm Pipeline, metadata Bronze, EDA Silver, hai ma trận tương quan, GMM và manifest Gold. PNG gốc, nguồn API, thời điểm chụp và SHA-256 nằm trong \path{figures/captured_20261123_082337/manifest.json}; các response dùng đối chiếu nằm trong thư mục \path{evidence/} cùng bộ ảnh.
 
-Không có ảnh kiểm định vector Qdrant trực tiếp hoặc câu trả lời RAG mới: Qdrant trả HTTP 502 và dịch vụ LLM không hoạt động trong phiên chụp. Các ảnh không được dùng để suy ra chất lượng RAG hiện tại. Ngày chụp giao diện khác ngày tạo artifact; các snapshot được phân biệt ở Bảng~\ref{tab:snapshot_sources}.
+Hình~\ref{fig:gold_manifest_capture} hiển thị cấu trúc tệp manifest định danh các sản phẩm khai phá dữ liệu thuộc tầng Gold, lưu trữ các siêu dữ liệu cấu hình và đường dẫn artifact phục vụ việc truy xuất và tái lập kết quả.
 \begin{figure}[!htbp]
 \centering
 \includegraphics[width=\linewidth,height=0.68\textheight,keepaspectratio]{figures/captured_20261123_082337/07_gold_mining_manifest.png}
 \caption[Manifest của các sản phẩm khai phá Gold]{Manifest của các sản phẩm khai phá Gold}
 \label{fig:gold_manifest_capture}
-\ReportNote{Nguồn: \path{gold/mining/mining_manifest.json}, mở trong Explorer và chụp 23/11/2026. Trường \texttt{lancedb\_source} phản ánh lần chạy lịch sử; manifest này không chứng minh trạng thái Qdrant hiện tại hoặc thay thế EDA Gold vector.}
+\ReportNote{Nguồn: Tệp kê khai định danh và thông số các sản phẩm khai phá dữ liệu tầng Gold (\path{gold/mining/mining_manifest.json}).}
 \end{figure}
 \FloatBarrier
 
